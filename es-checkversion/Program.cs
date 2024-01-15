@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using RetrobatUpdater;
+using LumacaUpdater;
 using EmulatorLauncher.Common;
 
 namespace es_checkversion
@@ -18,11 +18,11 @@ namespace es_checkversion
                 if (string.IsNullOrEmpty(branch))
                     branch = "stable";
 
-                string localVersion = RetrobatVersion.GetLocalVersion();
+                string localVersion = LumacaVersion.GetLocalVersion();
                 if (string.IsNullOrEmpty(localVersion))
-                    throw new ApplicationException("Retrobat is not properly installed");
+                    throw new ApplicationException("Lumaca is not properly installed");
 
-                string remoteVersion = RetrobatVersion.GetRemoteVersion(branch);
+                string remoteVersion = LumacaVersion.GetRemoteVersion(branch);
                 if (string.IsNullOrEmpty(remoteVersion))
                     throw new ApplicationException("Unable to get remote version");
 
