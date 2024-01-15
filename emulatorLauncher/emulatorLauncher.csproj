@@ -103,7 +103,7 @@
     </Compile>
     <Compile Include="Generators\ScummVm.Generator.cs" />
     <Compile Include="Generators\ForceEngine.Generator.cs" />
-    <Compile Include="Generators\RetrobatLauncher.Generator.cs" />
+    <Compile Include="Generators\LumacaLauncher.Generator.cs" />
     <Compile Include="Generators\MessSystem.cs" />
     <Compile Include="Generators\vita3k.Generator.cs" />
     <Compile Include="Installer.cs" />
@@ -421,7 +421,7 @@
   <ItemGroup>
     <Content Include="icon.ico" />
     <None Include="Resources\blacklisted-words.txt" />
-    <None Include="Resources\retrobat.png" />
+    <None Include="Resources\lumaca.png" />
     <None Include="Reshader\Bezel.fx" />
   </ItemGroup>
   <ItemGroup>

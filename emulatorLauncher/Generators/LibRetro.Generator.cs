@@ -17,7 +17,7 @@ namespace EmulatorLauncher.Libretro
 
     partial class LibRetroGenerator : Generator
     {
-        const string RetroArchNetPlayPatchedName = "RETROBAT";
+        const string RetroArchNetPlayPatchedName = "LUMACA";
 
         public string RetroarchPath { get; set; }
         public string RetroarchCorePath { get; set; }
@@ -1412,7 +1412,7 @@ namespace EmulatorLauncher.Libretro
 
 
         /// <summary>
-        /// Patch Retroarch to display @RETROBAT in netplay architecture
+        /// Patch Retroarch to display @LUMACA in netplay architecture
         /// </summary>
         /// <returns></returns>
         private string GetNetPlayPatchedRetroarch()

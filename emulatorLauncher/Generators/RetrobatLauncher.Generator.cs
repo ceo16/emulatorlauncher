@@ -10,7 +10,7 @@ using EmulatorLauncher.Common;
 
 namespace EmulatorLauncher
 {
-    class RetrobatLauncherGenerator : Generator
+    class LumacaLauncherGenerator : Generator
     {
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {

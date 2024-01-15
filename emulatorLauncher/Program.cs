@@ -43,7 +43,7 @@ namespace EmulatorLauncher
         static Dictionary<string, Func<Generator>> generators = new Dictionary<string, Func<Generator>>
         {
             { "3dsen", () => new Nes3dGenerator() },
-            { "retrobat", () => new RetrobatLauncherGenerator() },
+            { "lumaca", () => new LumacaLauncherGenerator() },
             { "libretro", () => new LibRetroGenerator() }, { "angle", () => new LibRetroGenerator() },
             { "amigaforever", () => new AmigaForeverGenerator() },
             { "duckstation", () => new DuckstationGenerator() },

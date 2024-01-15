@@ -127,7 +127,7 @@ namespace EmulatorLauncher
         {
             string installerUrl = RegistryKeyEx.GetRegistryValue(
                 RegistryKeyEx.CurrentUser,
-                @"SOFTWARE\RetroBat",
+                @"SOFTWARE\Lumaca",
                 "InstallRootUrl") as string;
 
             if (string.IsNullOrEmpty(installerUrl))

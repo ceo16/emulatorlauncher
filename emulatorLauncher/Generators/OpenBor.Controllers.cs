@@ -132,8 +132,8 @@ namespace EmulatorLauncher
             int nbButtons = c.NbButtons;
             int nbAxes = c.NbAxes;
 
-            // With Custom Retrobat Build, Button & Axes count are hardcoded for easiest injection
-            if (_isCustomRetrobatOpenBor)
+            // With Custom Lumaca Build, Button & Axes count are hardcoded for easiest injection
+            if (_isCustomLumacaOpenBor)
             {
                 nbButtons = 20;
                 nbAxes = 8;

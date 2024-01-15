@@ -367,9 +367,9 @@ namespace EmulatorLauncher.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap retrobat {
+        internal static System.Drawing.Bitmap lumaca {
             get {
-                object obj = ResourceManager.GetObject("retrobat", resourceCulture);
+                object obj = ResourceManager.GetObject("lumaca", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
