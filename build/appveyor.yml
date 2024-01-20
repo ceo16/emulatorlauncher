@@ -50,5 +50,4 @@ deploy:
   tag: continuous
   release: continuous
   auth_token:
-    secure: afMGqkbqCFPGpQOgnu9WZOaMG2l8hCUPeeGQU9JvZYeQGC+1LcfgXjGJF6LIOFrs
-  force_update: true
+    secure: Jzp2SBYLkIC3plNxmxAhQNW3VLlgIWzjAIvDRZ2xgWgMN5cKZe8XuJqbrQDYsGSo
