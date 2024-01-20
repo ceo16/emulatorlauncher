@@ -186,7 +186,7 @@ namespace EmulatorLauncher
             string vita_emulator_path = AppConfig.GetFullPath("vita3k");
             yml["pref-path"] = vita_emulator_path;
 
-            //Add modules if user has set option to manage from RETROBAT
+            //Add modules if user has set option to manage from LUMACA
             if (SystemConfig.isOptSet("modules") && SystemConfig["modules"] == "1")
             {
                 yml["modules-mode"] = "1";

@@ -55,8 +55,8 @@ namespace EmulatorLauncher
 
             var bezels = BezelFiles.GetBezelFiles(system, rom, resolution);
 
-            // Check if it's retrobat version
-            if (!string.IsNullOrEmpty(versionInfo.FileDescription) && versionInfo.FileDescription.Contains("Retrobat"))
+            // Check if it's lumaca version
+            if (!string.IsNullOrEmpty(versionInfo.FileDescription) && versionInfo.FileDescription.Contains("Lumaca"))
             {
                 // Disable internal effects ( scanlines )
                 WriteApple2Option("Video Style", "0");

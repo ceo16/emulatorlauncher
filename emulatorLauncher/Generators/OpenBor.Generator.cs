@@ -19,7 +19,7 @@ namespace EmulatorLauncher
         }
 
         private string _destFile;
-        private bool _isCustomRetrobatOpenBor; // This Version support harcoded NumButtons / NumAxes values for generic injection
+        private bool _isCustomLumacaOpenBor; // This Version support harcoded NumButtons / NumAxes values for generic injection
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {            
@@ -39,7 +39,7 @@ namespace EmulatorLauncher
             try
             {
                 var versionInfo = FileVersionInfo.GetVersionInfo(exe);
-                _isCustomRetrobatOpenBor = (versionInfo.FilePrivatePart == 5242); // 5242 stands for RB ( 'R' x52, 'B' x42 ) -> RetroBat !
+                _isCustomLumacaOpenBor = (versionInfo.FilePrivatePart == 5242); // 5242 stands for RB ( 'R' x52, 'B' x42 ) -> Lumaca !
             }
             catch { }
 
@@ -110,7 +110,7 @@ namespace EmulatorLauncher
         private bool setupConfigIni(string path)
         {
             string ini = Path.Combine(path, "config.ini");
-            if (!File.Exists(ini) && !_isCustomRetrobatOpenBor)
+            if (!File.Exists(ini) && !_isCustomLumacaOpenBor)
                 return false;
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");

@@ -6,12 +6,12 @@ using System.Xml.Serialization;
 using System.IO;
 using EmulatorLauncher.Common.FileFormats;
 
-namespace RetrobatUpdater
+namespace LumacaUpdater
 {
     /* Sample file :
     <?xml version="1.0" encoding="UTF-8"?>
     <upgradeinfo>
-      <neveroverwrite path="retrobat.ini"/>
+      <neveroverwrite path="lumaca.ini"/>
       <neveroverwrite path="emulationstation\.emulationstation\es_settings.cfg"/>
       <neveroverwrite path="emulationstation\.emulationstation\es_input.cfg"/>
       <actions version="4.0.2"> <!-- startswith -->

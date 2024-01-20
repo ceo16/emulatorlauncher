@@ -5,13 +5,13 @@ using System.Text;
 using System.IO;
 using EmulatorLauncher.Common;
 
-namespace RetrobatUpdater
+namespace LumacaUpdater
 {
-    static class RetrobatVersion
+    static class LumacaVersion
     {
         public static string GetInstallUrl(string relativePath)
         {
-            string installerUrl = RegistryKeyEx.GetRegistryValue(RegistryKeyEx.CurrentUser, @"SOFTWARE\RetroBat", "InstallRootUrl") as string;
+            string installerUrl = RegistryKeyEx.GetRegistryValue(RegistryKeyEx.CurrentUser, @"SOFTWARE\Lumaca", "InstallRootUrl") as string;
             if (string.IsNullOrEmpty(installerUrl))
                 return null;
 
@@ -35,12 +35,12 @@ namespace RetrobatUpdater
         private static string GetLocalVersionInfoPath()
         {
             /*
-            string localFile = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(typeof(RetrobatVersion).Assembly.Location)), "system", "version.info");
+            string localFile = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(typeof(LumacaVersion).Assembly.Location)), "system", "version.info");
             if (File.Exists(localFile))
                 return localFile;
             */
 
-            string localFile = Path.Combine(Path.GetDirectoryName(typeof(RetrobatVersion).Assembly.Location), "version.info");
+            string localFile = Path.Combine(Path.GetDirectoryName(typeof(LumacaVersion).Assembly.Location), "version.info");
             return localFile;
         }
 

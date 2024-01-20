@@ -15,7 +15,7 @@ namespace EmulatorLauncher
 
         static MessSystem[] MessSystems = new MessSystem[]
             {
-                // IN RETROBAT
+                // IN LUMACA
 
                 // ADAM
                 new MessSystem("adam"         ,"adam"     , new MessRomType[]
@@ -260,7 +260,7 @@ namespace EmulatorLauncher
                 new MessSystem("arcadia"      ,"arcadia"  ,"cart"  ),           // Arcadia 2001
                 new MessSystem("gmaster"      ,"gmaster"  ,"cart"  ),           // Game Master
 
-                // NOT IN RETROBAT
+                // NOT IN LUMACA
                 new MessSystem("x1"           ,"x1" , new MessRomType[] 
                         { 
                             new MessRomType("cart", new string[] { "bin", "rom" } ), 

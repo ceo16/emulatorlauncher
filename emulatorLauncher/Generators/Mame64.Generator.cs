@@ -516,7 +516,7 @@ namespace EmulatorLauncher
             else
                 retList.Add("winhybrid");
 
-            if (SystemConfig.isOptSet("mame_ctrlr_profile") && SystemConfig["mame_ctrlr_profile"] != "none" && SystemConfig["mame_ctrlr_profile"] != "retrobat_auto")
+            if (SystemConfig.isOptSet("mame_ctrlr_profile") && SystemConfig["mame_ctrlr_profile"] != "none" && SystemConfig["mame_ctrlr_profile"] != "lumaca_auto")
             {
                 string ctrlrProfile = hbmame? Path.Combine(AppConfig.GetFullPath("saves"), "hbmame", "ctrlr", SystemConfig["mame_ctrlr_profile"] + ".cfg") : Path.Combine(AppConfig.GetFullPath("saves"), "mame", "ctrlr", SystemConfig["mame_ctrlr_profile"] + ".cfg");
 
@@ -537,12 +537,12 @@ namespace EmulatorLauncher
                 }
             }
             
-            else if (!SystemConfig.isOptSet("mame_ctrlr_profile") || SystemConfig["mame_ctrlr_profile"] != "retrobat_auto")
+            else if (!SystemConfig.isOptSet("mame_ctrlr_profile") || SystemConfig["mame_ctrlr_profile"] != "lumaca_auto")
             {
                 if (ConfigureMameControllers(ctrlrPath, hbmame))
                 {
                     retList.Add("-ctrlr");
-                    retList.Add("retrobat_auto");
+                    retList.Add("lumaca_auto");
                 }
             }
 

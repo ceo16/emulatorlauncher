@@ -7,11 +7,11 @@ using System.Security.Cryptography;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Compression;
 
-namespace RetrobatUpdater
+namespace LumacaUpdater
 {
     class Program
     {
-        static string UpdateRelativeUrl = "{0}/archives/retrobat-v{1}.zip";
+        static string UpdateRelativeUrl = "{0}/archives/lumaca-v{1}.zip";
 
         static int Main(string[] args)
         {
@@ -28,31 +28,31 @@ namespace RetrobatUpdater
                 if (string.IsNullOrEmpty(branch))
                     branch = "stable";
 
-                string localVersion = RetrobatVersion.GetLocalVersion();
+                string localVersion = LumacaVersion.GetLocalVersion();
                 if (string.IsNullOrEmpty(localVersion))
                 {
-                    ConsoleOutput("Retrobat is not properly installed");
+                    ConsoleOutput("Lumaca is not properly installed");
                     return 1;
                 }
 
-                string remoteVersion = RetrobatVersion.GetRemoteVersion(branch);
+                string remoteVersion = LumacaVersion.GetRemoteVersion(branch);
                 if (string.IsNullOrEmpty(remoteVersion) || remoteVersion == localVersion)
                 {
                     ConsoleOutput("No update available");
                     return 1;
                 }
 
-                string url = RetrobatVersion.GetInstallUrl(string.Format(UpdateRelativeUrl, branch, remoteVersion));
+                string url = LumacaVersion.GetInstallUrl(string.Format(UpdateRelativeUrl, branch, remoteVersion));
                 if (string.IsNullOrEmpty(url))
                     return -1;
 
                 /*
 #if DEBUG
-                if (Directory.Exists(@"H:\retrobat"))
+                if (Directory.Exists(@"H:\lumaca"))
                 {
-                    rootPath = @"H:\retrobat";
-                    var z = ProcessUpgradeActions(@"c:\temp\upgrade.xml", @"H:\retrobat", localVersion);
-                    z.IsOverridable("retrobat.ini");
+                    rootPath = @"H:\lumaca";
+                    var z = ProcessUpgradeActions(@"c:\temp\upgrade.xml", @"H:\lumaca", localVersion);
+                    z.IsOverridable("lumaca.ini");
                     return -1;
                 }
 #endif
@@ -162,7 +162,7 @@ namespace RetrobatUpdater
                 catch { }
 
                 // Update local version info
-                RetrobatVersion.SetLocalVersion(remoteVersion);
+                LumacaVersion.SetLocalVersion(remoteVersion);
 
                 ConsoleOutput("UPDATE DONE");
                 return 0;

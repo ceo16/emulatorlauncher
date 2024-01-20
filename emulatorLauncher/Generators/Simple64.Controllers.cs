@@ -67,7 +67,7 @@ namespace EmulatorLauncher
             bool revertbuttons = controller.VendorID == USB_VENDOR.NINTENDO;
             bool zAsLeftTrigger = SystemConfig["mupen64_inputprofile" + playerIndex] == "c_face_zl" || SystemConfig["mupen64_inputprofile" + playerIndex] == "c_stick_zl";
 
-            string iniSection = "RetroBatAuto-" + playerIndex;
+            string iniSection = "LumacaAuto-" + playerIndex;
 
             // Get default sensitivity & deadzone
             string sensitivity = "100";
