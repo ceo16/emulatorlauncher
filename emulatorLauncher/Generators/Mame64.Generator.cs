@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.PadToKeyboard;
@@ -12,6 +11,11 @@ namespace EmulatorLauncher
 {
     partial class Mame64Generator : Generator
     {
+        public Mame64Generator()
+        {
+            DependsOnDesktopResolution = true;
+        }
+
         private bool _multigun;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)

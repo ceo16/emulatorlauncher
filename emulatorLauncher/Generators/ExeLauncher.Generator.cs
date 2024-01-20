@@ -3,14 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Diagnostics;
-using Microsoft.Win32;
-using System.Runtime.Serialization;
 using System.Threading;
-using System.Data.SQLite;
-using System.IO.Compression;
-using System.Net;
-using System.Windows.Documents;
-using System.Security.Cryptography;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
@@ -20,6 +13,11 @@ namespace EmulatorLauncher
 {
     partial class ExeLauncherGenerator : Generator
     {
+        public ExeLauncherGenerator()
+        {
+            DependsOnDesktopResolution = true;
+        }
+
         private string _systemName;
         private string _exename;
         private bool _isGameExePath;

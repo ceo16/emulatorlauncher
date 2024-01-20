@@ -5,6 +5,8 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.PadToKeyboard;
+﻿using System.IO;
+using System.Diagnostics;
 using System.Windows.Forms;
 using EmulatorLauncher.Common;
 

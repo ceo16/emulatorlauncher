@@ -4,16 +4,9 @@ using System.Linq;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
-using System.Management;
-using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Net;
-using System.ComponentModel;
 using Microsoft.Win32;
-using System.Text;
 using System.Security.Principal;
-using System.Xml.Linq;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.EmulationStation;
@@ -264,10 +257,12 @@ namespace EmulatorLauncher
             SystemConfig.ImportOverrides(SystemConfig.LoadAll(SystemConfig["system"] + "[\"" + Path.GetFileName(SystemConfig["rom"]) + "\"]"));
             SystemConfig.ImportOverrides(ConfigFile.FromArguments(args));
 
-
-            var test = GunGames.Systems;
-
-
+            /*
+            var games = new List<EmulatorLauncher.Common.Launchers.LauncherGameInfo>();
+            games.AddRange(EmulatorLauncher.Common.Launchers.SteamLibrary.GetInstalledGames());
+            games.AddRange(EmulatorLauncher.Common.Launchers.EpicLibrary.GetInstalledGames());
+            games.AddRange(EmulatorLauncher.Common.Launchers.AmazonLibrary.GetInstalledGames());
+            */
 
             if (!SystemConfig.isOptSet("use_guns") && args.Any(a => a == "-lightgun"))
                 SystemConfig["use_guns"] = "true";
