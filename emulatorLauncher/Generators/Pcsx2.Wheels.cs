@@ -35,6 +35,8 @@ namespace EmulatorLauncher
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
             SdlToDirectInput sdlWheel1 = null;
             SdlToDirectInput sdlWheel2 = null;
+            string forceWheelType = null;
+            string forceWheelType2 = null;
 
             if (!File.Exists(gamecontrollerDB))
             {
@@ -67,6 +69,15 @@ namespace EmulatorLauncher
             if (wheelNb < 1)
                 return;
 
+            if (SystemConfig.isOptSet("pcsx2_wheeltype") && !string.IsNullOrEmpty(SystemConfig["pcsx2_wheeltype"]))
+                forceWheelType = SystemConfig["pcsx2_wheeltype"];
+
+            if (SystemConfig.isOptSet("pcsx2_wheeltype2") && !string.IsNullOrEmpty(SystemConfig["pcsx2_wheeltype2"]))
+                forceWheelType2 = SystemConfig["pcsx2_wheeltype2"];
+
+            // Enable Dinput (needed for ForceFeedback)
+            pcsx2ini.WriteValue("InputSources", "DInput", "true");
+
             // Initialize USB sections
             string usbSection1 = "USB1";
             if (SystemConfig.isOptSet("pcsx2_wheel") && SystemConfig["pcsx2_wheel"] == "USB2")
@@ -89,22 +100,23 @@ namespace EmulatorLauncher
 
             try 
             {
-                if (!WheelSDLMappingInfo.Instance.TryGetValue(wheeltype1, out wheelSDLmapping1))
-                {
-                    if (!WheelMappingInfo.Instance.TryGetValue(wheeltype1, out wheelmapping1))
-                        WheelMappingInfo.Instance.TryGetValue("default", out wheelmapping1);
-                    else
-                        SimpleLogger.Instance.Info("[WHEELS] Using dinput mapping to configure first wheel.");
-                }
-                else
-                    SimpleLogger.Instance.Info("[WHEELS] Using SDL mapping to configure first wheel.");
+                if (!WheelMappingInfo.InstanceW.TryGetValue(wheeltype1, out wheelmapping1));
+                    SimpleLogger.Instance.Info("[WHEELS] Found dinput mapping to configure first wheel.");
             }
-            catch { SimpleLogger.Instance.Info("[WHEELS] Problem getting wheel 1 mapping in yml file."); }
+            catch { SimpleLogger.Instance.Info("[WHEELS] No DInput mapping in yml file four wheel 1."); }
 
-            if (wheelSDLmapping1 == null)
-                pcsx2ini.WriteValue("InputSources", "DInput", "true");
-            else
+            try
+            {
+                if (!WheelSDLMappingInfo.InstanceWSDL.TryGetValue(wheeltype1, out wheelSDLmapping1))
+                    SimpleLogger.Instance.Info("[WHEELS] Found SDL mapping to configure first wheel.");
+            }
+            catch { SimpleLogger.Instance.Info("[WHEELS] No SDL mapping in yml file four wheel 1."); }
+
+            if (wheelSDLmapping1 != null)
+            {
                 wheelTech1 = "sdl";
+                pcsx2ini.WriteValue("InputSources", "SDL", "true");
+            }
 
             if (wheelTech1 == "sdl")
                 wheelGuid1 = wheelSDLmapping1.WheelGuid;
@@ -120,10 +132,21 @@ namespace EmulatorLauncher
                     SimpleLogger.Instance.Info("[WHEEL] Wheel 1. No Dinput mapping found for : " + wheelGuid1 + " " + wheel1.Name);
 
                 pcsx2ini.WriteValue(usbSection1, "Type", "Pad");
-                pcsx2ini.WriteValue(usbSection1, "Pad_subtype", wheelmapping1.Pcsx2_Type);
-                pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "DInput-" + wheel1.DinputIndex);
-                pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, -1));
-                pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, 1));
+                pcsx2ini.WriteValue(usbSection1, "Pad_subtype", forceWheelType != null ? forceWheelType : wheelmapping1.Pcsx2_Type);
+
+                if (SystemConfig.isOptSet("pcsx2_force_feedback") && SystemConfig.getOptBoolean("pcsx2_force_feedback"))
+                {
+                    pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "None");
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, -1));
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, 1));
+                }
+                else
+                {
+                    pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "DInput-" + wheel1.DinputIndex);
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, -1));
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, 1));
+                }
+
                 pcsx2ini.WriteValue(usbSection1, "Pad_Start", GetDInputKeyName(wheelIndex1, sdlWheel1, "start"));
                 pcsx2ini.WriteValue(usbSection1, "Pad_Select", GetDInputKeyName(wheelIndex1, sdlWheel1, "back"));
                 pcsx2ini.WriteValue(usbSection1, "Pad_DPadUp", GetDInputKeyName(wheelIndex1, sdlWheel1, "dpup"));
@@ -146,13 +169,30 @@ namespace EmulatorLauncher
             {
                 SimpleLogger.Instance.Info("[WHEEL] Wheel 1. Configuring SDL mapping for wheel " + wheelGuid1);
 
+                SimpleLogger.Instance.Info("[WHEEL] Wheel 1. Fetching gamecontrollerdb.txt file with guid : " + wheelGuid1);
+                sdlWheel1 = GameControllerDBParser.ParseByGuid(gamecontrollerDB, wheelGuid1);
+
+                if (sdlWheel1 == null)
+                    SimpleLogger.Instance.Info("[WHEEL] Wheel 1. No Dinput mapping found for : " + wheelGuid1 + " " + wheel1.Name);
+
                 string sdlDevice = "SDL-" + wheel1.SDLIndex + "/";
 
                 pcsx2ini.WriteValue(usbSection1, "Type", "Pad");
-                pcsx2ini.WriteValue(usbSection1, "Pad_subtype", wheelSDLmapping1.Pcsx2_Type);
-                pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "SDL-" + wheel1.SDLIndex);
-                pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", sdlDevice + "-" + wheelSDLmapping1.Steer);
-                pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", sdlDevice + "+" + wheelSDLmapping1.Steer);
+                pcsx2ini.WriteValue(usbSection1, "Pad_subtype", forceWheelType != null ? forceWheelType : wheelSDLmapping1.Pcsx2_Type);
+
+                if (SystemConfig.isOptSet("pcsx2_force_feedback") && SystemConfig.getOptBoolean("pcsx2_force_feedback"))
+                {
+                    pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "None");
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", sdlDevice + "-" + wheelSDLmapping1.Steer);
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", sdlDevice + "+" + wheelSDLmapping1.Steer);
+                }
+                else
+                {
+                    pcsx2ini.WriteValue(usbSection1, "Pad_FFDevice", "SDL-" + wheel1.SDLIndex);
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringLeft", sdlDevice + "-" + wheelSDLmapping1.Steer + " & " + GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, -1));
+                    pcsx2ini.WriteValue(usbSection1, "Pad_SteeringRight", sdlDevice + "+" + wheelSDLmapping1.Steer + " & " + GetWheelMapping(sdlWheel1, wheelmapping1.Steer, wheelIndex1, 1));
+                }
+
                 pcsx2ini.WriteValue(usbSection1, "Pad_Start", sdlDevice + wheelSDLmapping1.Start);
                 pcsx2ini.WriteValue(usbSection1, "Pad_Select", sdlDevice + wheelSDLmapping1.Select);
                 pcsx2ini.WriteValue(usbSection1, "Pad_DPadUp", sdlDevice + wheelSDLmapping1.Dpad + "North");
@@ -184,17 +224,17 @@ namespace EmulatorLauncher
 
                 try
                 {
-                    if (!WheelSDLMappingInfo.Instance.TryGetValue(wheeltype2, out wheelSDLmapping2))
-                    {
-                        if (!WheelMappingInfo.Instance.TryGetValue(wheeltype2, out wheelmapping2))
-                            WheelMappingInfo.Instance.TryGetValue("default", out wheelmapping2);
-                        else
-                            SimpleLogger.Instance.Info("[WHEELS] Using dinput mapping to configure second wheel.");
-                    }
-                    else
-                        SimpleLogger.Instance.Info("[WHEELS] Using SDL mapping to configure second wheel.");
+                    if (!WheelMappingInfo.InstanceW.TryGetValue(wheeltype2, out wheelmapping2)) ;
+                    SimpleLogger.Instance.Info("[WHEELS] Found dinput mapping to configure second wheel.");
                 }
-                catch { SimpleLogger.Instance.Info("[WHEELS] Problem getting wheel 2 mapping in yml file."); }
+                catch { SimpleLogger.Instance.Info("[WHEELS] No DInput mapping in yml file four wheel 2."); }
+
+                try
+                {
+                    if (!WheelSDLMappingInfo.InstanceWSDL.TryGetValue(wheeltype2, out wheelSDLmapping2))
+                        SimpleLogger.Instance.Info("[WHEELS] Found SDL mapping to configure second wheel.");
+                }
+                catch { SimpleLogger.Instance.Info("[WHEELS] No SDL mapping in yml file four wheel 2."); }
 
                 if (wheelSDLmapping2 == null)
                     pcsx2ini.WriteValue("InputSources", "DInput", "true");
@@ -202,7 +242,10 @@ namespace EmulatorLauncher
                     wheelTech2 = "sdl";
 
                 if (wheelTech2 == "sdl")
+                {
+                    pcsx2ini.WriteValue("InputSources", "SDL", "true");
                     wheelGuid2 = wheelSDLmapping2.WheelGuid;
+                }
                 else
                     wheelGuid2 = wheelmapping2.WheelGuid;
 
@@ -221,10 +264,21 @@ namespace EmulatorLauncher
                         SimpleLogger.Instance.Info("[WHEEL] Wheel 2. No Dinput mapping found for : " + wheelGuid2 + " " + wheel2.Name);
 
                     pcsx2ini.WriteValue(usbSection2, "Type", "Pad");
-                    pcsx2ini.WriteValue(usbSection2, "Pad_subtype", wheelmapping2.Pcsx2_Type);
-                    pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "DInput-" + wheelIndex2);
-                    pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, -1));
-                    pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, 1));
+                    pcsx2ini.WriteValue(usbSection2, "Pad_subtype", forceWheelType2 != null ? forceWheelType2 : wheelmapping2.Pcsx2_Type);
+
+                    if (SystemConfig.isOptSet("pcsx2_force_feedback") && SystemConfig.getOptBoolean("pcsx2_force_feedback"))
+                    {
+                        pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "None");
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, -1));
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, 1));
+                    }
+                    else
+                    {
+                        pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "DInput-" + wheelIndex2);
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, -1));
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, 1));
+                    }
+
                     pcsx2ini.WriteValue(usbSection2, "Pad_Start", GetDInputKeyName(wheelIndex2, sdlWheel2, "start"));
                     pcsx2ini.WriteValue(usbSection2, "Pad_Select", GetDInputKeyName(wheelIndex2, sdlWheel2, "back"));
                     pcsx2ini.WriteValue(usbSection2, "Pad_DPadUp", GetWheelMapping(sdlWheel2, wheelmapping2.DpadUp, wheelIndex2));
@@ -247,13 +301,30 @@ namespace EmulatorLauncher
                 {
                     SimpleLogger.Instance.Info("[WHEEL] Wheel 2. Configuring SDL mapping for wheel " + wheelGuid2);
 
+                    SimpleLogger.Instance.Info("[WHEEL] Wheel 2. Fetching gamecontrollerdb.txt file with guid : " + wheelGuid2);
+                    sdlWheel2 = GameControllerDBParser.ParseByGuid(gamecontrollerDB, wheelGuid2);
+
+                    if (sdlWheel2 == null)
+                        SimpleLogger.Instance.Info("[WHEEL] Wheel 2. No Dinput mapping found for : " + wheelGuid2 + " " + wheel2.Name);
+
                     string sdlDevice2 = "SDL-" + wheel2.SDLIndex + "/";
 
                     pcsx2ini.WriteValue(usbSection2, "Type", "Pad");
-                    pcsx2ini.WriteValue(usbSection2, "Pad_subtype", wheelSDLmapping2.Pcsx2_Type);
-                    pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "SDL-" + wheel2.SDLIndex);
-                    pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", sdlDevice2 + "-" + wheelSDLmapping2.Steer);
-                    pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", sdlDevice2 + "+" + wheelSDLmapping2.Steer);
+                    pcsx2ini.WriteValue(usbSection2, "Pad_subtype", forceWheelType2 != null ? forceWheelType2 : wheelSDLmapping2.Pcsx2_Type);
+                    
+                    if (SystemConfig.isOptSet("pcsx2_force_feedback") && SystemConfig.getOptBoolean("pcsx2_force_feedback"))
+                    {
+                        pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "Null");
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", sdlDevice2 + "-" + wheelSDLmapping2.Steer);
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", sdlDevice2 + "+" + wheelSDLmapping2.Steer);
+                    }
+                    else
+                    {
+                        pcsx2ini.WriteValue(usbSection2, "Pad_FFDevice", "SDL-" + wheel2.SDLIndex);
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringLeft", sdlDevice2 + "-" + wheelSDLmapping2.Steer + " & " + GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, -1));
+                        pcsx2ini.WriteValue(usbSection2, "Pad_SteeringRight", sdlDevice2 + "+" + wheelSDLmapping2.Steer + " & " + GetWheelMapping(sdlWheel2, wheelmapping2.Steer, wheelIndex2, 1));
+                    }
+
                     pcsx2ini.WriteValue(usbSection2, "Pad_Start", sdlDevice2 + wheelSDLmapping2.Start);
                     pcsx2ini.WriteValue(usbSection2, "Pad_Select", sdlDevice2 + wheelSDLmapping2.Select);
                     pcsx2ini.WriteValue(usbSection2, "Pad_DPadUp", sdlDevice2 + wheelSDLmapping2.Dpad + "North");
