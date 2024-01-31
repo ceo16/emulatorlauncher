@@ -126,7 +126,6 @@
     <Compile Include="EpicLibrary\Properties\AssemblyInfo.cs" />
     <Compile Include="EpicLibrary\Services\EpicAccountClient.cs" />
     <Compile Include="EpicLibrary\Services\WebStoreClient.cs" />
-</Compile>
     <Compile Include="Generators\Bizhawk.CoreOptions.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
     </Compile>
