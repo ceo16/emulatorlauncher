@@ -1,5 +1,5 @@
-﻿using emulatorLauncher.Common;
-using emulatorLauncher.SDK;
+﻿using EmulatorLauncher.Common;
+using EmulatorLauncher.SDK;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
