@@ -111,7 +111,7 @@
     <Compile Include="EpicLibrary\EpicLibrary.cs" />
     <Compile Include="EpicLibrary\EpicLibrarySettingsViewModel.cs" />
     <Compile Include="EpicLibrary\EpicLibrarySettingsView.xaml.cs">
-      <DependentUpon>"EpicLibrary\EpicLibrarySettingsView.xaml"</DependentUpon>
+      <DependentUpon>EpicLibrarySettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="EpicLibrary\LocalizationKeys.cs" />
     <Compile Include="EpicLibrary\Models\AccountResponse.cs" />
