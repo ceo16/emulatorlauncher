@@ -1,5 +1,5 @@
-﻿using Playnite.Common;
-using Playnite.SDK;
+﻿using emulatorLauncher.Common;
+using emulatorLauncher.SDK;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
