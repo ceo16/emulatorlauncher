@@ -1,6 +1,9 @@
 ﻿using EpicLibrary.Models;
 using EpicLibrary.Services;
 using EmulatorLauncher.Common;
+using Playnite.SDK;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
 using System.IO;
