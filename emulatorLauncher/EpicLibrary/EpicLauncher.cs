@@ -6,9 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using EpicLibrary.Models;
-using Playnite.Common;
-using Playnite.SDK;
-using Playnite.SDK.Data;
+using EmulatorLauncher.Common;
 
 namespace EpicLibrary
 {
