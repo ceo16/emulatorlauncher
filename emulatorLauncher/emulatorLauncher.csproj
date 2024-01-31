@@ -277,7 +277,7 @@
     <Compile Include="Generators\Redream.Controllers.cs">
       <DependentUpon>Redream.Generator.cs</DependentUpon>
     </Compile>
-    <Compile Include="Generators\RetrobatLauncher.Generator.cs" />
+    <Compile Include="Generators\LumacaLauncher.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Controllers.cs">
       <DependentUpon>Rpcs3.Generator.cs</DependentUpon>
