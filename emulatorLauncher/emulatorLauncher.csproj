@@ -51,6 +51,7 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+     <Reference Include="EpicClient.dll" />
     <Reference Include="System.Data.SQLite, Version=1.0.118.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\System.Data.SQLite.dll</HintPath>
@@ -105,27 +106,6 @@
     <Compile Include="Generators\Bizhawk.Controllers.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
     </Compile>
-    <Compile Include="EpicLibrary\EpicClient.cs" />
-    <Compile Include="EpicLibrary\EpicGameController.cs" />
-    <Compile Include="EpicLibrary\EpicLauncher.cs" />
-    <Compile Include="EpicLibrary\EpicLibrary.cs" />
-    <Compile Include="EpicLibrary\EpicLibrarySettingsViewModel.cs" />
-    <Compile Include="EpicLibrary\EpicLibrarySettingsView.xaml.cs">
-      <DependentUpon>EpicLibrarySettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="EpicLibrary\LocalizationKeys.cs" />
-    <Compile Include="EpicLibrary\Models\AccountResponse.cs" />
-    <Compile Include="EpicLibrary\Models\AssetsResponse.cs" />
-    <Compile Include="EpicLibrary\Models\CatalogResponse.cs" />
-    <Compile Include="EpicLibrary\Models\ErrorResponse.cs" />
-    <Compile Include="EpicLibrary\Models\LauncherInstalled.cs" />
-    <Compile Include="EpicLibrary\Models\OauthResponse.cs" />
-    <Compile Include="EpicLibrary\EpicMetadataProvider.cs" />
-    <Compile Include="EpicLibrary\Models\PlaytimesResponse.cs" />
-    <Compile Include="EpicLibrary\Models\WebStoreModels.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="EpicLibrary\Services\EpicAccountClient.cs" />
-    <Compile Include="EpicLibrary\Services\WebStoreClient.cs" />
     <Compile Include="Generators\Bizhawk.CoreOptions.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
     </Compile>
