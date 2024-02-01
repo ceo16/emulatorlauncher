@@ -7,7 +7,7 @@ assembly_info:
   assembly_version: '{version}'
   assembly_file_version: '{version}'
   assembly_informational_version: '{version}'
-  before_build:
+before_build:
 - cmd: csc /target:library EpicClient.cs
 build:
   project: batocera-ports.sln
