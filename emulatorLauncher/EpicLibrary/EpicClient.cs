@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace EpicLibrary
 {
-    public class EpicClient : LibraryClient
+    public class EpicClient : LibraryClients
     {
         private static readonly ILogger logger = LogManager.GetLogger();
 
