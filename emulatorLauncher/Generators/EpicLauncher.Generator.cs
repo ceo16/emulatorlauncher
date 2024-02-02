@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Diagnostics;
 using EmulatorLauncher.Common.Launchers;
-using EpicStoreAPI;
 
 namespace EmulatorLauncher
 {
