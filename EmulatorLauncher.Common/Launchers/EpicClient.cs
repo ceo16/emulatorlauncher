@@ -6,8 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace EpicLibrary
-{
-    public class EpicClient : LibraryClient
     {
         private static readonly ILogger logger = LogManager.GetLogger();
 
@@ -36,4 +34,4 @@ namespace EpicLibrary
             }
         }
     }
-}
+
