@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace EmulatorLauncher.Common.Launchers.Epic
+namespace EpicLibrary
 {
     public class EpicClient : LibraryClient
     {
