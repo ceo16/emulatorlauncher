@@ -155,7 +155,6 @@
     <Compile Include="WebTools.cs" />
     <Compile Include="Epic\EpicClient.cs" />
     <Compile Include="Epic\EpicGameController.cs" />
-    <Compile Include="Epic\EpicLauncher.cs" />
     <Compile Include="Epic\EpicLibrary.cs" />
     <Compile Include="Epic\EpicLibrarySettingsViewModel.cs" />
     <Compile Include="Epic\EpicLibrarySettingsView.xaml.cs">
