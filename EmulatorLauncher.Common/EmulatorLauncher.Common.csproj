@@ -56,7 +56,6 @@
      <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
@@ -160,25 +159,6 @@
     <Compile Include="Tools.cs" />
     <Compile Include="User32.cs" />
     <Compile Include="WebTools.cs" />
-    <Compile Include="Epic\EpicClient.cs" />
-    <Compile Include="Epic\EpicGameController.cs" />
-    <Compile Include="Epic\EpicLibrary.cs" />
-    <Compile Include="Epic\EpicLibrarySettingsViewModel.cs" />
-    <Compile Include="Epic\EpicLibrarySettingsView.xaml.cs">
-      <DependentUpon>Epic\EpicLibrarySettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Epic\LocalizationKeys.cs" />
-    <Compile Include="Epic\Models\AccountResponse.cs" />
-    <Compile Include="Epic\Models\AssetsResponse.cs" />
-    <Compile Include="Epic\Models\CatalogResponse.cs" />
-    <Compile Include="Epic\Models\ErrorResponse.cs" />
-    <Compile Include="Epic\Models\LauncherInstalled.cs" />
-    <Compile Include="Epic\Models\OauthResponse.cs" />
-    <Compile Include="Epic\EpicMetadataProvider.cs" />
-    <Compile Include="Epic\Models\PlaytimesResponse.cs" />
-    <Compile Include="Epic\Models\WebStoreModels.cs" />
-    <Compile Include="Epic\Services\EpicAccountClient.cs" />
-    <Compile Include="Epic\Services\WebStoreClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
