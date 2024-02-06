@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Emulatorlauncher.Common.Epic.Models;
 using EmulatorLauncher.Common;
+EmulatorLauncher.Common.Launchers
 
 namespace EpicLibrary
 {
