@@ -1,6 +1,6 @@
 ﻿using Epic.Models;
 using Epic.Services;
-using Playnite.Common;
+using EmulatorLauncher.Common;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
