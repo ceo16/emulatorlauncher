@@ -1,4 +1,4 @@
-﻿using Playnite.Common;
+﻿using EmulatorLauncher.Common;
 using Playnite.SDK;
 using System;
 using System.Collections.Generic;
