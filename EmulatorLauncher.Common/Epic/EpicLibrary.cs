@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace EpicLibrary
 {
