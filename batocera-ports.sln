@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "emulatorLauncher", "emulato
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "batocera-bluetooth", "batocera-bluetooth\batocera-bluetooth.csproj", "{1CC1B79B-CCD2-445A-89CC-BEA265B36CD0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Epic", "Epic\EpicLibrary.csproj", "{2FD110FE-F936-4768-AE66-55EC7A60989A}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{56B39FFD-1B80-497D-BA0E-1B9D59CB9313}"
 	ProjectSection(SolutionItems) = preProject
 		7z.dll = 7z.dll
