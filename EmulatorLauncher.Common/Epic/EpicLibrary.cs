@@ -1,5 +1,5 @@
-﻿using EpicLibrary.Models;
-using EpicLibrary.Services;
+﻿using Epic.Models;
+using Epic.Services;
 using Playnite.Common;
 using Playnite.SDK;
 using Playnite.SDK.Models;
