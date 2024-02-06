@@ -158,7 +158,7 @@ namespace EpicLibrary
     }    
 }
 
-namespace EmulatorLauncher.Common.Launchers.Epic
+namespace EpicLibrary
 {
     [DataContract]
     public class LauncherInstalled
