@@ -1,5 +1,5 @@
 ﻿using EpicLibrary.Models;
-using EumulatorLauncher.Common;
+using EmulatorLauncher.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
