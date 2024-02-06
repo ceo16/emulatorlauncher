@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace EpicLibrary
+namespace EmulatorLauncher.Common.Launchers
 {
     public class EpicInstallController : InstallController
     {
