@@ -8,7 +8,7 @@ using EmulatorLauncher.Common.FileFormats;
 using Microsoft.Win32;
 using EmulatorLauncher.Common.Launchers.Epic;
 
-namespace EmulatorLauncher.Common.Launchers
+namespace EpicLibrary
 {
     public class EpicLibrary
     {
