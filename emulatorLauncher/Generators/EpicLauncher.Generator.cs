@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using EpicLibrary.Models;
+using Emulatorlauncher.Common.Epic.Models;
 using EmulatorLauncher.Common;
 
 namespace EpicLibrary
