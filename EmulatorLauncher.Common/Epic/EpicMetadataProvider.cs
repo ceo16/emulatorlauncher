@@ -1,7 +1,4 @@
 ﻿using EpicLibrary.Services;
-using Playnite.SDK;
-using Playnite.SDK.Data;
-using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
