@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace EpicLibrary
+namespace EmulatorLauncher.Common.Launchers
 {
     [LoadPlugin]
     public class EpicLibrary : LibraryPluginBase<EpicLibrarySettingsViewModel>
