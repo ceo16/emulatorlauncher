@@ -1,7 +1,5 @@
 ﻿using EpicLibrary.Services;
-using Playnite;
-using Playnite.SDK;
-using Playnite.Commands;
+using EmulatorLauncher;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +10,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using Playnite.SDK.Data;
 
 namespace EpicLibrary
 {
