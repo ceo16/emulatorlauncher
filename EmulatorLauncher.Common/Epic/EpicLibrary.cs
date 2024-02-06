@@ -1,5 +1,5 @@
-﻿using Epic.Models;
-using Epic.Services;
+﻿using EmulatorLauncher.Common.Epic.Models;
+using EmulatorLauncher.Common.Epic.Services;
 using EmulatorLauncher.Common;
 using System;
 using System.Collections.Generic;
