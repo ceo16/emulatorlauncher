@@ -417,6 +417,8 @@ namespace EmulatorLauncher.Libretro
 
                     var index = i - 1;
                     InputRemap["input_remap_port_p" + i] = index.ToString();
+
+                    GenerateCoreInputRemap(system, core, InputRemap);
                 }
             }
 
@@ -556,8 +558,16 @@ namespace EmulatorLauncher.Libretro
             }
 
             // Controls
-            BindFeature(retroarchConfig, "input_libretro_device_p1", "a800_controller1", "513");
-            BindFeature(retroarchConfig, "input_libretro_device_p2", "a800_controller2", "513");
+            if (system == "atari5200")
+            {
+                BindFeature(retroarchConfig, "input_libretro_device_p1", "a800_controller1", "769");
+                BindFeature(retroarchConfig, "input_libretro_device_p2", "a800_controller2", "769");
+            }
+            else
+            {
+                BindFeature(retroarchConfig, "input_libretro_device_p1", "a800_controller1", "513");
+                BindFeature(retroarchConfig, "input_libretro_device_p2", "a800_controller2", "513");
+            }
 
             if (string.IsNullOrEmpty(AppConfig["bios"]))
                 return;
@@ -2072,7 +2082,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "mesen_hdpacks", "hd_packs", "disabled");
             BindFeature(coreSettings, "mesen_ntsc_filter", "ntsc_filter", "Disabled");
             BindFeature(coreSettings, "mesen_palette", "palette", "Default");
-            BindFeature(coreSettings, "mesen_shift_buttons_clockwise", "shift_buttons", "disabled");
+            BindFeature(coreSettings, "mesen_shift_buttons_clockwise", "mesen_shift_buttons", "disabled");
             BindFeature(coreSettings, "mesen_fake_stereo", "fake_stereo", "disabled");
             BindBoolFeature(coreSettings, "mesen_nospritelimit", "mesen_nospritelimit", "enabled", "disabled");
             BindFeature(coreSettings, "mesen_overclock", "mesen_overclock", "None");
