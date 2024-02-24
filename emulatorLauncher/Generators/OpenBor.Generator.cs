@@ -110,7 +110,7 @@ namespace EmulatorLauncher
         private bool setupConfigIni(string path)
         {
             string ini = Path.Combine(path, "config.ini");
-            if (!File.Exists(ini) && !_isCustomLumacaOpenBor)
+            if (!File.Exists(ini) && !_isCustomRetrobatOpenBor)
                 return false;
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
