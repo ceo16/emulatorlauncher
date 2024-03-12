@@ -19,7 +19,7 @@ namespace EmulatorLauncher
         }
 
         private string _destFile;
-        private bool _isCustomRerobatOpenBor; // This Version support harcoded NumButtons / NumAxes values for generic injection
+        private bool_isCustomRetrobatOpenBor; // This Version support harcoded NumButtons / NumAxes values for generic injection
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {            
