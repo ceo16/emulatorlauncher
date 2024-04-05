@@ -7,12 +7,12 @@ using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Joysticks;
 using EmulatorLauncher.Common.FileFormats;
+using System.Windows.Controls;
 
 namespace EmulatorLauncher
 {
     partial class FbneoGenerator : Generator
     {
-
         private void CreateControllerConfiguration(string path, string rom, string system)
         {
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
@@ -23,54 +23,6 @@ namespace EmulatorLauncher
                 catch { }
 
             string cfgFile = Path.Combine(padConfigFolder, Path.GetFileNameWithoutExtension(rom) + ".ini");
-
-            int players = 2;
-            if (players4.Any(g => _romName.StartsWith(g)))
-                players = 4;
-
-            var cfg = FbneoConfigFile.FromFile(cfgFile);
-
-            if (!Controllers.Any(c => !c.IsKeyboard))
-            {
-                var controller = Controllers.FirstOrDefault(c => c.IsKeyboard);
-                if (controller != null)
-                    ConfigureKeyboard(controller, cfg, cfgFile);
-            }
-
-            else
-            {
-                foreach (var controller in this.Controllers.Where(c => !c.IsKeyboard).OrderBy(i => i.PlayerIndex).Take(players))
-                    ConfigureJoystick(controller, cfg, system);
-
-                cfg.Save();
-            }
-        }
-
-        private void ConfigureJoystick(Controller controller, FbneoConfigFile cfg, string system)
-        {
-            if (controller == null)
-                return;
-
-            var ctrlrCfg = controller.Config;
-            if (ctrlrCfg == null)
-                return;
-
-            // Fbneo uses dinput plugin
-            if (controller.DirectInput == null)
-                return;
-
-            // Get gamecontrollerdb buttonmapping for the controller
-            string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
-            string guid1 = (controller.Guid.ToString()).Substring(0, 27) + "00000";
-            SdlToDirectInput dinputCtrl = null;
-
-            SimpleLogger.Instance.Info("[INFO] Player " + controller.PlayerIndex + ". Fetching gamecontrollerdb.txt file with guid : " + guid1);
-
-            try { dinputCtrl = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid1); }
-            catch { }
-
-            if (dinputCtrl == null)
-                return;
 
             // Get game mapping yml database
             YmlContainer game = null;
@@ -111,9 +63,64 @@ namespace EmulatorLauncher
 
                     gameMapping.Add(gameName, buttonMap);
                 }
+                else
+                    SimpleLogger.Instance.Info("[INFO] Game not found in mapping file : " + _romName);
             }
 
-            if (gameMapping == null)
+            if (gameMapping == null || gameMapping.Count == 0)
+                return;
+
+            // Define number of players
+            int players = 2;
+
+            if (gameMapping.Values.FirstOrDefault().ContainsKey("players"))
+            {
+                if (gameMapping.Values.FirstOrDefault()["players"].ToInteger() > 0)
+                    players = gameMapping.Values.FirstOrDefault()["players"].ToInteger();
+            }
+
+            var cfg = FbneoConfigFile.FromFile(cfgFile);
+
+            if (!Controllers.Any(c => !c.IsKeyboard))
+            {
+                var controller = Controllers.FirstOrDefault(c => c.IsKeyboard);
+                if (controller != null)
+                    ConfigureKeyboard(controller, cfg, cfgFile);
+            }
+
+            else
+            {
+                foreach (var controller in this.Controllers.Where(c => !c.IsKeyboard).OrderBy(i => i.PlayerIndex).Take(players))
+                    ConfigureJoystick(controller, cfg, system, gameMapping);
+
+                cfg.Save();
+            }
+        }
+
+        private void ConfigureJoystick(Controller controller, FbneoConfigFile cfg, string system, Dictionary<string, Dictionary<string,string>> gameMapping)
+        {
+            if (controller == null)
+                return;
+
+            var ctrlrCfg = controller.Config;
+            if (ctrlrCfg == null)
+                return;
+
+            // Fbneo uses dinput plugin
+            if (controller.DirectInput == null)
+                return;
+
+            // Get gamecontrollerdb buttonmapping for the controller
+            string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
+            string guid1 = (controller.Guid.ToString()).Substring(0, 27) + "00000";
+            SdlToDirectInput dinputCtrl = null;
+
+            SimpleLogger.Instance.Info("[INFO] Player " + controller.PlayerIndex + ". Fetching gamecontrollerdb.txt file with guid : " + guid1);
+
+            try { dinputCtrl = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid1); }
+            catch { }
+
+            if (dinputCtrl == null)
                 return;
 
             // Define index
@@ -127,7 +134,47 @@ namespace EmulatorLauncher
 
             foreach (var button in gameMapping.Values.FirstOrDefault())
             {
-                if (p1strings.Contains(button.Key))
+                // Specific games
+                if (_romName == "kenseim")
+                {
+                    if (button.Key == "players")
+                        continue;
+                    else if (button.Key == "Coin")
+                    {
+                        if (controller.PlayerIndex == 1)
+                            cfg["input  " + "\"Coin\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    }
+                    else if (button.Key == "Ryu Start")
+                    {
+                        if (controller.PlayerIndex == 1)
+                            cfg["input  " + "\"Ryu Start\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    }
+                    else if (button.Key == "Chun-Li Start")
+                    {
+                        if (controller.PlayerIndex == 2)
+                            cfg["input  " + "\"Chun-Li Start\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    }
+                    else if (button.Key == "Service")
+                    {
+                        if (controller.PlayerIndex == 1)
+                            cfg["input  " + "\"Service\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    }
+                    else if (controller.PlayerIndex == 1)
+                        cfg["input  " + "\"Mole A" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    else
+                        cfg["input  " + "\"Mole B" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                }
+
+                else if (noPlayerRom.Contains(_romName))
+                {
+                    if (button.Key == "players")
+                        continue;
+                    else
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                }
+
+                // General
+                else if (p1strings.Contains(button.Key))
                 {
                     if (controller.PlayerIndex == 1)
                         cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
@@ -150,6 +197,9 @@ namespace EmulatorLauncher
                     if (controller.PlayerIndex == 4)
                         cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
                 }
+
+                else if (button.Key == "players")
+                    continue;
 
                 else
                     cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
@@ -313,18 +363,19 @@ namespace EmulatorLauncher
         }
 
         private static List<string> p1strings = new List<string>() 
-        { "Coin 1", "Diagnostic", "Debug Dip 1", "Debug Dip 2", "Dip 1", "Dip 2", "Dip A", "Dip B", "Dip C", "Fake Dip", "Region", "Reset", "Service", "Start 1", "System", "Slots", "Test" };
+        { "Coin 1", "Diagnostic", "Debug Dip 1", "Debug Dip 2", "Dip 1", "Dip 2", "Dip A", "Dip B", "Dip C", "Fake Dip", "Left Switch", "Pay Switch", "Region", "Reset", "Right Switch",
+            "S3 Test (Jamma)", "S3 Test", "Service", "Service 1", "Service Mode", "Show Switch", "Start 1", "System", "Slots", "Test", "Tilt" };
 
         private static List<string> p2strings = new List<string>()
-        { "Coin 2", "Start 2" };
+        { "Coin 2", "Service 2", "Start 2" };
 
         private static List<string> p3strings = new List<string>()
-        { "Coin 3", "Start 3" };
+        { "Coin 3", "Service 3", "Start 3" };
 
         private static List<string> p4strings = new List<string>()
-        { "Coin 4", "Start 4" };
+        { "Coin 4", "Service 4", "Start 4" };
 
-        private static List<string> players4 = new List<string>()
-        { "gaunt" };
+        private static List<string> noPlayerRom = new List<string>()
+        { "crusherm", "korokoro", "tjumpman" };
     }
 }
