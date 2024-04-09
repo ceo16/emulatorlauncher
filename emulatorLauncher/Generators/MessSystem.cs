@@ -15,7 +15,7 @@ namespace EmulatorLauncher
 
         static MessSystem[] MessSystems = new MessSystem[]
             {
-                // IN LUMACA
+                // IN RETROBAT
 
                 // ADAM
                 new MessSystem("adam"         ,"adam"     , new MessRomType[]
