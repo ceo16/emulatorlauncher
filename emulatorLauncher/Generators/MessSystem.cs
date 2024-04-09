@@ -260,7 +260,7 @@ namespace EmulatorLauncher
                 new MessSystem("arcadia"      ,"arcadia"  ,"cart"  ),           // Arcadia 2001
                 new MessSystem("gmaster"      ,"gmaster"  ,"cart"  ),           // Game Master
 
-                // NOT IN LUMACA
+                // NOT IN RETROBAT
                 new MessSystem("x1"           ,"x1" , new MessRomType[] 
                         { 
                             new MessRomType("cart", new string[] { "bin", "rom" } ), 
