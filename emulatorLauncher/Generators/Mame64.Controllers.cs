@@ -30,7 +30,7 @@ namespace EmulatorLauncher
             }
             
             // Delete existing config file if any
-            string inputConfig = Path.Combine(path, "retrobat_auto.cfg");
+            string inputConfig = Path.Combine(path, "lumaca_auto.cfg");
             if (File.Exists(inputConfig))
                 File.Delete(inputConfig);
 
