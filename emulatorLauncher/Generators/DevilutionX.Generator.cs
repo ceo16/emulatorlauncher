@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
-using System.Threading;
 using EmulatorLauncher.Common;
 
 namespace EmulatorLauncher
 {
     partial class DevilutionXGenerator : Generator
     {
-        private ScreenResolution _resolution;
-
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
             string path = AppConfig.GetFullPath(system);
@@ -20,13 +15,11 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
-            string conf = Path.Combine(path, "diablo.ini");
+            //string conf = Path.Combine(path, "diablo.ini");       TO BE USED LATER FOR FEATURES
             if (!File.Exists(exe))
                 return null;
 
-            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
-
-            _resolution = resolution;
+            //bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             string gamePath = AppConfig.GetFullPath(rom);
             string gameExtension = Path.GetExtension(rom).Replace(".", "");
@@ -37,11 +30,12 @@ namespace EmulatorLauncher
                 catch { }
 
             // Command line arguments
-            List<string> commandArray = new List<string>();
-
-            commandArray.Add("--data-dir" + " " + gamePath);
-            commandArray.Add("--config-dir" + " " + gamePath);
-            commandArray.Add("--save-dir" + " " + savesPath);
+            List<string> commandArray = new List<string>
+            {
+                "--data-dir" + " " + gamePath,
+                "--config-dir" + " " + gamePath,
+                "--save-dir" + " " + savesPath
+            };
 
             // Command line argument to start in windowed mode seems not to work (devilutionx bug ?). Leave it commented for now.
             /*

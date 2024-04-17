@@ -8,6 +8,8 @@ using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.PadToKeyboard;
+using System.Windows.Media;
+using System.Xml.Linq;
 
 namespace EmulatorLauncher
 {
@@ -19,8 +21,9 @@ namespace EmulatorLauncher
         }
 
         private string _systemName;
-        private string _exename;
+        private string _exename = null;
         private bool _isGameExePath;
+        private bool _exeFile;
         private BezelFiles _bezelFileInfo;
 
         private GameLauncher _gameLauncher;
@@ -41,6 +44,7 @@ namespace EmulatorLauncher
             string path = Path.GetDirectoryName(rom);
             string arguments = null;
             _isGameExePath = false;
+            _exeFile = false;
             string extension = Path.GetExtension(rom);
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
@@ -48,8 +52,80 @@ namespace EmulatorLauncher
             if (extension == ".lnk")
             {
                 string target = FileTools.GetShortcutTarget(rom);
+                
                 if (target != "" && target != null)
                     _isGameExePath = File.Exists(target);
+                
+                // if the target is not found in the link, see if a .gameexe file or a .uwp file exists
+                else
+                {
+                    string executableFile = Path.Combine(Path.GetDirectoryName(rom), Path.GetFileNameWithoutExtension(rom) + ".gameexe");
+                    string uwpexecutableFile = Path.Combine(Path.GetDirectoryName(rom), Path.GetFileNameWithoutExtension(rom) + ".uwp");
+
+                    // First case : use has directly specified the executable name in a .gameexe file
+                    if (File.Exists(executableFile))
+                    {
+                        var lines = File.ReadAllLines(executableFile);
+                        if (lines.Length > 0)
+                        {
+                            _exename = lines[0];
+                            _exeFile = true;
+                            SimpleLogger.Instance.Info("[INFO] Executable name specified in .gameexe file: " + _exename);
+                        }
+                    }
+
+                    // Second case : user has specified the UWP app name in a .uwp file
+                    else if (File.Exists(uwpexecutableFile))
+                    {
+                        var romLines = File.ReadAllLines(uwpexecutableFile);
+                        if (romLines.Length > 0)
+                        {
+                            string uwpAppName = romLines[0];
+                            int line = -1;
+                            var fileStream = GetStoreAppVersion(uwpAppName);
+
+                            if (fileStream != null && fileStream != "")
+                            {
+                                string[] lines = fileStream.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+                                int m;
+                                for (m = 0; m < lines.Count(); m++)
+                                {
+                                    if (lines[m].Contains("InstallLocation"))
+                                    {
+                                        line = m + 2;
+                                    }
+                                }
+                                string installLocation = lines[line];
+
+                                if (Directory.Exists(installLocation))
+                                {
+                                    string appManifest = Path.Combine(installLocation, "AppxManifest.xml");
+
+                                    if (File.Exists(appManifest))
+                                    {
+                                        XDocument doc = XDocument.Load(appManifest);
+                                        XElement applicationElement = doc.Descendants().Where(x => x.Name.LocalName == "Application").FirstOrDefault();
+                                        if (applicationElement != null)
+                                        {
+                                            string exePath = applicationElement.Attribute("Executable").Value;
+                                            if (exePath != null)
+                                            {
+                                                _exename = Path.GetFileNameWithoutExtension(exePath);
+                                                _exeFile = true;
+                                                SimpleLogger.Instance.Info("[INFO] Executable name found for UWP app: " + _exename);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    else
+                    {
+                        SimpleLogger.Instance.Info("[INFO] Impossible to find executable name, using rom file name.");
+                    }
+                }
 
                 if (_isGameExePath)
                 {
@@ -184,10 +260,11 @@ namespace EmulatorLauncher
                 ret.WindowStyle = ProcessWindowStyle.Hidden;
                 ret.UseShellExecute = true;
             }
-            else
+            else if (string.IsNullOrEmpty(_exename))
+            {
                 _exename = Path.GetFileNameWithoutExtension(rom);
-
-            SimpleLogger.Instance.Info("[INFO] Executable name : " + _exename);
+                SimpleLogger.Instance.Info("[INFO] Executable name : " + _exename);
+            }
 
             // If game was uncompressed, say we are going to launch, so the deletion will not be silent
             ValidateUncompressedGame();
@@ -197,7 +274,7 @@ namespace EmulatorLauncher
 
         public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
         {
-            if (_isGameExePath)
+            if (_isGameExePath || _exeFile)
                 return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
 
             else if (_gameLauncher != null) 
@@ -312,9 +389,29 @@ namespace EmulatorLauncher
 
         }
 
+        static string GetStoreAppVersion(string appName)
+        {
+            // PowerShell Process Start
+            Process process = new Process();
+            process.StartInfo.FileName = "powershell.exe";
+            process.StartInfo.Arguments = $"-Command (Get-AppxPackage -Name {appName} | Select Installlocation)";
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+            process.Start();
+
+            // Read Result
+            string output = process.StandardOutput.ReadToEnd();
+
+            // Process End
+            process.WaitForExit();
+
+            return output;
+        }
+
         public override int RunAndWait(ProcessStartInfo path)
         {
-            if (_isGameExePath)
+            if (_isGameExePath || _exeFile)
             {
                 Process process = Process.Start(path);
                 SimpleLogger.Instance.Info("Process started : " + _exename);

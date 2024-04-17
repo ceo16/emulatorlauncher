@@ -8,9 +8,13 @@ namespace EmulatorLauncher
 {
     partial class PortsLauncherGenerator : Generator
     {
+        #region ports
         private void ConfigureSonic3airControls(string configFolder, DynamicJson settings)
         {
             if (_emulator != "sonic3air")
+                return;
+
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
             if (!Controllers.Any(c => !c.IsKeyboard))
@@ -34,18 +38,18 @@ namespace EmulatorLauncher
                 string[] deviceNames = new string[] { deviceName };
                 device.SetObject("DeviceNames", deviceNames);
 
-                string[] up = new string[] { GetSDLInputName(controller, InputKey.up, isXinput) };
-                string[] down = new string[] { GetSDLInputName(controller, InputKey.down, isXinput) };
-                string[] left = new string[] { GetSDLInputName(controller, InputKey.left, isXinput) };
-                string[] right = new string[] { GetSDLInputName(controller, InputKey.right, isXinput) };
-                string[] a = new string[] { GetSDLInputName(controller, InputKey.a, isXinput) };
-                string[] b = new string[] { GetSDLInputName(controller, InputKey.b, isXinput) };
-                string[] x = new string[] { GetSDLInputName(controller, InputKey.y, isXinput) };
-                string[] y = new string[] { GetSDLInputName(controller, InputKey.x, isXinput) };
-                string[] start = new string[] { GetSDLInputName(controller, InputKey.start, isXinput) };
-                string[] back = new string[] { GetSDLInputName(controller, InputKey.select, isXinput) };
-                string[] l = new string[] { GetSDLInputName(controller, InputKey.pageup, isXinput) };
-                string[] r = new string[] { GetSDLInputName(controller, InputKey.pagedown, isXinput) };
+                string[] up = new string[] { GetSDLInputName(controller, InputKey.up) };
+                string[] down = new string[] { GetSDLInputName(controller, InputKey.down) };
+                string[] left = new string[] { GetSDLInputName(controller, InputKey.left) };
+                string[] right = new string[] { GetSDLInputName(controller, InputKey.right) };
+                string[] a = new string[] { GetSDLInputName(controller, InputKey.a) };
+                string[] b = new string[] { GetSDLInputName(controller, InputKey.b) };
+                string[] x = new string[] { GetSDLInputName(controller, InputKey.y) };
+                string[] y = new string[] { GetSDLInputName(controller, InputKey.x) };
+                string[] start = new string[] { GetSDLInputName(controller, InputKey.start) };
+                string[] back = new string[] { GetSDLInputName(controller, InputKey.select) };
+                string[] l = new string[] { GetSDLInputName(controller, InputKey.pageup) };
+                string[] r = new string[] { GetSDLInputName(controller, InputKey.pagedown) };
                 device.SetObject("Up", up);
                 device.SetObject("Down", down);
                 device.SetObject("Left", left);
@@ -67,13 +71,14 @@ namespace EmulatorLauncher
              
             inputJson.Save();
         }
+        #endregion
 
-        private static string GetSDLInputName(Controller c, InputKey key, bool isXinput)
+        #region general tools
+        private static string GetSDLInputName(Controller c, InputKey key)
         {
-            Int64 pid = -1;
+            Int64 pid;
 
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             var input = c.Config[key];
             if (input != null)
@@ -120,5 +125,6 @@ namespace EmulatorLauncher
             }
             return "";
         }
+        #endregion
     }
 }

@@ -360,6 +360,7 @@ namespace EmulatorLauncher.Libretro
             ConfigurePcsx2(retroarchConfig, coreSettings, system, core);
             ConfigurePcsxRearmed(retroarchConfig, coreSettings, system, core);
             ConfigurePicodrive(retroarchConfig, coreSettings, system, core);
+            ConfigurePocketCDG(retroarchConfig, coreSettings, system, core);
             ConfigurePokeMini(retroarchConfig, coreSettings, system, core);
             ConfigurePotator(retroarchConfig, coreSettings, system, core);
             ConfigurePpsspp(retroarchConfig, coreSettings, system, core);
@@ -1792,19 +1793,44 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             coreSettings["kronos_use_beetle_saves"] = "enabled";
-            coreSettings["kronos_multitap_port2"] = "disabled";
             coreSettings["kronos_sh2coretype"] = "kronos";
 
-            BindFeature(coreSettings, "kronos_addon_cartridge", "addon_cartridge", "512K_backup_ram");
-            BindFeature(coreSettings, "kronos_force_downsampling", "force_downsampling", "disabled");
-            BindFeature(coreSettings, "kronos_language_id", "language_id", "English");
-            BindFeature(coreSettings, "kronos_meshmode", "meshmode", "disabled");
-            BindFeature(coreSettings, "kronos_multitap_port1", "multitap_port1", "disabled");
-            BindFeature(coreSettings, "kronos_polygon_mode", "polygon_mode", "cpu_tesselation");
-            BindFeature(coreSettings, "kronos_resolution_mode", "resolution_mode", "original");
-            BindFeature(coreSettings, "kronos_use_cs", "use_cs", "disabled");
-            BindFeature(coreSettings, "kronos_videocoretype", "videocoretype", "opengl");
-            BindFeature(coreSettings, "kronos_videoformattype", "videoformattype", "auto");
+            coreSettings["kronos_multitap_port1"] = "disabled";
+            coreSettings["kronos_multitap_port2"] = "disabled";
+            if (SystemConfig.isOptSet("kronos_multitap") && !string.IsNullOrEmpty(SystemConfig["kronos_multitap"]))
+            {
+                switch (SystemConfig["kronos_multitap"])
+                {
+                    case "disabled":
+                        coreSettings["kronos_multitap_port1"] = "disabled";
+                        coreSettings["kronos_multitap_port2"] = "disabled";
+                        break;
+                    case "port1":
+                        coreSettings["kronos_multitap_port1"] = "enabled";
+                        coreSettings["kronos_multitap_port2"] = "disabled";
+                        break;
+                    case "port2":
+                        coreSettings["kronos_multitap_port1"] = "disabled";
+                        coreSettings["kronos_multitap_port2"] = "enabled";
+                        break;
+                    case "ports":
+                        coreSettings["kronos_multitap_port1"] = "enabled";
+                        coreSettings["kronos_multitap_port2"] = "enabled";
+                        break;
+                }
+            }
+
+            BindFeature(coreSettings, "kronos_addon_cartridge", "kronos_addon_cartridge", "512K_backup_ram");
+            BindFeature(coreSettings, "kronos_bandingmode", "kronos_bandingmode", "disabled");
+            BindFeature(coreSettings, "kronos_force_downsampling", "kronos_force_downsampling", "disabled");
+            BindFeature(coreSettings, "kronos_language_id", "kronos_language_id", "English");
+            BindFeature(coreSettings, "kronos_meshmode", "kronos_meshmode", "disabled");
+            BindFeature(coreSettings, "kronos_polygon_mode", "kronos_polygon_mode", "cpu_tesselation");
+            BindFeature(coreSettings, "kronos_resolution_mode", "kronos_resolution_mode", "original");
+            BindFeature(coreSettings, "kronos_use_cs", "kronos_use_cs", "disabled");
+            BindFeature(coreSettings, "kronos_videocoretype", "kronos_videocoretype", "opengl");
+            BindFeature(coreSettings, "kronos_videoformattype", "kronos_videoformattype", "auto");
+            BindFeature(coreSettings, "kronos_skipframe", "kronos_skipframe", "0");
 
             if (system == "segastv")
             {
@@ -3191,6 +3217,13 @@ namespace EmulatorLauncher.Libretro
                     coreSettings["picodrive_lowpass_range"] = "60";
                 }
             }
+        }
+
+        private void ConfigurePocketCDG(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "pocketcpg")
+                return;
+
         }
 
         private void ConfigurePokeMini(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)

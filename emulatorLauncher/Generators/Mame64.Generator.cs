@@ -42,23 +42,22 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
-            _exeName = Path.GetFileNameWithoutExtension(exe);
-
             ConfigureBezels(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "artwork"), system, rom, resolution);
             ConfigureUIini(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "ini"));
             ConfigureMameini(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "ini"));
 
-            string args = null;
+            string args;
 
             MessSystem messMode = MessSystem.GetMessSystem(system, core);
             if (messMode == null || messMode.Name == "mame" || messMode.Name == "hbmame")
             {
-                List<string> commandArray = new List<string>();
+                List<string> commandArray = new List<string>
+                {
+                    "-skip_gameinfo",
 
-                commandArray.Add("-skip_gameinfo");
-
-                // rompath
-                commandArray.Add("-rompath");
+                    // rompath
+                    "-rompath"
+                };
                 if (!string.IsNullOrEmpty(AppConfig["bios"]) && Directory.Exists(AppConfig["bios"]))
                     commandArray.Add(AppConfig.GetFullPath("bios") + ";" + Path.GetDirectoryName(rom));
                 else
@@ -172,10 +171,8 @@ namespace EmulatorLauncher
                 WorkingDirectory = path,
                 Arguments = args,
                 WindowStyle = ProcessWindowStyle.Minimized,
-        };
+            };
         }
-
-        private string _exeName;
 
         private List<string> GetCommonMame64Arguments(string rom, bool hbmame, ScreenResolution resolution = null)
         {
@@ -593,17 +590,18 @@ namespace EmulatorLauncher
         private void ConfigureMameini(string path)
         {
             var ini = MameIniFile.FromFile(Path.Combine(path, "mame.ini"));
+
             if (ini["writeconfig"] != "0")
             {
                 ini["writeconfig"] = "0";
-                ini.Save();
             }
 
             if (SystemConfig.getOptBoolean("mame_output_windows"))
                 ini["output"] = "windows";
             else
                 ini["output"] = "auto";
-
+            
+            ini.Save();
         }
     }
 
@@ -614,8 +612,10 @@ namespace EmulatorLauncher
 
         public static MameIniFile FromFile(string file)
         {
-            var ret = new MameIniFile();
-            ret._fileName = file;
+            var ret = new MameIniFile
+            {
+                _fileName = file
+            };
 
             try
             {

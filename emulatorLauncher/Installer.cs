@@ -99,12 +99,15 @@ namespace EmulatorLauncher
             { new Installer("psxmame", "psxmame", "mame.exe") },
             { new Installer("fbneo", "fbneo", "fbneo64.exe") },
             { new Installer("sonic3air", "sonic3air", "Sonic3AIR.exe") },
+            { new Installer("sonicmania", "sonicmania", "RSDKv5U_x64.exe") },
+            { new Installer("sonicretro", "sonicretro", "RSDKv4_64.exe") },
+            { new Installer("sonicretrocd", "sonicretrocd", "RSDKv3_64.exe") },
             { new Installer("devilutionx", "devilutionx", "devilutionx.exe") }
         };
 
         static List<string>noVersionExe = new List<string>()
         {
-            "rmg", "play", "eduke32", "mesen", "fbneo"
+            "flycast", "rmg", "play", "eduke32", "mesen", "fbneo"
         };
 
         #region Properties
@@ -267,6 +270,15 @@ namespace EmulatorLauncher
                 {
                     var output = ProcessExtensions.RunWithOutput(exe, "--version");
                     output = StringExtensions.FormatVersionString(output.ExtractString("Dolphin ", "\r"));
+
+                    Version ver = new Version();
+                    if (Version.TryParse(output, out ver))
+                        return ver.ToString();
+                }
+                else if (Path.GetFileNameWithoutExtension(exe).ToLower() == "flycast")
+                {
+                    var output = versionInfo.FileVersion.Substring(1);
+                    output = StringExtensions.FormatVersionString(output);
 
                     Version ver = new Version();
                     if (Version.TryParse(output, out ver))
