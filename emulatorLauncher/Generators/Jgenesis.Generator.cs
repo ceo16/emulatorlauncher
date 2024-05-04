@@ -12,7 +12,6 @@ namespace EmulatorLauncher
     {
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
-        private string _destRom;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -31,14 +30,14 @@ namespace EmulatorLauncher
                 string uncompressedRomPath = this.TryUnZipGameIfNeeded(system, rom, false, false);
                 if (Directory.Exists(uncompressedRomPath))
                 {
-                    string[] romFiles = Directory.GetFiles(uncompressedRomPath);
+                    string[] romFiles = Directory.GetFiles(uncompressedRomPath).OrderBy(file => Array.IndexOf(extensions, Path.GetExtension(file).ToLowerInvariant())).ToArray();
                     rom = romFiles.FirstOrDefault(file => extensions.Any(ext => Path.GetExtension(file).Equals(ext, StringComparison.OrdinalIgnoreCase)));
                     ValidateUncompressedGame();
                 }
             }
 
             // settings (toml configuration)
-            SetupTomlConfiguration(path, system, rom, fullscreen);
+            SetupTomlConfiguration(path, system, fullscreen);
 
             _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
             _resolution = resolution;
@@ -61,7 +60,7 @@ namespace EmulatorLauncher
             };
         }
 
-        private void SetupTomlConfiguration(string path, string system, string rom, bool fullscreen)
+        private void SetupTomlConfiguration(string path, string system, bool fullscreen)
         {
             string settingsFile = Path.Combine(path, "jgenesis-config.toml");
 

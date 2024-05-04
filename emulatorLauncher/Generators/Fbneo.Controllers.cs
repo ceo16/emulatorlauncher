@@ -10,6 +10,8 @@ namespace EmulatorLauncher
 {
     partial class FbneoGenerator : Generator
     {
+        private bool _noPlayer = false;
+
         private void CreateControllerConfiguration(string path, string rom, string system)
         {
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
@@ -81,6 +83,15 @@ namespace EmulatorLauncher
                     players = gameMapping.Values.FirstOrDefault()["players"].ToInteger();
             }
 
+            if (gameMapping.Values.FirstOrDefault().ContainsKey("noplayer"))
+            {
+                if (gameMapping.Values.FirstOrDefault()["noplayer"].ToInteger() == 1)
+                    _noPlayer = true;
+            }
+
+            if (noPlayerRom.Contains(_romName))
+                _noPlayer = true;
+
             var cfg = FbneoConfigFile.FromFile(cfgFile);
 
             if (!Controllers.Any(c => !c.IsKeyboard))
@@ -136,114 +147,162 @@ namespace EmulatorLauncher
 
             foreach (var button in gameMapping.Values.FirstOrDefault())
             {
-                // Specific games
+                string updatedValue = null;
+
+                if (button.Value.Contains("_or_"))
+                {
+                    string[] buttons = button.Value.Split(new string[] { "_or_" }, System.StringSplitOptions.None);
+                    if (controller.PlayerIndex == 1)
+                        updatedValue = buttons[0];
+                    else
+                        updatedValue = buttons[1];
+                }
+                else if (button.Value.StartsWith("noplayer_"))
+                {
+                    updatedValue = button.Value.Substring(9);
+                }
+                
+                // Specific cases
+                if (button.Key == "players")
+                    continue;
+                if (button.Key == "noplayer")
+                    continue;
+
                 if (_romName == "kenseim")
                 {
-                    if (button.Key == "players")
-                        continue;
-                    else if (button.Key == "Coin")
+                    if (button.Key == "Coin")
                     {
                         if (controller.PlayerIndex == 1)
-                            cfg["input  " + "\"Coin\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"Coin\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
-                    else if (button.Key == "Ryu Start")
+                    if (button.Key == "Ryu Start")
                     {
                         if (controller.PlayerIndex == 1)
-                            cfg["input  " + "\"Ryu Start\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"Ryu Start\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
                     else if (button.Key == "Chun-Li Start")
                     {
                         if (controller.PlayerIndex == 2)
-                            cfg["input  " + "\"Chun-Li Start\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"Chun-Li Start\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
                     else if (button.Key == "Service")
                     {
                         if (controller.PlayerIndex == 1)
-                            cfg["input  " + "\"Service\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"Service\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
                     else if (controller.PlayerIndex == 1)
-                        cfg["input  " + "\"Mole A" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                        cfg["input  " + "\"Mole A" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     else
-                        cfg["input  " + "\"Mole B" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                        cfg["input  " + "\"Mole B" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    continue;
                 }
 
-                else if (noPlayerRom.Contains(_romName))
-                {
-                    if (button.Key == "players")
-                        continue;
-                    else
-                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
-                }
-
-                else if (_romName.StartsWith("sidepckt"))
+                if (_romName.StartsWith("sidepckt"))
                 {
                     if (controller.PlayerIndex == 1)
                     {
                         if (button.Key == "Coin" || button.Key == "Start")
-                            cfg["input  " + "\"" + button.Key + " 1\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"" + button.Key + " 1\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                         else if (button.Key == "Service")
-                            cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                         else if (button.Key.EndsWith("(Cocktail)"))
-                            cfg["input  " + "\"" + button.Key.Replace("_(Cocktail)", "") + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"" + button.Key.Replace("_(Cocktail)", "") + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
 
                     else if (controller.PlayerIndex == 2)
                     {
                         if (button.Key == "Coin" || button.Key == "Start")
-                            cfg["input  " + "\"" + button.Key + " 2\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"" + button.Key + " 2\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                         else
-                            cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                            cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                     }
+                    continue;
                 }
 
-                // General
-                else if (gunValues.Contains(button.Value))
+                if (button.Value.StartsWith("noplayer_"))
                 {
                     if (controller.PlayerIndex == 1)
-                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key + "\""] = button.Value;
-                    else
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    continue;
+                }
+
+                if (p1strings.Contains(button.Key))
+                {
+                    if (controller.PlayerIndex == 1)
+                    {
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
                         continue;
-                }
-
-                else if (p1strings.Contains(button.Key))
-                {
-                    if (controller.PlayerIndex == 1)
-                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
-                }
-
-                else if (button.Key.EndsWith("(Cocktail)") && controller.PlayerIndex == 1)
-                {
-                    if (_romName.StartsWith("birdtry") && button.Key == "Fire 1 (Cocktail)")
-                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace("(Cocktail)", "(Hit)") + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
-                    else if (_romName.StartsWith("birdtry") && button.Key == "Fire 2 (Cocktail)")
-                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace("(Cocktail)", "(Select)") + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
-                    else
-                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace(" (Cocktail)", "") + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    }
                 }
 
                 else if (p2strings.Contains(button.Key))
                 {
                     if (controller.PlayerIndex == 2)
-                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    {
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                        continue;
+                    }
                 }
 
                 else if (p3strings.Contains(button.Key))
                 {
                     if (controller.PlayerIndex == 3)
-                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    {
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                        continue;
+                    }
                 }
 
                 else if (p4strings.Contains(button.Key))
                 {
                     if (controller.PlayerIndex == 4)
-                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    {
+                        cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                        continue;
+                    }
                 }
 
-                else if (button.Key == "players")
-                    continue;
+                if (gunValues.Contains(button.Value))
+                {
+                    if (controller.PlayerIndex == 1 && _noPlayer)
+                        cfg["input  " + "\"" + button.Key + "\""] = updatedValue ?? button.Value;
+                    else if (controller.PlayerIndex == 1)
+                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key + "\""] = updatedValue ?? button.Value;
+                    else
+                        continue;
 
-                else
-                    cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key + "\""] = GetDinputMapping(dinputCtrl, button.Value, joy, index);
+                    continue;
+                }
+
+                if (button.Key.EndsWith("(Cocktail)") && controller.PlayerIndex == 1)
+                {
+                    if (_romName.StartsWith("birdtry") && button.Key == "Fire 1 (Cocktail)")
+                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace("(Cocktail)", "(Hit)") + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    else if (_romName.StartsWith("birdtry") && button.Key == "Fire 2 (Cocktail)")
+                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace("(Cocktail)", "(Select)") + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    else if (!_noPlayer)
+                        cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key.Replace(" (Cocktail)", "") + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    else
+                    {
+                        cfg["input  " + "\"" + button.Key.Replace(" (Cocktail)", "") + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                        cfg["input  " + "\"" + button.Key + "\""] = "constant 0x00";
+                    }
+                    continue;
+                }
+
+                else if (button.Key.EndsWith("(Cocktail)") && controller.PlayerIndex == 2 && _noPlayer)
+                {
+                    cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    continue;
+                }
+
+                if (_noPlayer)
+                {
+                    cfg["input  " + "\"" + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
+                    continue;
+                }                
+
+                cfg["input  " + "\"P" + controller.PlayerIndex + " " + button.Key + "\""] = GetDinputMapping(dinputCtrl, updatedValue ?? button.Value, joy, index);
             }
         }
 
@@ -405,10 +464,10 @@ namespace EmulatorLauncher
 
         private readonly static List<string> p1strings = new List<string>() 
         { "Coin 1", "Diagnostic", "Debug Dip 1", "Debug Dip 2", "Dip 1", "Dip 2", "Dip A", "Dip B", "Dip C", "Fake Dip", "Left Switch", "Pay Switch", "Region", "Reset", "Right Switch",
-            "S3 Test (Jamma)", "S3 Test", "Service", "Service 1", "Service Mode", "Show Switch", "Start 1", "System", "Slots", "Test", "Tilt" };
+            "S3 Test (Jamma)", "S3 Test", "Service", "Service 1", "Service Mode", "Show Switch", "Start 1", "Start 1 / Fire 1", "Start 1 / Fire 2", "Start 1/P1 Fire 1", "Start 2/P1 Fire 2", "System", "Slots", "Test", "Tilt" };
 
         private readonly static List<string> p2strings = new List<string>()
-        { "Coin 2", "Service 2", "Start 2" };
+        { "Coin 2", "Service 2", "Start 2", "Start 2 / Fire 2" };
 
         private readonly static List<string> p3strings = new List<string>()
         { "Coin 3", "Service 3", "Start 3" };
@@ -417,7 +476,21 @@ namespace EmulatorLauncher
         { "Coin 4", "Service 4", "Start 4" };
 
         private readonly static List<string> noPlayerRom = new List<string>()
-        { "crusherm", "korokoro", "tjumpman" };
+        { "4in1", "800fath", "800fatha", "ad2083", "amidar", "amidar1", "amidaru", "amidaro", "amidarb", "amigo", "amidars", "anteater", "anteaterg", "anteateruk", "aracnis", "armorcar", "armorcar2", "asideral", "astrians", "atlantis", "atlantis2", "atlantisb", "azurian", 
+            "bagmanmc", "bagmanm2", "batman2", "billiard", "blkhole", "bomber", "bongo", "catacomb", "cavelon", "checkman", "checkmanj", "chewing", "ckongg", "ckongmc", "ckongs", "conquer", "crusherm", 
+            "dambustr", "dambustra", "dambustruk", "darkplnt", "devilfsh", "devilfshg", "devilfshgb", "dingo", "dingoe", "dkongjrm", "donight", "drivfrcg", "drivfrct", "drivfrcb", 
+            "eagle", "eagle2", "eagle3", "exodus", "explorer", "fantastc", "fantazia", "frogf", "frogg", "frogger", "froggereb", "froggermc", "froggers1", "froggers2", "froggers3", "froggert", "froggers", "froggrs", 
+            "galactica2", "galaktron", "galap1", "galap2", "galap4", "galapx", "galaxbsf", "galaxbsf2", "galaxcirsa", "galaxian", "galaxianbl", "galaxianbl2", "galaxianbl3", "galaxianem", "galaxianiii", "galaxrcgg", 
+            "galaxianrp", "galaxrf", "galaxrfgg", "galaxyx", "galemp", "galkamika", "galturbo", "gmgalax", "gteikoku", "gteikokub", "gteikokub2", "gteikokub3",
+            "hexpool", "hexpoola", "hncholms", "hotshock", "hotshockb", "hunchbkg", "hunchbks", "hustler", "hustlerb", "jumpbug", "jumpbugb", 
+            "kamakazi3", "kamikazesp", "kingball", "kingballj", "knockout", "kong", "korokoro", "ladybugg", "losttomb", "losttombh", "luctoday",
+            "mariner", "mimonkey", "mimonsco", "mimonscr", "mimonscra", "mltiwars", "moonal2", "moonal2b", "moonaln", "mooncmw", "mooncrecm", "mooncreg", "mooncreg2", "mooncrgx", 
+            "mooncrsl", "mooncrs2", "mooncrs3", "mooncrs4", "mooncrs5", "mooncrsb", "mooncrst", "mooncrstg", "mooncrsto", "mooncrstu", "mooncrstuk", "mooncrstuku", "mooncrstuu", "mouncrst", "moonwar", "moonwara", "moonqsr",
+            "mrkougar", "mrkougar2", "mrkougb", "mrkougb2", "mshuttle", "mshuttle2", "mshuttlea", "mshuttlej", "mshuttlej2",
+            "namenayo", "newsin7", "offensiv", "olibug", "omegab", "omni", "orbitron", "pacmanbl", "pacmanbla", "pacmanblc", "pacmanblv", "pajaroes", "phoenxp2", "pisces", "piscesb", "porter", "racknrol", "redufo", "redufob", "redufob2", "redufob3", 
+            "scorpion", "scorpiona", "scorpionb", "scorpionmc", "scramb2", "scramblb", "scramble", "scramblebb", "scramblebf", "scrambler", "scrambles", "scrambp", "scramce", "scrampt", "scramrf", "skybase", "skyraidr", 
+            "spacbat2", "spacbatt", "spacempr", "spcmission", "spctbird", "spctrek", "sstarcrs", "starfght", "starfgmc", "strfbomb", "superg", "supergx", "supershp", "swarm", 
+            "tjumpman", "triplep", "triplepa", "tst_galx", "uniwars", "uniwarsa", "vpool", "vueloesp", "zerotime", "zerotimed", "zerotimemc", "zerotimeu" };
 
         private readonly static List<string> gunValues = new List<string>()
         { "mouseaxis 0", "mouseaxis 1" };
