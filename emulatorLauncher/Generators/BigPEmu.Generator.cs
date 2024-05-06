@@ -3,6 +3,8 @@ using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
+using System.Linq;
+using System;
 
 namespace EmulatorLauncher
 {
@@ -20,14 +22,32 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            string[] extensions = new string[] { ".cue", ".cdi", ".j64",".jag", ".rom", ".bin", ".prg", ".cof", ".abs" };
+            if (Path.GetExtension(rom).ToLowerInvariant() == ".zip" || Path.GetExtension(rom).ToLowerInvariant() == ".7z")
+            {
+                string uncompressedRomPath = this.TryUnZipGameIfNeeded(system, rom, false, false);
+                if (Directory.Exists(uncompressedRomPath))
+                {
+                    string[] romFiles = Directory.GetFiles(uncompressedRomPath).OrderBy(file => Array.IndexOf(extensions, Path.GetExtension(file).ToLowerInvariant())).ToArray();
+                    rom = romFiles.FirstOrDefault(file => extensions.Any(ext => Path.GetExtension(file).Equals(ext, StringComparison.OrdinalIgnoreCase)));
+                    ValidateUncompressedGame();
+                }
+            }
+
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             _path = path;
 
             //Applying bezels
-            if (fullscreen)
+            if (fullscreen && (!SystemConfig.isOptSet("bigpemu_renderer") || SystemConfig["bigpemu_renderer"] == "BigPEmu_Video_OpenGL"))
             {
                 if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution))
+                    _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            }
+
+            else if (fullscreen && (SystemConfig["bigpemu_renderer"] == "BigPEmu_Video_D3D12"))
+            {
+                if (!ReshadeManager.Setup(ReshadeBezelType.dxgi, ReshadePlatform.x64, system, rom, path, resolution))
                     _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
             }
 
@@ -71,6 +91,8 @@ namespace EmulatorLauncher
             {
                 var json = DynamicJson.Load(configfile);
                 var bigpemucore = json.GetOrCreateContainer("BigPEmuConfig");
+
+                BindFeature(bigpemucore, "VideoPlugin", "bigpemu_renderer", "BigPEmu_Video_OpenGL");
 
                 //system part
                 var jsonSystem = bigpemucore.GetOrCreateContainer("System");
@@ -161,10 +183,12 @@ namespace EmulatorLauncher
             if (ret == 1)
             {
                 ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
+                ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, _path);
                 return 0;
             }
 
             ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
+            ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, _path);
             return ret;
         }
     }
