@@ -38,7 +38,7 @@ namespace EmulatorLauncher
             { new Installer("xbox", new string[] { "cxbx-reloaded", "cxbx-r" }, "cxbx.exe") },             
             { new Installer("citra", "citra", "citra-qt.exe") },
             { new Installer("citra-canary", "citra-canary", "citra-qt.exe") },
-            { new Installer("lime3ds", "lime3ds", "lime-qt.exe") },
+            { new Installer("lime3ds", new string[] { "lime3ds" }, new string[] { "lime-qt.exe", "lime3ds-gui.exe" }) },
             { new Installer("daphne") },
             { new Installer("demul") }, 
             { new Installer("demul-old", "demul-old", "demul.exe") }, 
@@ -105,7 +105,8 @@ namespace EmulatorLauncher
             { new Installer("sonicretrocd", "sonicretrocd", "RSDKv3_64.exe") },
             { new Installer("devilutionx", "devilutionx", "devilutionx.exe") },
             { new Installer("jgenesis", "jgenesis", "jgenesis-gui.exe") },
-            { new Installer("singe2", "singe2", "Singe-v2.10-Windows-x86_64.exe") }
+            { new Installer("singe2", "singe2", "Singe-v2.10-Windows-x86_64.exe") },
+            { new Installer("opengoal", "opengoal", "gk.exe") }
         };
 
         static List<string>noVersionExe = new List<string>()

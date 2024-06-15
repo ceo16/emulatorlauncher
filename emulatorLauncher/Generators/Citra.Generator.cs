@@ -15,6 +15,8 @@ namespace EmulatorLauncher
         }
 
         private SdlVersion _sdlVersion = SdlVersion.SDL2_26;
+        private BezelFiles _bezelFileInfo;
+        private ScreenResolution _resolution;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -40,6 +42,9 @@ namespace EmulatorLauncher
                 _sdlVersion = SdlJoystickGuidManager.GetSdlVersion(sdl2);
 
             SetupConfigurationCitra(path, fullscreen);
+
+            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+            _resolution = resolution;
 
             List<string> commandArray = new List<string>();
             if (fullscreen)
@@ -169,12 +174,12 @@ namespace EmulatorLauncher
                     }
                 }
 
-                if (Features.IsSupported("citra_layout_option"))
+                if (Features.IsSupported("citraqt_layout_option"))
                 {
-                    if (SystemConfig.isOptSet("citra_layout_option"))
+                    if (SystemConfig.isOptSet("citraqt_layout_option"))
                     {
                         ini.WriteValue("Layout", "layout_option\\default", "false");
-                        ini.WriteValue("Layout", "layout_option", SystemConfig["citra_layout_option"]);
+                        ini.WriteValue("Layout", "layout_option", SystemConfig["citraqt_layout_option"]);
                     }
                     else
                     {
@@ -289,6 +294,23 @@ namespace EmulatorLauncher
             }
 
             return 1;
+        }
+
+        public override int RunAndWait(ProcessStartInfo path)
+        {
+            FakeBezelFrm bezel = null;
+
+            if (_bezelFileInfo != null)
+                bezel = _bezelFileInfo.ShowFakeBezel(_resolution);
+
+            int ret = base.RunAndWait(path);
+
+            bezel?.Dispose();
+
+            if (ret == 1)
+                return 0;
+
+            return ret;
         }
     }
 }

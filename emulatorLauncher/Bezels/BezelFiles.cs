@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Lightguns;
 using EmulatorLauncher.Common.FileFormats;
+using System.Collections.Generic;
 
 namespace EmulatorLauncher
 {
@@ -196,9 +197,12 @@ namespace EmulatorLauncher
             return false;
         }
 
-        private static string FindBezel(string overlayUser, string overlaySystem, string bezel, string systemName, string romName, string perGameSystem)
+        private static string FindBezel(string overlayUser, string overlaySystem, string bezel, string systemName, string romName, string perGameSystem, string emulator)
         {
             string indexedRomName = romName.AsIndexedRomName();
+
+            // specific cases (eg for 3ds (depending on layout))
+            systemName = GetSpecificBezels(systemName, emulator);
 
             foreach (var path in bezelPaths)
             {
@@ -261,7 +265,7 @@ namespace EmulatorLauncher
             return null;
         }
       
-        public static BezelFiles GetBezelFiles(string systemName, string rom, ScreenResolution resolution)
+        public static BezelFiles GetBezelFiles(string systemName, string rom, ScreenResolution resolution, string emulator = null)
         {
             if (systemName == null || rom == null)
                 return null;
@@ -322,7 +326,7 @@ namespace EmulatorLauncher
             if (systemName == "fbneo" && bezel == "thebezelproject" && Directory.Exists(Path.Combine(overlayUser, bezel, "games", "mame")) && !Directory.Exists(Path.Combine(overlayUser, bezel, "games", "fbneo")))
                 perGameSystem = "mame";
 
-            string overlay_png_file = FindBezel(overlayUser, overlaySystem, bezel, systemName, Path.GetFileNameWithoutExtension(rom), perGameSystem);
+            string overlay_png_file = FindBezel(overlayUser, overlaySystem, bezel, systemName, Path.GetFileNameWithoutExtension(rom), perGameSystem, emulator);
             if (string.IsNullOrEmpty(overlay_png_file))
             {
                 if (Program.SystemConfig.getOptBoolean("use_guns") && RawLightgun.IsSindenLightGunConnected())
@@ -344,7 +348,38 @@ namespace EmulatorLauncher
 
             return ret;
         }
-        
+
+        private static string GetSpecificBezels(string system, string emulator)
+        {
+            if (system == "3ds")
+            {
+                switch (emulator)
+                {
+                    case "citra":
+                    case "citra-canary":
+                        if (Program.SystemConfig.isOptSet("citraqt_layout_option") && Program.SystemConfig["citraqt_layout_option"] == "3")
+                            return "3ds_side_by_side";
+                        else if (Program.SystemConfig.isOptSet("citraqt_layout_option") && Program.SystemConfig["citraqt_layout_option"] == "2")
+                            return "3ds_hybrid";
+                        break;
+                    case "libretro":
+                        if (Program.SystemConfig.isOptSet("citra_layout_option") && Program.SystemConfig["citra_layout_option"] == "Side by Side")
+                            return "3ds_side_by_side";
+                        else if (Program.SystemConfig.isOptSet("citra_layout_option") && Program.SystemConfig["citra_layout_option"] == "Large Screen, Small Screen")
+                            return "3ds_lr_hybrid";
+                        break;
+                    case "lime3ds":
+                        if (Program.SystemConfig.isOptSet("lime_layout_option") && Program.SystemConfig["lime_layout_option"] == "3")
+                            return "3ds_side_by_side";
+                        else if (Program.SystemConfig.isOptSet("lime_layout_option") && Program.SystemConfig["lime_layout_option"] == "2")
+                            return "3ds_hybrid";
+                        break;
+                }
+            }
+
+            return system;
+        }
+
         public static BezelFiles CreateSindenBorderBezel(BezelFiles input, ScreenResolution resolution = null)
         {
             if (input == null)
