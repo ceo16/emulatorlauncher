@@ -639,7 +639,7 @@ namespace EmulatorLauncher
                 else
                     ini.WriteValue(" Global ", "InputSystem", "dinput");
 
-                // Fetch information in retrobat/system/tools/gamecontrollerdb.txt file
+                // Fetch information in lumaca/system/tools/gamecontrollerdb.txt file
                 SdlToDirectInput ctrl1 = null;
                 SdlToDirectInput sdlWheel = null;
                 string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");

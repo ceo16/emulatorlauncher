@@ -81,7 +81,7 @@ namespace EmulatorLauncher
 
             if (!File.Exists(settingsFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "jgenesis", "jgenesis-config-template.toml");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "jgenesis", "jgenesis-config-template.toml");
                 if (!File.Exists(templateFile))
                     return;
 

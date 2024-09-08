@@ -149,7 +149,7 @@ namespace EmulatorLauncher
             // Special treatment for N64 controllers
             N64Controller n64Gamepad = null;
             bool n64ControllerFound = false;
-            string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+            string n64json = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
             if (File.Exists(n64json) && system == "n64")
             {
                 try

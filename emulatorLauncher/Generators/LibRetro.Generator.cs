@@ -1015,7 +1015,7 @@ namespace EmulatorLauncher.Libretro
 
                 if (!File.Exists(animatedBezelPath))
                 {
-                    animatedBezelPath = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "decorations", "animated", "systems", systemName, systemName + ".cfg");
+                    animatedBezelPath = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "decorations", "animated", "systems", systemName, systemName + ".cfg");
                     if (!File.Exists(animatedBezelPath))
                         animatedBezel = false;
                 }

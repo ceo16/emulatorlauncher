@@ -110,7 +110,7 @@ namespace EmulatorLauncher
             if (SystemConfig.getOptBoolean("disableautoconfig"))
                 return;
 
-            SimpleLogger.Instance.Info("[Generator] Writing RetroBat configuration to .toml config file.");
+            SimpleLogger.Instance.Info("[Generator] Writing Lumaca configuration to .toml config file.");
 
             try
             {

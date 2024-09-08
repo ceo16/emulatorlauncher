@@ -129,7 +129,7 @@ namespace EmulatorLauncher.Libretro
             config["input_exit_emulator"] = "escape";
 #endif            
             // Overwrite hotkeys with a file
-            string kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "retroarch_kb_hotkeys.yml");
+            string kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "retroarch_kb_hotkeys.yml");
 
             if (File.Exists(kbHotkeyFile))
             {
@@ -163,7 +163,7 @@ namespace EmulatorLauncher.Libretro
                 }
             }
 
-            // If no file use RetroBat standard
+            // If no file use Lumaca standard
             config["input_menu_toggle"] = "f1";
             config["input_save_state"] = "f2";
             config["input_load_state"] = "f4";
@@ -252,7 +252,7 @@ namespace EmulatorLauncher.Libretro
             if (system == "n64")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string n64json = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+                string n64json = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
 
                 if (File.Exists(n64json))
                 {

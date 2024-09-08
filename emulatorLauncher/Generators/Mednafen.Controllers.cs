@@ -104,7 +104,7 @@ namespace EmulatorLauncher
             int nbAxis = controller.NbAxes;
 
             string guid1 = (controller.Guid.ToString()).Substring(0, 24) + "00000000";
-            // Fetch information in retrobat/system/tools/gamecontrollerdb.txt file
+            // Fetch information in lumaca/system/tools/gamecontrollerdb.txt file
             SdlToDirectInput dinputCtrl = null;
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
             

@@ -16,7 +16,7 @@ namespace EmulatorLauncher
                 try { Directory.CreateDirectory(Path.Combine(path, "bindings")); }
                 catch { }
 
-            var ymlFile = Path.Combine(path, "bindings", "retrobat.yml");
+            var ymlFile = Path.Combine(path, "bindings", "lumaca.yml");
             
             if (File.Exists(ymlFile))
                 File.Delete(ymlFile);

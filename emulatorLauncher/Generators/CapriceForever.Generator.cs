@@ -210,7 +210,7 @@ namespace EmulatorLauncher
 
                         switch(padProfile)
                         {
-                            case "retrobat":
+                            case "lumaca":
                                 controllerConfig = true;
                                 break;
                             case "per_game":

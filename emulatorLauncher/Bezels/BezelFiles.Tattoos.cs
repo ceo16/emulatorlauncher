@@ -28,11 +28,11 @@ namespace EmulatorLauncher
                     string gameName = rom != null ? Path.GetFileNameWithoutExtension(rom) : "system";
                     tattooFile = Path.Combine(Program.AppConfig.GetFullPath("tattoos"), "games", gameName + ".png");
                     if (!File.Exists(tattooFile))
-                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tattoos", "games", gameName + ".png");
+                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tattoos", "games", gameName + ".png");
                     if (!File.Exists(tattooFile))
                         tattooFile = Path.Combine(Program.AppConfig.GetFullPath("tattoos"), "default", tattooName);
                     if (!File.Exists(tattooFile))
-                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tattoos", "default", tattooName);
+                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tattoos", "default", tattooName);
                     if (!File.Exists(tattooFile))
                     {
                         SimpleLogger.Instance.Info("[GENERATOR] Tattoo file not found: " + tattooName);

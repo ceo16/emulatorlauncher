@@ -15,11 +15,11 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
-            // Define profile as retrobat
-            ini.WriteValue("Inputs", "DefaultProfileFilename", "Retrobat.prfl");
+            // Define profile as lumaca
+            ini.WriteValue("Inputs", "DefaultProfileFilename", "Lumaca.prfl");
 
             // clear existing pad sections of ini file
-            string profileFile = Path.Combine(path, "Profiles", "Retrobat.prfl");
+            string profileFile = Path.Combine(path, "Profiles", "Lumaca.prfl");
             StringBuilder contentBuilder = new StringBuilder();
 
             // Inject controllers                

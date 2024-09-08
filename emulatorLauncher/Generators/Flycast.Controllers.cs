@@ -287,7 +287,7 @@ namespace EmulatorLauncher
                 if (isArcade)
                 {
                     Dictionary<string, Dictionary<string, string>> gameMapping = new Dictionary<string, Dictionary<string, string>>();
-                    string flycastMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "flycast_Arcade.yml");
+                    string flycastMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "flycast_Arcade.yml");
                     if (File.Exists(flycastMapping))
                     {
                         YmlFile ymlFile = YmlFile.Load(flycastMapping);

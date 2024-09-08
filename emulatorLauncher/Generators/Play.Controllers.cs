@@ -20,8 +20,8 @@ namespace EmulatorLauncher
 
             SimpleLogger.Instance.Info("[INFO] Creating controller configuration for Play!");
 
-            string controllerFile = Path.Combine(path, "Play Data Files", "inputprofiles", "Retrobat.xml");
-            string templateControllerFile = Path.Combine(AppConfig.GetFullPath("templates"), "play", "inputprofiles", "Retrobat.xml");
+            string controllerFile = Path.Combine(path, "Play Data Files", "inputprofiles", "Lumaca.xml");
+            string templateControllerFile = Path.Combine(AppConfig.GetFullPath("templates"), "play", "inputprofiles", "Lumaca.xml");
 
             if (!File.Exists(controllerFile) && !File.Exists(templateControllerFile))
             {
@@ -276,7 +276,7 @@ namespace EmulatorLauncher
         private string GetDeviceID(Controller ctrl, bool isXinput)
         {
             // dinput
-            // Retrobat :   fc6f3e60-8fa8-11ed-8002-444553540000
+            // Lumaca :   fc6f3e60-8fa8-11ed-8002-444553540000
             // Play :       fc6f3e60:11ed8fa8:45440280:5453:0:0
 
             if (isXinput)

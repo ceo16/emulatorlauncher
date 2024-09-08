@@ -328,7 +328,7 @@ namespace EmulatorLauncher
                 { "ru", 10 },
             };
 
-            SimpleLogger.Instance.Info("[Generator] Getting language from RetroBat language.");
+            SimpleLogger.Instance.Info("[Generator] Getting language from Lumaca language.");
 
             // Special case for Taiwanese which is zh_TW
             if (SystemConfig["Language"] == "zh_TW")
