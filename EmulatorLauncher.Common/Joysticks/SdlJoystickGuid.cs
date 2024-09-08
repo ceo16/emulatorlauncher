@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using EmulatorLauncher.Common.FileFormats;
 
 namespace EmulatorLauncher.Common.Joysticks
 {
@@ -171,33 +171,33 @@ namespace EmulatorLauncher.Common.Joysticks
                     .Where(r => r.VendorId == this.VendorId && r.ProductId == this.ProductId)
                     .FirstOrDefault();
 
-                if (ctrl != null && !string.IsNullOrEmpty(ctrl.Name) && !string.IsNullOrEmpty(ctrl.Manufacturer))
+                if (ctrl != null)
                 {
-                    ushort crc = SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Manufacturer));
-                    crc = SDL.SDL_crc16(new byte[] { 32 }, crc);
-                    crc = SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Name), crc);
+                    if (!string.IsNullOrEmpty(ctrl.Name) && !string.IsNullOrEmpty(ctrl.Manufacturer))
+                    {
+                        ushort crc = SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Manufacturer));
+                        crc = SDL.SDL_crc16(new byte[] { 32 }, crc);
+                        crc = SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Name), crc);
 
-                    var crc16 = SDL.SDL_Swap16(crc).ToString("X4");
+                        var crc16 = SDL.SDL_Swap16(crc).ToString("X4");
 
-                    var ggs = _guid.Substring(0, 4) + crc16 + _guid.Substring(8);
-                    return new SdlJoystickGuid(ggs);
+                        var ggs = _guid.Substring(0, 4) + crc16 + _guid.Substring(8);
+                        return new SdlJoystickGuid(ggs);
+                    }
+
+                    if (!string.IsNullOrEmpty(ctrl.Name))
+                    {
+                        var crc16 = SDL.SDL_Swap16(SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Name))).ToString("X4");
+
+                        var ggs = _guid.Substring(0, 4) + crc16 + _guid.Substring(8);
+                        return new SdlJoystickGuid(ggs);
+                    }
+                    
+                    return new SdlJoystickGuid(_guid.Substring(0, 4) + "0000" + _guid.Substring(8));
                 }
-
-                if (ctrl != null && !string.IsNullOrEmpty(ctrl.Name))
-                {
-                    var crc16 = SDL.SDL_Swap16(SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(ctrl.Name))).ToString("X4");
-
-                    var ggs = _guid.Substring(0, 4) + crc16 + _guid.Substring(8);
-                    return new SdlJoystickGuid(ggs);
-                }
-
-                // Pre 2.26x : remove '16-bit CRC16 from the joystick name'
-                ret = new SdlJoystickGuid(_guid.Substring(0, 4) + "0000" + _guid.Substring(8));
-                if (version == SdlVersion.SDL2_24)
-                    return ret;                
             }
             
-            if (version > SdlVersion.SDL2_26 && name != null)
+            if (version >= SdlVersion.SDL2_26 && name != null)
             {
                 var crc16 = SDL.SDL_Swap16(SDL.SDL_crc16(System.Text.Encoding.UTF8.GetBytes(name ?? ""))).ToString("X4");
 
@@ -235,6 +235,34 @@ namespace EmulatorLauncher.Common.Joysticks
             }
 
             return ret;
+        }
+
+        public static string GetGuidFromFile(string path, string inputGuid, string emulator)
+        {
+            if (!File.Exists(path))
+                return null;
+
+            try
+            {
+                var yml = YmlFile.Load(path);
+                if (yml != null)
+                {
+                    var controllerInfo = yml.GetContainer(inputGuid.ToLowerInvariant());
+                    if (controllerInfo != null)
+                    {
+                        var emulatorInfo = controllerInfo.GetContainer(emulator);
+                        if (emulatorInfo != null)
+                        {
+                            string outputGuid = emulatorInfo["guid"];
+                            if (!string.IsNullOrEmpty(outputGuid))
+                                return outputGuid.ToLowerInvariant();
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         #endregion

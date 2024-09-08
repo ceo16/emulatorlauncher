@@ -32,12 +32,14 @@ namespace EmulatorLauncher
             string disk = "--disk-a";
             bool diskImage = false;
 
-            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
             _resolution = resolution;
 
-            var commandArray = new List<string>();
-            commandArray.Add("-c");
-            commandArray.Add("\"" + cfgFile + "\"");
+            var commandArray = new List<string>
+            {
+                "-c",
+                "\"" + cfgFile + "\""
+            };
             
             if (Path.GetExtension(rom).ToLower() == ".gemdos")
             {
@@ -52,7 +54,6 @@ namespace EmulatorLauncher
                     
                     if (autoRun.Length > 0)
                     {
-                        string autorunCmd = autoRun[0];
                         commandArray.Add("--auto");
                         commandArray.Add("\"" + autoRun[0] + "\"");
                     }
@@ -239,19 +240,24 @@ namespace EmulatorLauncher
 
             if (c.IsKeyboard)
             {
-                ini.WriteValue(joySection, "nJoystickMode", "1");
+                ini.WriteValue(joySection, "nJoystickMode", "2");
                 ini.WriteValue(joySection, "nJoyId", "0");
                 ini.WriteValue(joySection, "kUp", "Up");
                 ini.WriteValue(joySection, "kDown", "Down");
                 ini.WriteValue(joySection, "kLeft", "Left");
                 ini.WriteValue(joySection, "kRight", "Right");
-                ini.WriteValue(joySection, "kFire", "X");
+                ini.WriteValue(joySection, "kFire", "Left Shift");
             }
 
             int index = c.DeviceIndex;
 
-            ini.WriteValue(joySection, "nJoystickMode", "2");
+            ini.WriteValue(joySection, "nJoystickMode", "1");
             ini.WriteValue(joySection, "nJoyId", index.ToString());
+
+            if (SystemConfig.isOptSet("hatari_autofire") && SystemConfig.getOptBoolean("hatari_autofire"))
+                ini.WriteValue(joySection, "bEnableAutoFire", "TRUE");
+            else
+                ini.WriteValue(joySection, "bEnableAutoFire", "FALSE");
         }
 
         public override int RunAndWait(ProcessStartInfo path)
@@ -263,8 +269,7 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
                 return 0;

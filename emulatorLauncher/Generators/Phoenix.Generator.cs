@@ -116,8 +116,8 @@ namespace EmulatorLauncher
 
 
             //Applying bezels
-            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, emuPath, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, emuPath, resolution, emulator))
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
             _resolution = resolution;
 
             return new ProcessStartInfo()
@@ -203,7 +203,7 @@ namespace EmulatorLauncher
             if (system == "jaguar")
                 settingsPlatform = global.Element("Platform-Jaguar");
             
-            ConfigureControllers(settingsPlatform);
+            ConfigureControllers(settingsPlatform, system);
 
             //Video settings
             XElement video = settings.Element("Video");

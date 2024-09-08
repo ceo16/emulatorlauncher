@@ -9,6 +9,8 @@ using System.Xml.Linq;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.Compression;
+using EmulatorLauncher.Common.EmulationStation;
+using static EmulatorLauncher.PadToKeyboard.SendKey;
 
 namespace EmulatorLauncher
 {
@@ -27,10 +29,10 @@ namespace EmulatorLauncher
             { new Installer("model3", "supermodel") }, 
             { new Installer("supermodel") }, 
             { new Installer("rpcs3") }, { new Installer("ps3", "rpcs3") }, 
-            { new Installer("pcsx2", new string[] { "pcsx2" }, new string[] { "pcsx2-qt.exe", "pcsx2-qtx64.exe", "pcsx2x64.exe" }) },
+            { new Installer("pcsx2", "pcsx2", "pcsx2-qt.exe") },
             { new Installer("pcsx2-16", "pcsx2-16", "pcsx2.exe") },
             { new Installer("fpinball", "fpinball", "Future Pinball.exe") }, { new Installer("bam", "fpinball", "Future Pinball.exe") }, 
-            { new Installer("cemu") }, { new Installer("wiiu", "cemu") },
+            { new Installer("cemu", "cemu", "Cemu.exe") },
             { new Installer("applewin") }, { new Installer("apple2", "applewin") },
             { new Installer("gsplus") }, { new Installer("apple2gs", "gsplus") },             
             { new Installer("cxbx", new string[] { "cxbx-reloaded", "cxbx-r" }, "cxbx.exe") }, 
@@ -38,10 +40,11 @@ namespace EmulatorLauncher
             { new Installer("xbox", new string[] { "cxbx-reloaded", "cxbx-r" }, "cxbx.exe") },             
             { new Installer("citra", "citra", "citra-qt.exe") },
             { new Installer("citra-canary", "citra-canary", "citra-qt.exe") },
+            { new Installer("lime3ds", "lime3ds", "lime3ds.exe") },
             { new Installer("daphne") },
             { new Installer("demul") }, 
             { new Installer("demul-old", "demul-old", "demul.exe") }, 
-            { new Installer("dolphin", new string[] { "dolphin-emu", "dolphin" }, "dolphin.exe") },
+            { new Installer("dolphin", "dolphin-emu", "Dolphin.exe") },
             { new Installer("flycast", "flycast", "flycast.exe") },
             { new Installer("simple64", "simple64", "simple64-gui.exe") },
             { new Installer("mupen64", "mupen64", "RMG.exe") },
@@ -64,7 +67,7 @@ namespace EmulatorLauncher
             { new Installer("snes9x", "snes9x", "snes9x-x64.exe") }, 
             { new Installer("solarus", "solarus", "solarus-run.exe") },             
             { new Installer("tsugaru", "tsugaru", "tsugaru_cui.exe") }, 
-            { new Installer("vpinball", "vpinball", "vpinballx.exe") }, 
+            { new Installer("vpinball", new string[] {"vpinball" }, new string[] { "VPinballX.exe", "vpinballx.exe", "VPinballX64.exe" }) }, 
             { new Installer("winuae", "winuae", "winuae64.exe") }, 
             { new Installer("xemu", "xemu") },
             { new Installer("nosgba", "nosgba", "no$gba.exe") },
@@ -93,13 +96,26 @@ namespace EmulatorLauncher
             { new Installer("theforceengine", "theforceengine", "TheForceEngine.exe") },
             { new Installer("kronos", "kronos", "kronos.exe") },
             { new Installer("gzdoom", "gzdoom", "gzdoom.exe") },
+            { new Installer("magicengine", "magicengine", "pce.exe") },
             { new Installer("eka2l1", "eka2l1", "eka2l1_qt.exe") },
-            { new Installer("psxmame", "psxmame", "mame.exe") }
+            { new Installer("gemrb", "gemrb", "gemrb.exe") },
+            { new Installer("psxmame", "psxmame", "mame.exe") },
+            { new Installer("fbneo", "fbneo", "fbneo64.exe") },
+            { new Installer("sonic3air", "sonic3air", "Sonic3AIR.exe") },
+            { new Installer("sonicmania", "sonicmania", "RSDKv5U_x64.exe") },
+            { new Installer("sonicretro", "sonicretro", "RSDKv4_64.exe") },
+            { new Installer("sonicretrocd", "sonicretrocd", "RSDKv3_64.exe") },
+            { new Installer("devilutionx", "devilutionx", "devilutionx.exe") },
+            { new Installer("jgenesis", "jgenesis", "jgenesis-gui.exe") },
+            { new Installer("singe2", "singe2", "Singe-v2.10-Windows-x86_64.exe") },
+            { new Installer("opengoal", "opengoal", "gk.exe") },
+            { new Installer("capriceforever", "capriceforever", "Caprice64.exe") },
+            { new Installer("shadps4", "shadps4", "shadPS4.exe") }
         };
 
-        static List<string>noVersionExe = new List<string>()
+        static readonly List<string>noVersionExe = new List<string>()
         {
-            "rmg", "play", "eduke32", "mesen"
+            "flycast", "rmg", "play", "eduke32", "mesen", "fbneo"
         };
 
         #region Properties
@@ -238,7 +254,12 @@ namespace EmulatorLauncher
                 if (Path.GetFileNameWithoutExtension(exe).ToLower() == "retroarch")
                 {
                     var output = ProcessExtensions.RunWithOutput(exe, "--version");
-                    output = StringExtensions.FormatVersionString(output.ExtractString(" -- v", " -- "));
+
+                    string ret = output.ExtractString("Version:", " ("); 
+                    if (string.IsNullOrEmpty(ret))
+                        ret = output.ExtractString(" -- v", " -- "); // Format before 1.16
+
+                    output = StringExtensions.FormatVersionString(ret);
 
                     Version ver = new Version();
                     if (Version.TryParse(output, out ver))
@@ -262,6 +283,55 @@ namespace EmulatorLauncher
                     if (Version.TryParse(output, out ver))
                         return ver.ToString();
                 }
+                else if (Path.GetFileNameWithoutExtension(exe).ToLower() == "flycast")
+                {
+                    var output = versionInfo.FileVersion.Substring(1);
+                    Version ver = new Version();
+                    int firstDashIndex = output.IndexOf('-');
+                    if (firstDashIndex == -1 || output.IndexOf('-', firstDashIndex + 1) == -1)
+                    {
+                        output = StringExtensions.FormatVersionString(output);
+                        
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+
+                    int secondDashIndex = output.IndexOf('-', firstDashIndex + 1);
+                    output = output.Substring(0, secondDashIndex).Replace('-', '.');
+                    string[] parts = output.Split('.');
+                    if (parts.Length == 4)
+                    {
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+                    else if (parts.Length == 3)
+                    {
+                        output = parts[0] + "." + parts[1] + ".0" + "." + parts[2];
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+                    else if (parts.Length == 2)
+                    {
+                        output = parts[0] + "." + parts[1] + ".0" + ".0";
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+                    else if (parts.Length == 1)
+                    {
+                        output = parts[0] + ".0" + ".0" + ".0";
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+                    else if (parts.Length > 4)
+                    {
+                        output = parts[0] + "." + parts[1] + "." + parts[2] + "." + parts[3];
+                        if (Version.TryParse(output, out ver))
+                            return ver.ToString();
+                    }
+
+                    if (Version.TryParse(output, out ver))
+                        return ver.ToString();
+                }
                 else if (Path.GetFileNameWithoutExtension(exe).ToLower() == "gsplus")
                 {
                     var output = ProcessExtensions.RunWithOutput(exe, "--help");
@@ -280,6 +350,15 @@ namespace EmulatorLauncher
                     if (Version.TryParse(output, out ver))
                         return ver.ToString();
                 }
+                /*else if (Path.GetFileNameWithoutExtension(exe).ToLower() == "play")
+                {
+                    var output = versionInfo.ProductVersion.Substring(0, 7);
+                    output = StringExtensions.FormatVersionString(output);
+
+                    Version ver = new Version();
+                    if (Version.TryParse(output, out ver))
+                        return ver.ToString();
+                }*/
                 else
                 {
                     // Fake version number based on last write time

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using EmulatorLauncher.Common;
+using System;
 
 namespace EmulatorLauncher
 {
@@ -12,9 +13,6 @@ namespace EmulatorLauncher
         {
             DependsOnDesktopResolution = true;
         }
-
-        private BezelFiles _bezelFileInfo;
-        private ScreenResolution _resolution;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -28,21 +26,30 @@ namespace EmulatorLauncher
 
             var mednafenCore = GetMednafenCoreName(core);
 
-            //Applying bezels
-            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            string[] romExtensions = new string[] { ".m3u", ".cue", ".img", ".mdf", ".pbp", ".toc", ".cbn", ".ccd", ".iso", ".cso", ".pce", ".bin", ".mds" };
 
-            _resolution = resolution;
+            if ((Path.GetExtension(rom).ToLowerInvariant() == ".7z" || Path.GetExtension(rom).ToLowerInvariant() == ".squashfs") || (system == "psx" && Path.GetExtension(rom).ToLowerInvariant() == ".zip"))
+            {
+                string uncompressedRomPath = this.TryUnZipGameIfNeeded(system, rom, false, false);
+                if (Directory.Exists(uncompressedRomPath))
+                {
+                    string[] romFiles = Directory.GetFiles(uncompressedRomPath, "*.*", SearchOption.AllDirectories).OrderBy(file => Array.IndexOf(romExtensions, Path.GetExtension(file).ToLowerInvariant())).ToArray();
+                    rom = romFiles.FirstOrDefault(file => romExtensions.Any(ext => Path.GetExtension(file).Equals(ext, StringComparison.OrdinalIgnoreCase)));
+                    ValidateUncompressedGame();
+                }
+            }
+
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             // Configure cfg file
-            SetupConfig(path, cfg, mednafenCore, system);
+            SetupConfig(cfg, mednafenCore, system, rom);
 
             // Command line arguments
-            List<string> commandArray = new List<string>();
-            
-            commandArray.Add("-fps.scale 0");
-            commandArray.Add("-sound.volume 120");
+            List<string> commandArray = new List<string>
+            {
+                "-fps.scale 0",
+                "-sound.volume 120"
+            };
 
             if (fullscreen)
                 commandArray.Add("-video.fs 1");
@@ -52,7 +59,7 @@ namespace EmulatorLauncher
 			commandArray.Add("-video.disable_composition 1");
             commandArray.Add("-video.driver opengl");
             
-            if (mednafenCore == "pce" && AppConfig.isOptSet("bios"))
+            if (mednafenCore == "pce" && system == "pcenginecd")
                 commandArray.Add("-pce.cdbios \"" + Path.Combine(AppConfig.GetFullPath("bios"), "syscard3.pce") + "\"");
          
             commandArray.Add("-" + mednafenCore + ".shader none");
@@ -89,10 +96,10 @@ namespace EmulatorLauncher
             }
 
             // Shader & Bezel
-            var bezels = BezelFiles.GetBezelFiles(system, rom, resolution);
+            var bezels = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
             var platform = ReshadeManager.GetPlatformFromFile(exe);
 
-            if (ReshadeManager.Setup(ReshadeBezelType.opengl, platform, system, rom, path, resolution, bezels != null) && bezels != null)
+            if (ReshadeManager.Setup(ReshadeBezelType.opengl, platform, system, rom, path, resolution, emulator, bezels != null) && bezels != null)
                 commandArray.Add("-" + mednafenCore + ".stretch full");
             else if (SystemConfig.isOptSet("mednafen_ratio") && !string.IsNullOrEmpty(SystemConfig["mednafen_ratio"]))
                 commandArray.Add("-" + mednafenCore + ".stretch " + SystemConfig["mednafen_ratio"]);
@@ -115,13 +122,9 @@ namespace EmulatorLauncher
         {
             FakeBezelFrm bezel = null;
 
-            if (_bezelFileInfo != null)
-                bezel = _bezelFileInfo.ShowFakeBezel(_resolution);
-
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
             {
@@ -133,8 +136,8 @@ namespace EmulatorLauncher
             return ret;
         }
 
-        private void SetupConfig(string path, MednafenConfigFile cfg, string mednafenCore, string system)
-        {          
+        private void SetupConfig(MednafenConfigFile cfg, string mednafenCore, string system, string rom)
+        {
             // Inject path loop
             Dictionary<string, string> userPath = new Dictionary<string, string>
                 {
@@ -164,29 +167,34 @@ namespace EmulatorLauncher
             BindMednafenBoolFeature(cfg, "mednafen_cheats", "cheats", "1", "0");
             BindMednafenBoolFeature(cfg, "mednafen_fps_enable", "fps.autoenable", "1", "0");
 
+            if (Path.GetExtension(rom).ToLowerInvariant() == ".zip")
+                cfg["cd.image_memcache"] = "1";
+            else
+                cfg["cd.image_memcache"] = "0";
+
             // Core Specific settings
-            ConfigureMednafenApple2(cfg, mednafenCore, system);
+            ConfigureMednafenApple2(cfg, mednafenCore);
             ConfigureMednafenGB(cfg, mednafenCore, system);
-            ConfigureMednafenGBA(cfg, mednafenCore, system);
-            ConfigureMednafenLynx(cfg, mednafenCore, system);
-            ConfigureMednafenMasterSystem(cfg, mednafenCore, system);
-            ConfigureMednafenMegadrive(cfg, mednafenCore, system);
-            ConfigureMednafenNES(cfg, mednafenCore, system);
-            ConfigureMednafenNGP(cfg, mednafenCore, system);
-            ConfigureMednafenPCE(cfg, mednafenCore, system);
-            ConfigureMednafenPCFX(cfg, mednafenCore, system);
-            ConfigureMednafenPSX(cfg, mednafenCore, system);
-            ConfigureMednafenSaturn(cfg, mednafenCore, system);
-            ConfigureMednafenSnes(cfg, mednafenCore, system);
-            ConfigureMednafenWswan(cfg, mednafenCore, system);
+            ConfigureMednafenGBA(cfg, mednafenCore);
+            ConfigureMednafenLynx(cfg, mednafenCore);
+            ConfigureMednafenMasterSystem(cfg, mednafenCore);
+            ConfigureMednafenMegadrive(cfg, mednafenCore);
+            ConfigureMednafenNES(cfg, mednafenCore);
+            ConfigureMednafenNGP(cfg, mednafenCore);
+            ConfigureMednafenPCE(cfg, mednafenCore);
+            ConfigureMednafenPCFX(cfg, mednafenCore);
+            ConfigureMednafenPSX(cfg, mednafenCore);
+            ConfigureMednafenSaturn(cfg, mednafenCore);
+            ConfigureMednafenSnes(cfg, mednafenCore);
+            ConfigureMednafenWswan(cfg, mednafenCore);
 
             // controllers
-            CreateControllerConfiguration(cfg, mednafenCore);
+            CreateControllerConfiguration(cfg, mednafenCore, system);
 
             cfg.Save();
         }
 
-        private void ConfigureMednafenApple2(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenApple2(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "apple2")
                 return;
@@ -196,7 +204,7 @@ namespace EmulatorLauncher
             cfg["apple2.input.port1.joystick.axis_scale"] = "1.00";
         }
 
-        private void ConfigureMednafenGBA(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenGBA(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "gba")
                 return;
@@ -222,7 +230,7 @@ namespace EmulatorLauncher
                 cfg["gb.system_type"] = "cgb";
         }
 
-        private void ConfigureMednafenLynx(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenLynx(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "lynx")
                     return;
@@ -231,7 +239,7 @@ namespace EmulatorLauncher
             BindMednafenBoolFeature(cfg, "mednafen_lynx_rotate", mednafenCore + ".rotateinput", "1", "0");
         }
 
-        private void ConfigureMednafenMasterSystem(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenMasterSystem(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "sms")
                 return;
@@ -239,7 +247,7 @@ namespace EmulatorLauncher
             BindMednafenBoolFeature(cfg, "mednafen_sms_fm", mednafenCore + ".fm", "1", "0");
         }
 
-        private void ConfigureMednafenMegadrive(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenMegadrive(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "md")
                 return;
@@ -258,7 +266,7 @@ namespace EmulatorLauncher
                 cfg["md.input.multitap"] = "none";
         }
 
-        private void ConfigureMednafenNES(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenNES(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "nes")
                 return;
@@ -270,7 +278,7 @@ namespace EmulatorLauncher
             BindMednafenBoolFeature(cfg, "mednafen_nes_multitap", mednafenCore + ".input.fcexp", "4player", "none");
         }
 
-        private void ConfigureMednafenNGP(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenNGP(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "ngp")
                 return;
@@ -278,7 +286,7 @@ namespace EmulatorLauncher
             BindMednafenFeature(cfg, "mednafen_ngp_language", "ngp.language", "english");
         }
 
-        private void ConfigureMednafenPCE(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenPCE(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "pce")
                 return;
@@ -286,7 +294,7 @@ namespace EmulatorLauncher
             BindMednafenBoolFeature(cfg, "mednafen_pce_multitap", mednafenCore + ".input.multitap", "1", "0");
         }
 
-        private void ConfigureMednafenPCFX(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenPCFX(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "pcfx")
                 return;
@@ -295,8 +303,8 @@ namespace EmulatorLauncher
             
             for(int i=1; i<9; i++)
             {
-                BindMednafenFeature(cfg, "mednafen_pcfx_mode1", "pcfx.input.port" + i + ".gamepad.mode1.defpos", "auto");
-                BindMednafenFeature(cfg, "mednafen_pcfx_mode2", "pcfx.input.port" + i + ".gamepad.mode2.defpos", "auto");
+                BindMednafenFeature(cfg, "mednafen_pcfx_mode1", "pcfx.input.port" + i + ".gamepad.mode1.defpos", "a");
+                BindMednafenFeature(cfg, "mednafen_pcfx_mode2", "pcfx.input.port" + i + ".gamepad.mode2.defpos", "a");
             }
 
             if (SystemConfig.isOptSet("mednafen_pcfx_multitap") && SystemConfig["mednafen_pcfx_multitap"] == "1")
@@ -321,7 +329,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void ConfigureMednafenPSX(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenPSX(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "psx")
                 return;
@@ -408,7 +416,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void ConfigureMednafenSaturn(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenSaturn(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "ss")
                 return;
@@ -447,7 +455,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void ConfigureMednafenSnes(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenSnes(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "snes")
                 return;
@@ -478,7 +486,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void ConfigureMednafenWswan(MednafenConfigFile cfg, string mednafenCore, string system)
+        private void ConfigureMednafenWswan(MednafenConfigFile cfg, string mednafenCore)
         {
             if (mednafenCore != "wswan")
                 return;
@@ -533,8 +541,10 @@ namespace EmulatorLauncher
 
         public static MednafenConfigFile FromFile(string file)
         {
-            var ret = new MednafenConfigFile();
-            ret._fileName = file;
+            var ret = new MednafenConfigFile
+            {
+                _fileName = file
+            };
 
             try
             {

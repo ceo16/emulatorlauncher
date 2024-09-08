@@ -19,6 +19,8 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
+            SimpleLogger.Instance.Info("[INFO] Creating controller configuration for Demul");
+
             _isArcade = !nonArcadeSystems.Contains(system);
 
             if (!this.Controllers.Any(c => !c.IsKeyboard))
@@ -30,7 +32,7 @@ namespace EmulatorLauncher
             {
                 try
                 {
-                    CleanupExistingMappings(ctrlIni, system);
+                    CleanupExistingMappings(ctrlIni);
 
                     foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex).Take(4))
                         ConfigureInput(controller, ctrlIni, ini, system);
@@ -61,7 +63,7 @@ namespace EmulatorLauncher
 
             // Initializing controller information
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
-            string guid = (controller.Guid.ToString()).Substring(0, 27) + "00000";
+            string guid = (controller.Guid.ToString()).Substring(0, 24) + "00000000";
             SdlToDirectInput sdlCtrl = null;
             int index = controller.DirectInput != null ? controller.DirectInput.DeviceIndex : controller.DeviceIndex;
 
@@ -188,8 +190,16 @@ namespace EmulatorLauncher
                 ctrlIni.WriteValue(iniSection, "X", isXInput ? GetXInputCode(controller, InputKey.y, index) : GetDInputCode(controller, InputKey.y, sdlCtrl, index));
                 ctrlIni.WriteValue(iniSection, "Y", isXInput ? GetXInputCode(controller, InputKey.x, index) : GetDInputCode(controller, InputKey.x, sdlCtrl, index));
 
-                ctrlIni.WriteValue(iniSection, "LTRIG", isXInput ? GetXInputCode(controller, InputKey.l2, index) : GetDInputCode(controller, InputKey.l2, sdlCtrl, index));
-                ctrlIni.WriteValue(iniSection, "RTRIG", isXInput ? GetXInputCode(controller, InputKey.r2, index) : GetDInputCode(controller, InputKey.r2, sdlCtrl, index));
+                if (SystemConfig.getOptBoolean("dreamcast_use_shoulders"))
+                {
+                    ctrlIni.WriteValue(iniSection, "LTRIG", isXInput ? GetXInputCode(controller, InputKey.pageup, index) : GetDInputCode(controller, InputKey.pageup, sdlCtrl, index));
+                    ctrlIni.WriteValue(iniSection, "RTRIG", isXInput ? GetXInputCode(controller, InputKey.pagedown, index) : GetDInputCode(controller, InputKey.pagedown, sdlCtrl, index));
+                }
+                else
+                {
+                    ctrlIni.WriteValue(iniSection, "LTRIG", isXInput ? GetXInputCode(controller, InputKey.l2, index) : GetDInputCode(controller, InputKey.l2, sdlCtrl, index));
+                    ctrlIni.WriteValue(iniSection, "RTRIG", isXInput ? GetXInputCode(controller, InputKey.r2, index) : GetDInputCode(controller, InputKey.r2, sdlCtrl, index));
+                }
 
                 ctrlIni.WriteValue(iniSection, "START", isXInput ? GetXInputCode(controller, InputKey.start, index) : GetDInputCode(controller, InputKey.start, sdlCtrl, index));
 
@@ -202,6 +212,8 @@ namespace EmulatorLauncher
                 ctrlIni.WriteValue(iniSection, "S2LEFT", isXInput ? GetXInputCode(controller, InputKey.joystick2left, index) : GetDInputCode(controller, InputKey.joystick2left, sdlCtrl, index));
                 ctrlIni.WriteValue(iniSection, "S2RIGHT", isXInput ? GetXInputCode(controller, InputKey.joystick2right, index) : GetDInputCode(controller, InputKey.joystick2right, sdlCtrl, index));
             }
+
+            SimpleLogger.Instance.Info("[INFO] Assigned controller " + controller.DevicePath + " to player : " + controller.PlayerIndex.ToString());
         }
 
         private static string GetDInputCode(Controller c, InputKey key, SdlToDirectInput ctrl, int index, bool trigger = false)
@@ -211,8 +223,7 @@ namespace EmulatorLauncher
             long axisStart = 33554688;
             long revertAxisStart = axisStart - 256;
 
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             string esName = (c.Config[key].Name).ToString();
 
@@ -266,10 +277,9 @@ namespace EmulatorLauncher
 
         private static string GetXInputCode(Controller c, InputKey key, int index)
         {
-            Int64 pid = -1;
+            Int64 pid;
 
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             var input = c.Config[key];
             if (input != null)
@@ -330,7 +340,7 @@ namespace EmulatorLauncher
             return "0";
         }
 
-        private void CleanupExistingMappings(IniFile ini, string system)
+        private void CleanupExistingMappings(IniFile ini)
         {
             for (int i = 0; i < 2; i++)
             {
@@ -368,7 +378,7 @@ namespace EmulatorLauncher
         private static readonly List<string> globalButtons = new List<string>() {
             "TEST", "TEST2", "SERVICE", "SAVESTATE", "LOADSTATE", "NEXTSTATE", "PREVSTATE", "DEADZONE" };
 
-        private static Dictionary<string, string> esToDinput = new Dictionary<string, string>()
+        private readonly static Dictionary<string, string> esToDinput = new Dictionary<string, string>()
         {
             { "a", "a" },
             { "b", "b" },
@@ -402,7 +412,7 @@ namespace EmulatorLauncher
             { "righttrigger", "rightstick" },
         };
 
-        private static Dictionary<int, string> maplePorts = new Dictionary<int, string>()
+        private readonly static Dictionary<int, string> maplePorts = new Dictionary<int, string>()
         {
             { 1, "PORTA" },
             { 2, "PORTB" },
@@ -410,7 +420,7 @@ namespace EmulatorLauncher
             { 4, "PORTD" },
         };
 
-        private static Dictionary<int, string> vmuPort = new Dictionary<int, string>()
+        private readonly static Dictionary<int, string> vmuPort = new Dictionary<int, string>()
         {
             { 1, "VMSA0" },
             { 2, "VMSB0" },

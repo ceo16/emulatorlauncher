@@ -9,18 +9,27 @@ namespace EmulatorLauncher
 {
     class Vita3kGenerator : Generator
     {
+        private string _prefPath = "";
+
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
-            //get emulator path based on emulator name
-            string path = AppConfig.GetFullPath("vita3k");
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
 
-            //get the executable file
+            string path = AppConfig.GetFullPath("vita3k");
+            if (!Directory.Exists(path))
+                return null;
+
             string exe = Path.Combine(path, "vita3k.exe");
             if (!File.Exists(exe))
                 return null;
 
+            if (!GetVita3kPrefPath(path))
+                _prefPath = Path.Combine(AppConfig.GetFullPath("saves"), "psvita", "vita3k");
+
+            SimpleLogger.Instance.Info("[Generator] Setting '" + _prefPath + "' as content path for the emulator");
+
             // Check if firmware is intalled
-            string firmware = Path.Combine(path, "vs0", "vsh", "initialsetup");
+            string firmware = Path.Combine(_prefPath, "vs0", "vsh", "initialsetup");
             if (!Directory.Exists(firmware))
                 throw new ApplicationException("PSVita firmware is not installed in Vita3K emulator, launch the emulator and install the firware.");
 
@@ -64,14 +73,12 @@ namespace EmulatorLauncher
             //check if game is already installed or not (if installed game folder with gameID name exists in ux0\app\<gameID> folder)
             //if game is not yet installed ==> install it
             //if game is installed ==> run it
-            string gamepath = Path.Combine(path, "ux0", "app", gameID);
+            string gamepath = Path.Combine(_prefPath, "ux0", "app", gameID);
             
             if (!Directory.Exists(gamepath) && (ext == ".vpk" || ext == ".psvita"))
-            {
                 commandArray.Add("-path " + "\"" + rom + "\"");     //path used to install the game
-            }
 
-            if (Directory.Exists(gamepath) || ext == "m3u")
+            if (Directory.Exists(gamepath) || ext == ".m3u")
                 commandArray.Add("-r " + gameID);                    //r used to run installed games
 
             string args = string.Join(" ", commandArray);
@@ -131,8 +138,7 @@ namespace EmulatorLauncher
             string lang = GetCurrentLanguage();
             if (!string.IsNullOrEmpty(lang))
             {
-                string ret;
-                if (availableLanguages.TryGetValue(lang, out ret))
+                if (availableLanguages.TryGetValue(lang, out string ret))
                     return ret;
             }
 
@@ -166,7 +172,7 @@ namespace EmulatorLauncher
             BindFeature(yml, "resolution-multiplier", "resolution-multiplier", "1");
             BindFeature(yml, "disable-surface-sync", "disable_surfacesync", "false");
             BindFeature(yml, "screen-filter", "vita_screenfilter", "Bilinear");
-            BindFeature(yml, "v-sync", "vsync", "false");
+            BindFeature(yml, "v-sync", "vita_vsync", "false");
             BindFeature(yml, "anisotropic-filtering", "anisotropic-filtering", "1");
             BindFeature(yml, "cpu-opt", "cpu-opt", "true");
             BindFeature(yml, "shader-cache", "shader-cache", "true");
@@ -174,6 +180,9 @@ namespace EmulatorLauncher
             BindFeature(yml, "performance-overlay", "performance-overlay", "false");
             BindFeature(yml, "high-accuracy", "vita3k_high_accuracy", "true");
             BindFeature(yml, "fps-hack", "vita3k_fpshack", "false");
+            BindFeature(yml, "show-gui", "vita3k_gui", "false");
+            BindFeature(yml, "show-compile-shaders", "vita3k_showShaderCompile", "false");
+            yml["check-for-updates"] = "false";
 
             //Performance overlay options
             if (SystemConfig.isOptSet("performance-overlay") && SystemConfig["performance-overlay"] != "false")
@@ -185,8 +194,7 @@ namespace EmulatorLauncher
                 yml["performance-overlay"] = "false";
 
             //write pref-path with emulator path
-            string vita_emulator_path = AppConfig.GetFullPath("vita3k");
-            yml["pref-path"] = vita_emulator_path;
+            yml["pref-path"] = _prefPath;
 
             //Add modules if user has set option to manage from LUMACA
             if (SystemConfig.isOptSet("modules") && SystemConfig["modules"] == "1")
@@ -221,8 +229,34 @@ namespace EmulatorLauncher
                 
 
             //save config file
-            yml.Save();           
+            yml.Save();
         }
 
+        private bool GetVita3kPrefPath(string path)
+        {
+            string configFilePath = Path.Combine(path, "config.yml");
+            if (!File.Exists(configFilePath))
+                return false;
+
+            var yml = YmlFile.Load(Path.Combine(path, "config.yml"));
+            if (yml == null)
+                return false;
+
+            if (yml["pref-path"] == null)
+                return false;
+
+            string prefPath = yml["pref-path"];
+
+            if (string.IsNullOrEmpty(prefPath))
+                return false;
+
+            if (!Directory.Exists(prefPath) || prefPath.StartsWith(".") || prefPath.StartsWith("/") || prefPath.StartsWith("\\"))
+                return false;
+            else
+            {
+                _prefPath = prefPath;
+                return true;
+            }
+        }
     }
 }

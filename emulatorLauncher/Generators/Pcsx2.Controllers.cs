@@ -22,8 +22,10 @@ namespace EmulatorLauncher
         /// <param name="pcsx2ini"></param>
         private void UpdateSdlControllersWithHints(IniFile pcsx2ini)
         {
-            var hints = new List<string>();
-            hints.Add("SDL_JOYSTICK_HIDAPI_WII = 1");
+            var hints = new List<string>
+            {
+                "SDL_JOYSTICK_HIDAPI_WII = 1"
+            };
 
             if (pcsx2ini.GetValue("InputSources", "SDLControllerEnhancedMode") == "true")
             {
@@ -40,8 +42,10 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
-            _forceSDL = Program.SystemConfig.isOptSet("input_forceSDL") && Program.SystemConfig.getOptBoolean("input_forceSDL");
-            _forceDInput = Program.SystemConfig.isOptSet("input_forceSDL") && Program.SystemConfig["input_forceSDL"] == "dinput";
+            SimpleLogger.Instance.Info("[INFO] Creating controller configuration for PCSX2");
+
+            _forceSDL = Program.SystemConfig.isOptSet("pcsx2_input_driver_force") && Program.SystemConfig.getOptBoolean("pcsx2_input_driver_force");
+            _forceDInput = Program.SystemConfig.isOptSet("pcsx2_input_driver_force") && Program.SystemConfig["pcsx2_input_driver_force"] == "dinput";
 
             UpdateSdlControllersWithHints(pcsx2ini);
 
@@ -87,18 +91,37 @@ namespace EmulatorLauncher
             // Reset hotkeys
             ResetHotkeysToDefault(pcsx2ini);
 
-            // Inject controllers                
-            foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex))
+            // Inject controllers
+            if (Controllers.Any(c => !c.IsKeyboard))
             {
-                int padSectionNumber = controller.PlayerIndex;
-                if (_multitap)
+                foreach (var controller in this.Controllers.Where(c => !c.IsKeyboard).OrderBy(i => i.PlayerIndex))
                 {
-                    padSectionNumber = multitapPadNb[controller.PlayerIndex];
+                    int padSectionNumber = controller.PlayerIndex;
+                    if (_multitap)
+                    {
+                        padSectionNumber = multitapPadNb[controller.PlayerIndex];
+                    }
+
+                    string padNumber = "Pad" + padSectionNumber.ToString();
+
+                    ConfigureInput(pcsx2ini, controller, padNumber); // ini has one section for each pad (from Pad1 to Pad8), when using multitap pad 2 must be placed as pad5
                 }
+            }
 
-                string padNumber = "Pad" + padSectionNumber.ToString();
+            else
+            {
+                foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex))
+                {
+                    int padSectionNumber = controller.PlayerIndex;
+                    if (_multitap)
+                    {
+                        padSectionNumber = multitapPadNb[controller.PlayerIndex];
+                    }
 
-                ConfigureInput(pcsx2ini, controller, padNumber); // ini has one section for each pad (from Pad1 to Pad8), when using multitap pad 2 must be placed as pad5
+                    string padNumber = "Pad" + padSectionNumber.ToString();
+
+                    ConfigureInput(pcsx2ini, controller, padNumber); // ini has one section for each pad (from Pad1 to Pad8), when using multitap pad 2 must be placed as pad5
+                }
             }
         }
 
@@ -222,7 +245,7 @@ namespace EmulatorLauncher
                     SimpleLogger.Instance.Info("[WHEELS] gamecontrollerdb.txt file not found in tools folder. Controller mapping will not be available.");
                     gamecontrollerDB = null;
                 }
-                string guid = (ctrl.Guid.ToString()).Substring(0, 27) + "00000";
+                string guid = (ctrl.Guid.ToString()).Substring(0, 24) + "00000000";
                 SimpleLogger.Instance.Info("[INFO] Player " + ctrl.PlayerIndex + ". Fetching gamecontrollerdb.txt file with guid : " + guid);
 
                 try { dinputController = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid); }
@@ -291,6 +314,81 @@ namespace EmulatorLauncher
                 pcsx2ini.WriteValue(padNumber, "LargeMotor", techPadNumber + "LargeMotor");
                 pcsx2ini.WriteValue(padNumber, "SmallMotor", techPadNumber + "SmallMotor");
 
+                // Specific cases for driving games
+                if (SystemConfig.isOptSet("pcsx2_triggersdriving") && !string.IsNullOrEmpty(SystemConfig["pcsx2_triggersdriving"]))
+                {
+                    string triggersDriving = SystemConfig["pcsx2_triggersdriving"];
+                    pcsx2ini.Remove(padNumber, "R2");
+                    pcsx2ini.Remove(padNumber, "L2");
+
+                    switch (triggersDriving)
+                    {
+                        case "square_cross":
+                            pcsx2ini.WriteValue(padNumber, "Cross", techPadNumber + GetDInputKeyName(dinputController, "righttrigger", -1, isXinput));
+                            pcsx2ini.WriteValue(padNumber, "Square", techPadNumber + GetDInputKeyName(dinputController, "lefttrigger", 1, isXinput));
+                            break;
+                        case "righty":
+                            pcsx2ini.WriteValue(padNumber, "RUp", techPadNumber + GetDInputKeyName(dinputController, "righttrigger", -1, isXinput));
+                            pcsx2ini.WriteValue(padNumber, "RDown", techPadNumber + GetDInputKeyName(dinputController, "lefttrigger", 1, isXinput));
+                            break;
+                        case "lefty":
+                            pcsx2ini.WriteValue(padNumber, "LUp", techPadNumber + GetDInputKeyName(dinputController, "righttrigger", -1, isXinput));
+                            pcsx2ini.WriteValue(padNumber, "LDown", techPadNumber + GetDInputKeyName(dinputController, "lefttrigger", 1, isXinput));
+                            break;
+                    }
+                }
+
+                // Simulate wheel with Gamepad
+                if (SystemConfig.getOptBoolean("pcsx2_emulatedwheel") && (playerIndex == 1 || playerIndex == 2))
+                {
+                    pcsx2ini.WriteValue(padNumber, "Type", "None");
+                    string usbSection = "USB" + playerIndex;
+                    string forceWheelType = "2";
+
+                    if (SystemConfig.isOptSet("pcsx2_wheeltype") && !string.IsNullOrEmpty(SystemConfig["pcsx2_wheeltype"]))
+                        forceWheelType = SystemConfig["pcsx2_wheeltype"];
+
+                    pcsx2ini.ClearSection(usbSection);
+                    pcsx2ini.WriteValue(usbSection, "Type", "Pad");
+                    pcsx2ini.WriteValue(usbSection, "Pad_subtype", forceWheelType);
+                    pcsx2ini.WriteValue(usbSection, "Pad_SteeringLeft", techPadNumber + GetDInputKeyName(dinputController, "leftx", -1));
+                    pcsx2ini.WriteValue(usbSection, "Pad_SteeringRight", techPadNumber + GetDInputKeyName(dinputController, "leftx", 1));
+                    pcsx2ini.WriteValue(usbSection, "Pad_Throttle", techPadNumber + GetDInputKeyName(dinputController, "righttrigger", -1, isXinput));
+                    pcsx2ini.WriteValue(usbSection, "Pad_Brake", techPadNumber + GetDInputKeyName(dinputController, "lefttrigger", 1, isXinput));
+
+                    if (forceWheelType != "3")
+                    {
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadUp", techPadNumber + GetDInputKeyName(dinputController, "buttonup", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadDown", techPadNumber + GetDInputKeyName(dinputController, "buttondown", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadLeft", techPadNumber + GetDInputKeyName(dinputController, "buttonleft", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadRight", techPadNumber + GetDInputKeyName(dinputController, "buttonright", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Cross", techPadNumber + GetDInputKeyName(dinputController, "a"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Square", techPadNumber + GetDInputKeyName(dinputController, "x"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Circle", techPadNumber + GetDInputKeyName(dinputController, "b"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Triangle", techPadNumber + GetDInputKeyName(dinputController, "y"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_R1", techPadNumber + GetDInputKeyName(dinputController, "rightshoulder"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_L1", techPadNumber + GetDInputKeyName(dinputController, "leftshoulder"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Select", techPadNumber + GetDInputKeyName(dinputController, "back"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Start", techPadNumber + GetDInputKeyName(dinputController, "start"));
+
+                        if (forceWheelType != "0")
+                        {
+                            pcsx2ini.WriteValue(usbSection, "Pad_L3", techPadNumber + GetDInputKeyName(dinputController, "leftstick"));
+                            pcsx2ini.WriteValue(usbSection, "Pad_R3", techPadNumber + GetDInputKeyName(dinputController, "rightstick"));
+                        }
+                    }
+
+                    else
+                    {
+                        pcsx2ini.WriteValue(usbSection, "Pad_MenuUp", techPadNumber + GetDInputKeyName(dinputController, "buttonup", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_MenuDown", techPadNumber + GetDInputKeyName(dinputController, "buttondown", 0, isXinput));
+                        pcsx2ini.WriteValue(usbSection, "Pad_A", techPadNumber + GetDInputKeyName(dinputController, "a"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Y", techPadNumber + GetDInputKeyName(dinputController, "y"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_B", techPadNumber + GetDInputKeyName(dinputController, "b"));
+                        pcsx2ini.WriteValue(usbSection, "Pad_X", techPadNumber + GetDInputKeyName(dinputController, "x"));
+                    }
+                }
+
                 // Write Hotkeys for player 1
                 if (playerIndex == 1)
                 {
@@ -340,6 +438,82 @@ namespace EmulatorLauncher
                 pcsx2ini.WriteValue(padNumber, "LargeMotor", techPadNumber + "LargeMotor");
                 pcsx2ini.WriteValue(padNumber, "SmallMotor", techPadNumber + "SmallMotor");
 
+                // Specific cases for driving games
+                if (SystemConfig.isOptSet("pcsx2_triggersdriving") && !string.IsNullOrEmpty(SystemConfig["pcsx2_triggersdriving"]))
+                {
+                    string triggersDriving = SystemConfig["pcsx2_triggersdriving"];
+                    pcsx2ini.Remove(padNumber, "R2");
+                    pcsx2ini.Remove(padNumber, "L2");
+
+                    switch (triggersDriving)
+                    {
+                        case "square_cross":
+                            pcsx2ini.WriteValue(padNumber, "Cross", techPadNumber + GetInputKeyName(ctrl, InputKey.r2, tech));
+                            pcsx2ini.WriteValue(padNumber, "Square", techPadNumber + GetInputKeyName(ctrl, InputKey.l2, tech));
+                            break;
+                        case "righty":
+                            pcsx2ini.WriteValue(padNumber, "RUp", techPadNumber + GetInputKeyName(ctrl, InputKey.r2, tech));
+                            pcsx2ini.WriteValue(padNumber, "RDown", techPadNumber + GetInputKeyName(ctrl, InputKey.l2, tech));
+                            break;
+                        case "lefty":
+                            pcsx2ini.WriteValue(padNumber, "LUp", techPadNumber + GetInputKeyName(ctrl, InputKey.r2, tech));
+                            pcsx2ini.WriteValue(padNumber, "LDown", techPadNumber + GetInputKeyName(ctrl, InputKey.l2, tech));
+                            break;
+                    }
+                }
+
+                // Simulate wheel with Gamepad
+                if (SystemConfig.getOptBoolean("pcsx2_emulatedwheel") && (playerIndex == 1 || playerIndex == 2))
+                {
+                    pcsx2ini.WriteValue(padNumber, "Type", "None");
+                    string usbSection = "USB" + playerIndex;
+                    string forceWheelType = "2";
+
+                    if (SystemConfig.isOptSet("pcsx2_wheeltype") && !string.IsNullOrEmpty(SystemConfig["pcsx2_wheeltype"]))
+                        forceWheelType = SystemConfig["pcsx2_wheeltype"];
+
+                    pcsx2ini.ClearSection(usbSection);
+                    pcsx2ini.WriteValue(usbSection, "Type", "Pad");
+
+                    pcsx2ini.WriteValue(usbSection, "Pad_subtype", forceWheelType);
+                    pcsx2ini.WriteValue(usbSection, "Pad_SteeringLeft", techPadNumber + GetInputKeyName(ctrl, InputKey.leftanalogleft, tech));
+                    pcsx2ini.WriteValue(usbSection, "Pad_SteeringRight", techPadNumber + GetInputKeyName(ctrl, InputKey.leftanalogright, tech));
+                    pcsx2ini.WriteValue(usbSection, "Pad_Throttle", techPadNumber + GetInputKeyName(ctrl, InputKey.r2, tech));
+                    pcsx2ini.WriteValue(usbSection, "Pad_Brake", techPadNumber + GetInputKeyName(ctrl, InputKey.l2, tech));
+
+                    if (forceWheelType != "3")
+                    {
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadUp", techPadNumber + GetInputKeyName(ctrl, InputKey.up, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadDown", techPadNumber + GetInputKeyName(ctrl, InputKey.down, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadLeft", techPadNumber + GetInputKeyName(ctrl, InputKey.left, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_DPadRight", techPadNumber + GetInputKeyName(ctrl, InputKey.right, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Cross", techPadNumber + GetInputKeyName(ctrl, InputKey.a, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Square", techPadNumber + GetInputKeyName(ctrl, InputKey.x, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Circle", techPadNumber + GetInputKeyName(ctrl, InputKey.b, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Triangle", techPadNumber + GetInputKeyName(ctrl, InputKey.y, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_R1", techPadNumber + GetInputKeyName(ctrl, InputKey.pagedown, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_L1", techPadNumber + GetInputKeyName(ctrl, InputKey.pageup, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Select", techPadNumber + GetInputKeyName(ctrl, InputKey.select, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Start", techPadNumber + GetInputKeyName(ctrl, InputKey.start, tech));
+
+                        if (forceWheelType != "0")
+                        {
+                            pcsx2ini.WriteValue(usbSection, "Pad_L3", techPadNumber + GetInputKeyName(ctrl, InputKey.l3, tech));
+                            pcsx2ini.WriteValue(usbSection, "Pad_R3", techPadNumber + GetInputKeyName(ctrl, InputKey.r3, tech));
+                        }
+                    }
+
+                    else
+                    {
+                        pcsx2ini.WriteValue(usbSection, "Pad_MenuUp", techPadNumber + GetInputKeyName(ctrl, InputKey.up, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_MenuDown", techPadNumber + GetInputKeyName(ctrl, InputKey.down, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_A", techPadNumber + GetInputKeyName(ctrl, InputKey.a, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_Y", techPadNumber + GetInputKeyName(ctrl, InputKey.x, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_B", techPadNumber + GetInputKeyName(ctrl, InputKey.b, tech));
+                        pcsx2ini.WriteValue(usbSection, "Pad_X", techPadNumber + GetInputKeyName(ctrl, InputKey.y, tech));
+                    }
+                }
+
                 // Write Hotkeys for player 1
                 if (playerIndex == 1)
                 {
@@ -359,6 +533,8 @@ namespace EmulatorLauncher
                         pcsx2ini.WriteValue("Hotkeys", "ToggleFullscreen", techPadNumber + hotKeyName + " & " + techPadNumber + GetInputKeyName(ctrl, InputKey.pageup, tech));
                 }
             }
+
+            SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
         }
 
         private void ResetHotkeysToDefault(IniFile pcsx2ini)
@@ -398,10 +574,9 @@ namespace EmulatorLauncher
 
         private static string GetInputKeyName(Controller c, InputKey key, string tech)
         {
-            Int64 pid = -1;
+            Int64 pid;
 
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             var input = c.Config[key];
             if (input != null)

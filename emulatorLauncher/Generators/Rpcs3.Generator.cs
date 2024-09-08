@@ -17,6 +17,8 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             string path = AppConfig.GetFullPath(emulator);
             if (string.IsNullOrEmpty(path) && emulator != "rpcs3")
                 path = AppConfig.GetFullPath("rpcs3");
@@ -26,6 +28,9 @@ namespace EmulatorLauncher
                 return null;
 
             rom = this.TryUnZipGameIfNeeded(system, rom);
+            string savesPath = Path.Combine(AppConfig.GetFullPath("saves"), "ps3", "rpcs3");
+            if (!Directory.Exists(savesPath))
+                savesPath = path;
 
             if (Directory.Exists(rom))
             {
@@ -43,14 +48,16 @@ namespace EmulatorLauncher
                 if (rom.StartsWith(".\\") || rom.StartsWith("./"))
                     rom = Path.Combine(romPath, rom.Substring(2));
                 else if (rom.StartsWith("\\") || rom.StartsWith("/"))
-                    rom = Path.Combine(path, rom.Substring(1));
+                    rom = Path.Combine(savesPath, rom.Substring(1));
             }
 
             // Fullscreen
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
-            var commandArray = new List<string>();
-            commandArray.Add("\"" + rom + "\"");
+            var commandArray = new List<string>
+            {
+                "\"" + rom + "\""
+            };
             
             if (fullscreen)
             {
@@ -68,6 +75,7 @@ namespace EmulatorLauncher
             {
                 SetupGuiConfiguration(path);
                 SetupConfiguration(path, fullscreen);
+                SetupVFSConfiguration(path, savesPath);
                 CreateControllerConfiguration(path);
 
                 // Check if firmware is installed in emulator, if not and if firmware is available in \bios path then install it instead of running the game
@@ -81,9 +89,12 @@ namespace EmulatorLauncher
                 else if (!File.Exists(firmware) && File.Exists(biosPs3))
                 {
                     SimpleLogger.Instance.Info("[INFO] Firmware not installed, launching RPCS3 with 'installfirmware' command.");
-                    List<string> commandArrayfirmware = new List<string>();
-                    commandArrayfirmware.Add("--installfw");
-                    commandArrayfirmware.Add(biosPs3);
+                    List<string> commandArrayfirmware = new List<string>
+                    {
+                        "--installfw",
+                        biosPs3
+                    };
+                    
                     string argsfirmware = string.Join(" ", commandArrayfirmware);
                     return new ProcessStartInfo()
                     {
@@ -99,7 +110,7 @@ namespace EmulatorLauncher
                 FileName = exe,
                 WorkingDirectory = path,
                 Arguments = args,
-                WindowStyle = args.Contains("--fullscreen") ? ProcessWindowStyle.Maximized : ProcessWindowStyle.Minimized
+                //WindowStyle = args.Contains("--fullscreen") ? ProcessWindowStyle.Maximized : ProcessWindowStyle.Minimized
             };
         }
 
@@ -116,8 +127,7 @@ namespace EmulatorLauncher
 
             // In some cases, the process seems to be launched again by the main one
             process = Process.GetProcessesByName("rpcs3").FirstOrDefault();
-            if (process != null)
-                process.WaitForExit();
+            process?.WaitForExit();
 
             return 0;
         }
@@ -128,6 +138,8 @@ namespace EmulatorLauncher
         /// <param name="path"></param>
         private void SetupGuiConfiguration(string path)
         {
+            SimpleLogger.Instance.Info("[GENERATOR] Writing to GuiConfigs\\CurrentSettings.ini file.");
+
             string guiSettings = Path.Combine(path, "GuiConfigs", "CurrentSettings.ini");
             using (var ini = new IniFile(guiSettings))
             {
@@ -147,7 +159,28 @@ namespace EmulatorLauncher
                     ini.WriteValue("GSFrame", "lockMouseInFullscreen", "false");
                 else
                     ini.WriteValue("GSFrame", "lockMouseInFullscreen", "true");
+
+                ini.WriteValue("GSFrame", "disableMouse", "true");
             }
+        }
+
+        private void SetupVFSConfiguration(string path, string savesPath)
+        {
+            SimpleLogger.Instance.Info("[GENERATOR] Writing to vfs.yml file.");
+
+            var yml = YmlFile.Load(Path.Combine(path, "config", "vfs.yml"));
+
+            string hdd0Path = Path.Combine(savesPath, "dev_hdd0");
+            if (!Directory.Exists(hdd0Path))
+                try { Directory.CreateDirectory(hdd0Path); }
+                catch { }
+
+            yml["/dev_hdd0/"] = hdd0Path.Replace("\\", "/");
+
+            SimpleLogger.Instance.Info("[Generator] Setting '" + hdd0Path + "' as content path for the emulator");
+
+            // Save to yml file
+            yml.Save();
         }
 
         /// <summary>
@@ -156,47 +189,48 @@ namespace EmulatorLauncher
         /// <param name="path"></param>
         private void SetupConfiguration(string path, bool fullscreen)
         {
+            SimpleLogger.Instance.Info("[GENERATOR] Writing to config.yml file.");
+
             var yml = YmlFile.Load(Path.Combine(path, "config.yml"));
+            // Initialize IO settings
+            var io = yml.GetOrCreateContainer("Input/Output");
+            BindFeature(io, "Keyboard", "rpcs3_keyboard", "\"Null\"");
+            BindFeature(io, "Mouse", "rpcs3_mouse", "\"Null\"");
+            BindFeature(io, "Move", "rpcs3_move", "\"Null\"");
+            BindFeature(io, "Keyboard", "rpcs3_keyboard", "\"Null\"");
+            BindFeature(io, "Camera", "rpcs3_camera", "\"Null\"");
+
+            if (SystemConfig.isOptSet("rpcs3_cameraType") && !string.IsNullOrEmpty(SystemConfig["rpcs3_cameraType"]))
+            {
+                io["Camera type"] = SystemConfig["rpcs3_cameraType"];
+                if (!SystemConfig.isOptSet("rpcs3_camera"))
+                    io["Camera"] = "Fake";
+
+                string camera = io["Camera ID"];
+
+                if (string.IsNullOrEmpty(camera) || camera == "\"\"")
+                    io["Camera ID"] = "Default";
+            }
 
             // Handle Core part of yml file
             var core = yml.GetOrCreateContainer("Core");
-            BindFeature(core, "PPU Decoder", "ppudecoder", "Recompiler (LLVM)"); //this option changes in the latest version of RCPS3 (es_features only)
-            BindFeature(core, "PPU LLVM Precompilation", "lvmprecomp", "true");
-            BindFeature(core, "SPU Decoder", "spudecoder", "Recompiler (LLVM)"); //this option changes in the latest version of RCPS3 (es_features only)
-            BindFeature(core, "Lower SPU thread priority", "lowerspuprio", "false");
+            BindFeature(core, "PPU Decoder", "ppudecoder", "Recompiler (LLVM)");
+            BindFeature(core, "LLVM Precompilation", "lvmprecomp", "true");
+            BindFeature(core, "SPU Decoder", "spudecoder", "Recompiler (LLVM)");
             BindFeature(core, "Preferred SPU Threads", "sputhreads", "0");
             BindFeature(core, "SPU loop detection", "spuloopdetect", "false");
             BindFeature(core, "SPU Block Size", "spublocksize", "Safe");
             BindFeature(core, "Accurate RSX reservation access", "accuratersx", "false");
-            BindFeature(core, "PPU LLVM Accurate Vector NaN values", "vectornan", "false");
+            BindFeature(core, "PPU Accurate Vector NaN Values", "vectornan", "false");
             BindFeature(core, "Full Width AVX-512", "fullavx", "false");
-
-            // xfloat is managed through 3 options now in latest release
-            if (SystemConfig.isOptSet("xfloat") && (SystemConfig["xfloat"] == "Accurate"))
-            {
-                core["Accurate xfloat"] = "true";
-                core["Approximate xfloat"] = "false";
-                core["Relaxed xfloat"] = "false";
-            }
-            else if (SystemConfig.isOptSet("xfloat") && (SystemConfig["xfloat"] == "Relaxed"))
-            {
-                core["Accurate xfloat"] = "false";
-                core["Approximate xfloat"] = "false";
-                core["Relaxed xfloat"] = "true";
-            }
-            else if (Features.IsSupported("xfloat")) 
-            {
-                core["Accurate xfloat"] = "false";
-                core["Approximate xfloat"] = "true";
-                core["Relaxed xfloat"] = "false";
-            }
+            BindFeature(core, "XFloat Accuracy", "rpcs3_xfloat", "Accurate");
 
             // Handle Video part of yml file
             var video = yml.GetOrCreateContainer("Video");
             BindFeature(video, "Renderer", "gfxbackend", "Vulkan");
             video["Resolution"] = "1280x720";
             BindFeature(video, "Resolution Scale", "rpcs3_internal_resolution", "100");
-            BindFeature(video, "Aspect ratio", "ratio", "16:9");
+            BindFeature(video, "Aspect ratio", "rpcs3_ratio", "16:9");
             BindFeature(video, "Frame limit", "framelimit", "Auto");
             BindFeature(video, "MSAA", "msaa", "Auto");
             BindFeature(video, "Shader Mode", "shadermode", "Async Shader Recompiler");
@@ -204,40 +238,13 @@ namespace EmulatorLauncher
             BindFeature(video, "Write Depth Buffer", "writedepthbuffers", "false");
             BindFeature(video, "Read Color Buffers", "readcolorbuffers", "false");
             BindFeature(video, "Read Depth Buffer", "readdepthbuffers", "false");
-            BindFeature(video, "VSync", "vsync", "true");
+            BindFeature(video, "VSync", "rpcs3_vsync", "true");
             BindFeature(video, "Stretch To Display Area", "stretchtodisplay", "false");
             BindFeature(video, "Strict Rendering Mode", "strict_rendering", "false");
             BindFeature(video, "Disable Vertex Cache", "disablevertex", "false");
             BindFeature(video, "Multithreaded RSX", "multithreadedrsx", "false");
             BindFeature(video, "Output Scaling Mode", "rpcs3_scaling_filter", "Nearest");
-
-            if (SystemConfig.isOptSet("enable3d") && !string.IsNullOrEmpty(SystemConfig["enable3d"]))
-            {
-                switch(SystemConfig["enable3d"])
-                {
-                    case "disabled":
-                        video["Enable 3D"] = "false";
-                        video["3D Display Mode"] = "Disabled";
-                        break;
-                    case "anaglyph":
-                        video["Enable 3D"] = "false";
-                        video["3D Display Mode"] = "Anaglyph";
-                        break;
-                    case "sidebyside":
-                        video["Enable 3D"] = "false";
-                        video["3D Display Mode"] = "Side-by-Side";
-                        break;
-                    case "overunder":
-                        video["Enable 3D"] = "false";
-                        video["3D Display Mode"] = "Over-Under";
-                        break;
-                }
-            }
-            else
-            {
-                video["Enable 3D"] = "false";
-                video["3D Display Mode"] = "Disabled";
-            }
+            BindFeature(video, "3D Display Mode", "enable3d", "Disabled");
             
             BindFeature(video, "Anisotropic Filter Override", "anisotropicfilter", "0");
             BindFeature(video, "Shader Precision", "shader_quality", "Auto");
@@ -248,24 +255,24 @@ namespace EmulatorLauncher
             // ZCULL Accuracy
             if (SystemConfig.isOptSet("zcull_accuracy") && (SystemConfig["zcull_accuracy"] == "Approximate"))
             {
-                core["Relaxed ZCULL Sync"] = "false";
-                core["Accurate ZCULL stats"] = "false";
+                video["Relaxed ZCULL Sync"] = "false";
+                video["Accurate ZCULL stats"] = "false";
             }
             else if (SystemConfig.isOptSet("zcull_accuracy") && (SystemConfig["zcull_accuracy"] == "Relaxed"))
             {
-                core["Relaxed ZCULL Sync"] = "true";
-                core["Accurate ZCULL stats"] = "false";
+                video["Relaxed ZCULL Sync"] = "true";
+                video["Accurate ZCULL stats"] = "false";
             }
             else if (Features.IsSupported("zcull_accuracy"))
             {
-                core["Relaxed ZCULL Sync"] = "false";
-                core["Accurate ZCULL stats"] = "true";
+                video["Relaxed ZCULL Sync"] = "false";
+                video["Accurate ZCULL stats"] = "true";
             }
 
             // Handle Vulkan part of yml file
             var vulkan = video.GetOrCreateContainer("Vulkan");
             BindFeature(vulkan, "Asynchronous Texture Streaming 2", "asynctexturestream", "false");
-            BindFeature(vulkan, "Enable FidelityFX Super Resolution Upscaling", "fsr_upscaling", "false");
+            BindFeature(vulkan, "Exclusive Fullscreen Mode", "rpcs3_fullscreen_mode", "Automatic");
 
             // Handle Performance Overlay part of yml file
             var performance = video.GetOrCreateContainer("Performance Overlay");
@@ -295,19 +302,16 @@ namespace EmulatorLauncher
             BindFeature(audio, "Enable Buffering", "audio_buffering", "true");
             if (SystemConfig.isOptSet("time_stretching") && (SystemConfig["time_stretching"] == "low"))
             {
-                audio["Enable Buffering"] = "true";
                 audio["Enable time stretching"] = "true";
                 audio["Time Stretching Threshold"] = "25";
             }
             else if (SystemConfig.isOptSet("time_stretching") && (SystemConfig["time_stretching"] == "medium"))
             {
-                audio["Enable Buffering"] = "true";
                 audio["Enable time stretching"] = "true";
                 audio["Time Stretching Threshold"] = "50";
             }
             else if (SystemConfig.isOptSet("time_stretching") && (SystemConfig["time_stretching"] == "high"))
             {
-                audio["Enable Buffering"] = "true";
                 audio["Enable time stretching"] = "true";
                 audio["Time Stretching Threshold"] = "75";
             }
@@ -329,6 +333,8 @@ namespace EmulatorLauncher
             misc["Automatically start games after boot"] = "true";
             misc["Exit RPCS3 when process finishes"] = "true";
             misc["Prevent display sleep while running games"] = "true";
+            BindBoolFeature(misc, "Show shader compilation hint", "rpcs3_hidehints", "false", "true");
+            BindBoolFeature(misc, "Show PPU compilation hint", "rpcs3_hidehints", "false", "true");
 
             SetupGuns(yml, vulkan);
 
@@ -371,8 +377,7 @@ namespace EmulatorLauncher
             string lang = GetCurrentLanguage();
             if (!string.IsNullOrEmpty(lang))
             {
-                string ret;
-                if (availableLanguages.TryGetValue(lang, out ret))
+                if (availableLanguages.TryGetValue(lang, out string ret))
                     return ret;
             }
             return "English (US)";

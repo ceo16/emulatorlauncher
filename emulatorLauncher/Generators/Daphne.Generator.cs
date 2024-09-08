@@ -46,11 +46,20 @@ namespace EmulatorLauncher
                 else
                     commandArray.Add("-force_aspect_ratio");
 
+                if (SystemConfig.isOptSet("hypseus_scalefactor") && !string.IsNullOrEmpty(SystemConfig["hypseus_scalefactor"]))
+                {
+                    commandArray.Add("-scalefactor");
+                    commandArray.Add(SystemConfig["hypseus_scalefactor"]);
+                }
+
                 if (SystemConfig.isOptSet("hypseus_renderer") && SystemConfig["hypseus_renderer"] == "vulkan")
                 {
                     commandArray.Remove("-opengl");
                     commandArray.Add("-vulkan");
                 }
+
+                if (SystemConfig.getOptBoolean("hypseus_nocrosshair"))
+                    commandArray.Add("-nocrosshair");
 
                 return;
             }
@@ -83,6 +92,8 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             rom = this.TryUnZipGameIfNeeded(system, rom);
 
             string romName = Path.GetFileNameWithoutExtension(rom);
@@ -160,6 +171,9 @@ namespace EmulatorLauncher
                 if (directoryName == "actionmax")
                     directoryName = Path.ChangeExtension(directoryName, ".daphne");
 
+                if (directoryName.EndsWith(".singe"))
+                    directoryName = directoryName.Replace(".singe", ".daphne");
+
                 _symLink = Path.Combine(emulatorPath, directoryName);
 
                 try
@@ -169,6 +183,7 @@ namespace EmulatorLauncher
                 }
                 catch { }
 
+                SimpleLogger.Instance.Info("[Generator] Creating symbolic link for " + rom + " to " + _symLink);
                 FileTools.CreateSymlink(_symLink, rom, true);
 
                 if (!Directory.Exists(_symLink))
@@ -206,6 +221,13 @@ namespace EmulatorLauncher
 
             if (fullscreen)
                 commandArray.Add("-fullscreen");
+
+            /* 
+            In future we can use -gamepad to use SDL codes for controller settings, however this does not currently allow to specify the controller index...
+            It will also need modification of daphne.controllers.cs with SDL codes instead of dinput numbers
+            if (this.Controllers.Any(c => !c.IsKeyboard))
+                commandArray.Add("-gamepad");
+            */
 
             commandArray.Add("-x");
             commandArray.Add((resolution == null ? Screen.PrimaryScreen.Bounds.Width : resolution.Width).ToString());
@@ -254,12 +276,12 @@ namespace EmulatorLauncher
                 if (SystemConfig["ratio"] == "16/9")
                     SystemConfig["bezel"] = "none";
 
-                ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadeManager.GetPlatformFromFile(exe), system, rom, emulatorPath, resolution);
+                ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadeManager.GetPlatformFromFile(exe), system, rom, emulatorPath, resolution, emulator);
             }
 
             else if (emulator == "hypseus")
             {
-                BezelFiles bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+                BezelFiles bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
                 if (bezelFileInfo != null)
                 {
                     string bezelFile = bezelFileInfo.PngFile;

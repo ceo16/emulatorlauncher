@@ -5,26 +5,33 @@ using System.IO;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.Joysticks;
-using System.Diagnostics;
+using EmulatorLauncher.Common;
 
 namespace EmulatorLauncher
 {
     partial class RyujinxGenerator : Generator
     {
         /// <summary>
-        /// cf. https://github.com/Ryujinx/Ryujinx/blob/master/Ryujinx.SDL2.Common/SDL2Driver.cs#L61
+        /// cf. https://github.com/Ryujinx/Ryujinx/blob/master/src/Ryujinx.SDL2.Common/SDL2Driver.cs#L56
         /// </summary>
         private void UpdateSdlControllersWithHints()
         {
-            _sdlVersion = SdlJoystickGuidManager.GetSdlVersion(Path.Combine(_emulatorPath, "SDL2.dll"));
+            string dllPath = Path.Combine(_emulatorPath, "SDL2.dll");
+            _sdlVersion = SdlJoystickGuidManager.GetSdlVersion(dllPath);
 
-            var hints = new List<string>();            
-            hints.Add("SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE = 1");
-            hints.Add("SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE = 1");
-            hints.Add("SDL_HINT_JOYSTICK_HIDAPI_JOY_CONS = 1");
-            hints.Add("SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS = 1");
+            if (Program.Controllers.Count(c => !c.IsKeyboard) == 0)
+                return;
+
+            var hints = new List<string>
+            {
+                "SDL_HINT_JOYSTICK_HIDAPI_PS4_RUMBLE = 1",
+                "SDL_HINT_JOYSTICK_HIDAPI_PS5_RUMBLE = 1",
+                "SDL_HINT_JOYSTICK_HIDAPI_SWITCH_HOME_LED = 0",
+                "SDL_HINT_JOYSTICK_HIDAPI_JOY_CONS = 1",
+                "SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS = 1"
+            };            
             
-            _sdlMapping = SdlDllControllersMapping.FromSdlVersion(_sdlVersion, string.Join(",", hints));
+            _sdlMapping = SdlDllControllersMapping.FromDll(dllPath, string.Join(",", hints));
             if (_sdlMapping == null)
             {
                 SdlGameController.ReloadWithHints(string.Join(",", hints));
@@ -39,6 +46,8 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
+            SimpleLogger.Instance.Info("[INFO] Creating controller configuration for Ryujinx");
+
             UpdateSdlControllersWithHints();
 
             //clear existing input_config section to avoid the same controller mapped to different players because of past mapping
@@ -47,8 +56,12 @@ namespace EmulatorLauncher
             //create new input_config section
             var input_configs = new List<DynamicJson>();
 
+            int maxPad = 8;
+            if (SystemConfig.isOptSet("ryujinx_maxcontrollers") && !string.IsNullOrEmpty(SystemConfig["ryujinx_maxcontrollers"]))
+                maxPad = SystemConfig["ryujinx_maxcontrollers"].ToInteger();
+
             //loop controllers
-            foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex))
+            foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex).Take(maxPad))
                 ConfigureInput(json, controller, input_configs);
         }
 
@@ -342,11 +355,13 @@ namespace EmulatorLauncher
             //add section to file
             input_configs.Add(input_config);
             json.SetObject("input_config", input_configs);
+
+            SimpleLogger.Instance.Info("[INFO] Assigned controller " + c.DevicePath + " to player : " + c.PlayerIndex.ToString());
         }
 
         private static string GetInputKeyName(Controller c, InputKey key, string tech)
         {
-            Int64 pid = -1;
+            Int64 pid;
 
             var input = c.Config[key];
             if (input != null)
@@ -478,7 +493,7 @@ namespace EmulatorLauncher
                 case 0x40000052: return "Up";
                 case 0x40000053: return "NumLock";
                 case 0x40000054: return "KeypadDivide";
-                case 0x40000055: return "KeypadMultiply*";
+                case 0x40000055: return "KeypadMultiply";
                 case 0x40000056: return "KeypadSubtract";
                 case 0x40000057: return "KeypadAdd";
                 case 0x40000058: return "Enter";

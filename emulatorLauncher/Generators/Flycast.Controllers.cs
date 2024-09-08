@@ -4,7 +4,6 @@ using System.Linq;
 using System.IO;
 using System.Globalization;
 using EmulatorLauncher.Common.FileFormats;
-using EmulatorLauncher.Common.Joysticks;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common;
 
@@ -15,7 +14,7 @@ namespace EmulatorLauncher
         /// <summary>
         /// cf. https://github.com/flyinghead/flycast/blob/master/core/sdl/sdl.cpp
         /// </summary>
-        private void UpdateSdlControllersWithHints()
+        /*private void UpdateSdlControllersWithHints()
         {
             var hints = new List<string>();
 
@@ -24,12 +23,14 @@ namespace EmulatorLauncher
                 SdlGameController.ReloadWithHints(string.Join(",", hints));
                 Program.Controllers.ForEach(c => c.ResetSdlController());
             }
-        }
+        }*/
 
         private void CreateControllerConfiguration(string path, string system, IniFile ini)
         {
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
+
+            SimpleLogger.Instance.Info("[INFO] Creating controller configuration for Flycast");
 
             // Reset controller attribution
             ini.WriteValue("input", "RawInput", "no");
@@ -215,7 +216,7 @@ namespace EmulatorLauncher
             if (joy == null)
                 return;
 
-            SimpleLogger.Instance.Info("[GAMEPAD] Configuring gamepad " + ctrl.Name + " for player " + ctrl.PlayerIndex + " and system " + system);
+            SimpleLogger.Instance.Info("[GAMEPAD] Configuring gamepad for player " + ctrl.PlayerIndex + " and system " + system);
 
             bool isArcade = system != "dreamcast";
             int index = ctrl.SdlController != null ? ctrl.SdlController.Index : ctrl.DeviceIndex;
@@ -229,7 +230,7 @@ namespace EmulatorLauncher
             // Test if triggers are analog or digital
             bool analogTriggers = false;
             bool switchToDpad = SystemConfig.isOptSet("flycast_usedpad") && SystemConfig.getOptBoolean("flycast_usedpad");
-            bool useR1L1 = SystemConfig.isOptSet("flycast_r1l1") && SystemConfig.getOptBoolean("flycast_r1l1");
+            bool useR1L1 = SystemConfig.isOptSet("dreamcast_use_shoulders") && SystemConfig.getOptBoolean("dreamcast_use_shoulders");
             
             var r2test = joy[InputKey.r2];
             if (joy[InputKey.r2] != null)
@@ -293,6 +294,15 @@ namespace EmulatorLauncher
 
                         game = ymlFile.Elements.Where(c => c.Name == _romName).FirstOrDefault() as YmlContainer;
 
+                        if (game == null)
+                            game = ymlFile.Elements.Where(g => _romName.StartsWith(g.Name)).FirstOrDefault() as YmlContainer;
+
+                        if (game == null)
+                            game = ymlFile.Elements.Where(g => g.Name == "default_" + system).FirstOrDefault() as YmlContainer;
+
+                        if (game == null)
+                            game = ymlFile.Elements.Where(g => g.Name == "default").FirstOrDefault() as YmlContainer;
+
                         if (game != null)
                         {
                             var gameName = game.Name;
@@ -300,7 +310,7 @@ namespace EmulatorLauncher
 
                             foreach (var buttonEntry in game.Elements)
                             {
-                                var button = buttonEntry as YmlElement;
+                                YmlElement button = buttonEntry as YmlElement;
                                 if (button != null)
                                 {
                                     buttonMap.Add(button.Name, button.Value);
@@ -539,6 +549,8 @@ namespace EmulatorLauncher
                     ctrlini.Save();
                 }
             }
+
+            SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
         }
 
         private static string GetInputKeyName(Controller c, InputKey key, string tech)
@@ -548,8 +560,7 @@ namespace EmulatorLauncher
             // If controller is nintendo, A/B and X/Y are reversed
             //bool revertbuttons = (c.VendorID == VendorId.USB_VENDOR_NINTENDO);
 
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             var input = c.Config[key];
             if (input != null)
@@ -595,7 +606,7 @@ namespace EmulatorLauncher
         }
 
         #region keyboard mapping
-        static Dictionary<SDL.SDL_Keycode, int> keycodeToHID = new Dictionary<SDL.SDL_Keycode, int>()
+        static readonly Dictionary<SDL.SDL_Keycode, int> keycodeToHID = new Dictionary<SDL.SDL_Keycode, int>()
         {
             { SDL.SDL_Keycode.SDLK_a, 4 },
             { SDL.SDL_Keycode.SDLK_b, 5 },
@@ -817,7 +828,7 @@ namespace EmulatorLauncher
             { SDL.SDL_Keycode.SDLK_SLEEP, 282 }
         };
 
-        static Dictionary<SDL.SDL_Keycode, SDL.SDL_Keycode> azertyLayoutMapping = new Dictionary<SDL.SDL_Keycode, SDL.SDL_Keycode>()
+        static readonly Dictionary<SDL.SDL_Keycode, SDL.SDL_Keycode> azertyLayoutMapping = new Dictionary<SDL.SDL_Keycode, SDL.SDL_Keycode>()
         {
             { SDL.SDL_Keycode.SDLK_a, SDL.SDL_Keycode.SDLK_q },
             { SDL.SDL_Keycode.SDLK_q, SDL.SDL_Keycode.SDLK_a },
@@ -832,7 +843,7 @@ namespace EmulatorLauncher
         #endregion
 
         #region controllerinformation
-        static Dictionary<string, int> deviceType = new Dictionary<string, int>()
+        /*static readonly Dictionary<string, int> deviceType = new Dictionary<string, int>()
         {
             { "controller", 0 },
             { "lightgun", 7 },
@@ -841,18 +852,18 @@ namespace EmulatorLauncher
             { "ascii_stick", 4 },
             { "twinstick", 8 },
             { "none", 10 }
-        };
+        };*/
 
-        static Dictionary<string, int> extensionType = new Dictionary<string, int>()
+        /*static readonly Dictionary<string, int> extensionType = new Dictionary<string, int>()
         {
             { "vmu", 1 },
             { "purupuru", 3 },
             { "microphone", 2 },
             { "none", 10 }
-        };
+        };*/
         #endregion
 
-        static Dictionary<string, InputKey> yamlToInputKey = new Dictionary<string, InputKey>()
+        static readonly Dictionary<string, InputKey> yamlToInputKey = new Dictionary<string, InputKey>()
         {
             { "leftanalogleft", InputKey.leftanalogleft },
             { "leftanalogright", InputKey.leftanalogright },
@@ -880,7 +891,7 @@ namespace EmulatorLauncher
             { "right", InputKey.right },
         };
 
-        static Dictionary<string, InputKey> switchToDpadKeys = new Dictionary<string, InputKey>()
+        static readonly Dictionary<string, InputKey> switchToDpadKeys = new Dictionary<string, InputKey>()
         {
             { "leftanalogleft", InputKey.left },
             { "leftanalogright", InputKey.right },
@@ -888,7 +899,7 @@ namespace EmulatorLauncher
             { "leftanalogdown", InputKey.down },
         };
 
-        static List<string> analogKeys = new List<string>()
+        /*static readonly List<string> analogKeys = new List<string>()
         {
             "leftanalogleft",
             "leftanalogright",
@@ -898,6 +909,6 @@ namespace EmulatorLauncher
             "rightanalogright",
             "rightanalogup",
             "rightanalogdown",
-        };
+        };*/
     }
 }

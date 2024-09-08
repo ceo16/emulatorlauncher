@@ -1,6 +1,5 @@
 ﻿using EmulatorLauncher.Common.FileFormats;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 
@@ -8,14 +7,21 @@ namespace EmulatorLauncher.Libretro
 {
     partial class LibRetroGenerator : Generator
     {
-        static List<string> systemButtonInvert = new List<string>() { "snes", "snes-msu", "sattelaview", "sufami", "sgb" };
-        static List<string> systemButtonRotate = new List<string>() { "nes", "fds" };
-        static List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
+        static readonly List<string> systemButtonInvert = new List<string>() { "snes", "snes-msu", "sattelaview", "sufami", "sgb", "gb-msu" };
+        static readonly List<string> systemButtonRotate = new List<string>() { "nes", "fds", "mastersystem" };
+        static readonly List<string> systemMegadrive = new List<string>() { "megadrive", "megadrive-msu", "sega32x", "segacd" };
+        static readonly List<string> systemNES = new List<string>() { "nes", "fds" };
+        static readonly List<string> systemN64 = new List<string>() { "n64", "n64dd" };
+        static readonly List<string> megadrive3ButtonsList = new List<string>() { "2", "257", "1025", "1537", "773" };
+        static readonly List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
 
         private static int _playerCount = 1;
 
         public static void GenerateCoreInputRemap(string system, string core, Dictionary<string, string> inputremap)
         {
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
+                return;
+
             _playerCount = Program.Controllers.Count;
 
             if (_playerCount == 0)
@@ -26,8 +32,12 @@ namespace EmulatorLauncher.Libretro
             if (!string.IsNullOrEmpty(rom) && File.Exists(rom))
                 romName = System.IO.Path.GetFileNameWithoutExtension(rom);
 
+            bool remapFromFile = SetupCoreGameRemaps(system, core, romName, inputremap);
+            if (remapFromFile)
+                return;
+
             bool invertButtons = systemButtonInvert.Contains(system) && Program.Features.IsSupported("buttonsInvert") && Program.SystemConfig.getOptBoolean("buttonsInvert");
-            bool rotateButtons = systemButtonRotate.Contains(system) && Program.Features.IsSupported("shift_buttons") && Program.SystemConfig.getOptBoolean("shift_buttons");
+            bool rotateButtons = systemButtonRotate.Contains(system) && Program.Features.IsSupported("rotate_buttons") && Program.SystemConfig.getOptBoolean("rotate_buttons");
 
             for (int i = 1; i <= _playerCount; i++)
             {
@@ -38,15 +48,8 @@ namespace EmulatorLauncher.Libretro
                     inputremap["input_player" + i + "_btn_x"] = "1";
                     inputremap["input_player" + i + "_btn_y"] = "9";
                 }
-
-                if (rotateButtons && !coreNoRemap.Contains(core))
-                {
-                    inputremap["input_player" + i + "_btn_a"] = "9";
-                    inputremap["input_player" + i + "_btn_b"] = "8";
-                    inputremap["input_player" + i + "_btn_x"] = "1";
-                    inputremap["input_player" + i + "_btn_y"] = "0";
-                }
-
+                
+                #region atari800
                 if (core == "atari800")
                 {
                     inputremap["input_player" + i + "_btn_a"] = "0";
@@ -58,24 +61,67 @@ namespace EmulatorLauncher.Libretro
                         inputremap["input_player" + i + "_btn_y"] = "9";
                     }
                 }
+                #endregion
 
+                #region 3do
+                if (system == "3do")
+                {
+                    inputremap["input_player" + i + "_btn_x"] = "-1";
+                }
+                #endregion
+
+                #region 3ds
+                if (system == "3ds")
+                {
+                    inputremap["input_player" + i + "_btn_l3"] = "15";
+                    inputremap["input_player" + i + "_btn_r3"] = "-1";
+
+                    if (Program.SystemConfig.getOptBoolean("gamepadbuttons"))
+                    {
+                        inputremap["input_player" + i + "_btn_a"] = "0";
+                        inputremap["input_player" + i + "_btn_b"] = "8";
+                        inputremap["input_player" + i + "_btn_x"] = "1";
+                        inputremap["input_player" + i + "_btn_y"] = "9";
+                    }
+                }
+                #endregion
+
+                #region dreamcast
+                if (system == "dreamcast")
+                {
+                    if (Program.SystemConfig.getOptBoolean("dreamcast_use_shoulders"))
+                    {
+                        inputremap["input_player" + i + "_btn_l"] = "12";
+                        inputremap["input_player" + i + "_btn_l2"] = "-1";
+                        inputremap["input_player" + i + "_btn_r"] = "13";
+                        inputremap["input_player" + i + "_btn_r2"] = "-1";
+                    }
+                }
+                #endregion
+
+                #region gamecube
                 if (system == "gamecube")
                 {
-                    bool revertall = Program.Features.IsSupported("gamepadbuttons") && Program.SystemConfig.isOptSet("gamepadbuttons") && Program.SystemConfig["gamepadbuttons"] == "reverse_all";
-                    bool revertAB = Program.Features.IsSupported("gamepadbuttons") && Program.SystemConfig.isOptSet("gamepadbuttons") && Program.SystemConfig["gamepadbuttons"] == "reverse_ab";
-                    bool xboxPositions = Program.Features.IsSupported("gamepadbuttons") && Program.SystemConfig.isOptSet("gamepadbuttons") && Program.SystemConfig["gamepadbuttons"] == "xbox";
-                    bool analogTriggers = Program.Features.IsSupported("gamepadanalogtriggers") && Program.SystemConfig.isOptSet("gamepadanalogtriggers") && Program.SystemConfig["gamepadanalogtriggers"] == "true";
+                    bool positional = Program.Features.IsSupported("gamecube_buttons") && Program.SystemConfig.isOptSet("gamecube_buttons") && Program.SystemConfig["gamecube_buttons"] == "position";
+                    bool revertAB = Program.Features.IsSupported("gamecube_buttons") && Program.SystemConfig.isOptSet("gamecube_buttons") && Program.SystemConfig["gamecube_buttons"] == "reverse_ab";
+                    bool xboxPositions = Program.Features.IsSupported("gamecube_buttons") && Program.SystemConfig.isOptSet("gamecube_buttons") && Program.SystemConfig["gamecube_buttons"] == "xbox";
+                    bool digitalTriggers = Program.Features.IsSupported("gamepaddigitaltriggers") && Program.SystemConfig.isOptSet("gamepaddigitaltriggers") && Program.SystemConfig.getOptBoolean("gamepaddigitaltriggers");
 
-                    if (analogTriggers)
+                    inputremap["input_player" + i + "_btn_l3"] = "-1";
+                    inputremap["input_player" + i + "_btn_r3"] = "-1";
+
+                    if (positional)
                     {
-                        inputremap["input_player" + i + "_btn_l2"] = "14";
-                        inputremap["input_player" + i + "_btn_r2"] = "15";
-                        inputremap["input_player" + i + "_btn_l3"] = "-1";
-                        inputremap["input_player" + i + "_btn_r3"] = "-1";
+                        inputremap["input_player" + i + "_btn_a"] = "9";
+                        inputremap["input_player" + i + "_btn_b"] = "8";
+                        inputremap["input_player" + i + "_btn_x"] = "1";
+                        inputremap["input_player" + i + "_btn_y"] = "0";
+                        if (!digitalTriggers)
+                        {
+                            inputremap["input_player" + i + "_btn_l2"] = "14";
+                            inputremap["input_player" + i + "_btn_r2"] = "15";
+                        }
                     }
-
-                    if (revertall)
-                        continue;
 
                     if (xboxPositions)
                     {
@@ -83,31 +129,257 @@ namespace EmulatorLauncher.Libretro
                         inputremap["input_player" + i + "_btn_b"] = "8";
                         inputremap["input_player" + i + "_btn_x"] = "1";
                         inputremap["input_player" + i + "_btn_y"] = "9";
+                        if (!digitalTriggers)
+                        {
+                            inputremap["input_player" + i + "_btn_l2"] = "14";
+                            inputremap["input_player" + i + "_btn_r2"] = "15";
+                        }
                     }
 
                     else if (revertAB)
                     {
                         inputremap["input_player" + i + "_btn_x"] = "1";
                         inputremap["input_player" + i + "_btn_y"] = "9";
+                        if (!digitalTriggers)
+                        {
+                            inputremap["input_player" + i + "_btn_l2"] = "14";
+                            inputremap["input_player" + i + "_btn_r2"] = "15";
+                        }
                     }
 
                     else
+                    {
+                        if (!digitalTriggers)
+                        {
+                            inputremap["input_player" + i + "_btn_l2"] = "14";
+                            inputremap["input_player" + i + "_btn_r2"] = "15";
+                        }
+                        inputremap["input_player" + i + "_btn_l3"] = "-1";
+                        inputremap["input_player" + i + "_btn_r3"] = "-1";
+                    }
+                }
+                #endregion
+
+                #region gamegear
+                if (system == "gamegear")
+                {
+                    if (core == "fbneo")
+                    {
+                        inputremap["input_player" + i + "_btn_a"] = "0";
+                        inputremap["input_player" + i + "_btn_b"] = "8";
+                    }
+                }
+                #endregion
+
+                #region mastersystem
+                if (system == "mastersystem" && rotateButtons)
+                {
+                    if (core == "fbneo")
+                    {
+                        inputremap["input_player" + i + "_btn_a"] = "-1";
+                        inputremap["input_player" + i + "_btn_b"] = "8";
+                        inputremap["input_player" + i + "_btn_y"] = "0";
+                    }
+                    else
+                    {
+                        inputremap["input_player" + i + "_btn_a"] = "-1";
+                        inputremap["input_player" + i + "_btn_b"] = "8";
+                        inputremap["input_player" + i + "_btn_x"] = "-1";
+                        inputremap["input_player" + i + "_btn_y"] = "0";
+                    }
+                }
+                #endregion
+
+                #region megadrive
+                if (systemMegadrive.Contains(system) && !megadrive3ButtonsList.Contains(Program.SystemConfig["genesis_plus_gx_controller"]))
+                {
+                    switch (core)
+                    {
+                        case "genesis_plus_gx":
+                        case "genesis_plus_gx_wide":
+                        case "picodrive":
+                            if (Program.SystemConfig["megadrive_control_layout"] == "lr_zc")
+                            {
+                                inputremap["input_player" + i + "_btn_a"] = "0";
+                                inputremap["input_player" + i + "_btn_b"] = "1";
+                                inputremap["input_player" + i + "_btn_l"] = "11";
+                                inputremap["input_player" + i + "_btn_r"] = "8";
+                                inputremap["input_player" + i + "_btn_y"] = "10";
+                            }
+                            else if (Program.SystemConfig["megadrive_control_layout"] == "lr_yz")
+                            {
+                                inputremap["input_player" + i + "_btn_l"] = "9";
+                                inputremap["input_player" + i + "_btn_x"] = "10";
+                            }
+                            break;
+                        case "fbneo":
+                            if (Program.SystemConfig["megadrive_control_layout"] == "lr_zc")
+                            {
+                                inputremap["input_player" + i + "_btn_a"] = "0";
+                                inputremap["input_player" + i + "_btn_b"] = "1";
+                                inputremap["input_player" + i + "_btn_r"] = "8";
+                                inputremap["input_player" + i + "_btn_x"] = "11";
+                                inputremap["input_player" + i + "_btn_y"] = "9";
+                            }
+                            else if (Program.SystemConfig["megadrive_control_layout"] == "lr_yz")
+                            {
+                                inputremap["input_player" + i + "_btn_l"] = "11";
+                                inputremap["input_player" + i + "_btn_r"] = "10";
+                            }
+                            else
+                            {
+                                inputremap["input_player" + i + "_btn_l"] = "9";
+                                inputremap["input_player" + i + "_btn_r"] = "10";
+                                inputremap["input_player" + i + "_btn_x"] = "11";
+                            }
+                            break;
+                    }
+                }
+                else if (systemMegadrive.Contains(system))
+                {
+                    if (core == "fbneo")
+                    {
+                        inputremap["input_player" + i + "_btn_l"] = "9";
+                        inputremap["input_player" + i + "_btn_r"] = "10";
+                        inputremap["input_player" + i + "_btn_x"] = "11";
+                    }
+                }
+                #endregion
+
+                #region neogeocd
+                if (system == "neogeocd")
+                {
+                    if (core == "neocd")
+                    {
+                        inputremap["input_player" + i + "_btn_l"] = "14";
+                        inputremap["input_player" + i + "_btn_l2"] = "15";
+                        inputremap["input_player" + i + "_btn_l3"] = "-1";
+                        inputremap["input_player" + i + "_btn_r"] = "12";
+                        inputremap["input_player" + i + "_btn_r3"] = "-1";
+                    }
+                }
+                #endregion
+
+                #region N64
+                if (systemN64.Contains(system))
+                {
+                    if (Program.SystemConfig.isOptSet("lr_n64_buttons") && Program.SystemConfig["lr_n64_buttons"] == "xbox")
+                    {
+                        inputremap["input_player" + i + "_btn_a"] = "1";
+                        inputremap["input_player" + i + "_btn_r2"] = "-1";
+                        inputremap["input_player" + i + "_btn_x"] = "-1";
+                        inputremap["input_player" + i + "_btn_y"] = "-1";
+                    }
+                }
+                #endregion
+
+                #region NES
+                if (systemNES.Contains(system))
+                {
+                    if (core == "fceumm" && !rotateButtons)
                     {
                         inputremap["input_player" + i + "_btn_a"] = "9";
                         inputremap["input_player" + i + "_btn_b"] = "8";
                         inputremap["input_player" + i + "_btn_x"] = "1";
                         inputremap["input_player" + i + "_btn_y"] = "0";
                     }
+
+                    if (core == "nestopia" && !Program.SystemConfig.getOptBoolean("nes_turbo_enable"))
+                    {
+                        if (Program.SystemConfig.getOptBoolean("rotate_buttons"))
+                        {
+                            inputremap["input_player" + i + "_btn_x"] = "-1";
+                            inputremap["input_player" + i + "_btn_y"] = "-1";
+                        }
+                        else
+                        {
+                            inputremap["input_player" + i + "_btn_x"] = "-1";
+                            inputremap["input_player" + i + "_btn_a"] = "-1";
+                        }
+                    }
                 }
+                #endregion
+
+                #region psx
+                if (system == "psx" && Program.SystemConfig.getOptBoolean("psx_triggerswap"))
+                {
+                    inputremap["input_player" + i + "_btn_l2"] = "22";
+                    inputremap["input_player" + i + "_btn_r2"] = "23";
+                }
+                #endregion
+
+                #region saturn
+                if (system == "saturn")
+                {
+                    bool switchTriggers = Program.SystemConfig.getOptBoolean("saturn_invert_triggers");
+                    if (Program.SystemConfig.isOptSet("saturn_padlayout") && !string.IsNullOrEmpty(Program.SystemConfig["saturn_padlayout"]))
+                    {
+                        switch (Program.SystemConfig["saturn_padlayout"])
+                        {
+                            case "lr_yz":
+                                if (switchTriggers)
+                                {
+                                    inputremap["input_player" + i + "_btn_a"] = "11";
+                                    inputremap["input_player" + i + "_btn_b"] = "8";
+                                    inputremap["input_player" + i + "_btn_l"] = "12";
+                                    inputremap["input_player" + i + "_btn_r"] = "13";
+                                    inputremap["input_player" + i + "_btn_x"] = "1";
+                                    inputremap["input_player" + i + "_btn_y"] = "0";
+                                    inputremap["input_player" + i + "_btn_l2"] = "9";
+                                    inputremap["input_player" + i + "_btn_r2"] = "10";
+                                }
+                                else
+                                {
+                                    inputremap["input_player" + i + "_btn_a"] = "11";
+                                    inputremap["input_player" + i + "_btn_b"] = "8";
+                                    inputremap["input_player" + i + "_btn_l"] = "9";
+                                    inputremap["input_player" + i + "_btn_r"] = "10";
+                                    inputremap["input_player" + i + "_btn_x"] = "1";
+                                    inputremap["input_player" + i + "_btn_y"] = "0";
+                                }
+                                break;
+                            case "lr_xz":
+                                if (switchTriggers)
+                                {
+                                    inputremap["input_player" + i + "_btn_a"] = "11";
+                                    inputremap["input_player" + i + "_btn_b"] = "8";
+                                    inputremap["input_player" + i + "_btn_l"] = "12";
+                                    inputremap["input_player" + i + "_btn_l2"] = "1";
+                                    inputremap["input_player" + i + "_btn_r"] = "13";
+                                    inputremap["input_player" + i + "_btn_r2"] = "10";
+                                    inputremap["input_player" + i + "_btn_y"] = "0";
+                                }
+                                else
+                                {
+                                    inputremap["input_player" + i + "_btn_a"] = "11";
+                                    inputremap["input_player" + i + "_btn_b"] = "8";
+                                    inputremap["input_player" + i + "_btn_l"] = "1";
+                                    inputremap["input_player" + i + "_btn_r"] = "10";
+                                    inputremap["input_player" + i + "_btn_y"] = "0";
+                                }
+                                break;
+                            case "lr_zc":
+                                if (switchTriggers)
+                                {
+                                    inputremap["input_player" + i + "_btn_l"] = "12";
+                                    inputremap["input_player" + i + "_btn_l2"] = "10";
+                                    inputremap["input_player" + i + "_btn_r"] = "13";
+                                    inputremap["input_player" + i + "_btn_r2"] = "11";
+                                }
+                                break;
+                        }
+                    }
+                }
+                #endregion
             }
-            SetupCoreGameRemaps(system, core, romName, inputremap);
+            
             return;
         }
 
-        private static void SetupCoreGameRemaps(string system, string core, string romName, Dictionary<string, string> inputremap)
+        private static bool SetupCoreGameRemaps(string system, string core, string romName, Dictionary<string, string> inputremap)
         {
             if (core == null || system == null || romName == null)
-                return;
+                return false;
 
             YmlContainer game = null;
 
@@ -115,17 +387,29 @@ namespace EmulatorLauncher.Libretro
             string coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "libretro_" + core + "_" + system + ".yml");
 
             if (!File.Exists(coreMapping))
-                return;
+                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "libretro_" + core + ".yml");
+
+            if (!File.Exists(coreMapping))
+                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "libretro" + ".yml");
+
+            if (!File.Exists(coreMapping))
+                return false;
 
             YmlFile ymlFile = YmlFile.Load(coreMapping);
 
             if (ymlFile == null)
-                return;
+                return false;
 
             game = ymlFile.Elements.Where(c => c.Name == romName).FirstOrDefault() as YmlContainer;
 
             if (game == null)
-                return;
+                game = ymlFile.Elements.Where(c => romName.StartsWith(c.Name)).FirstOrDefault() as YmlContainer;
+
+            if (game == null)
+                game = ymlFile.Elements.Where(c => c.Name == "default").FirstOrDefault() as YmlContainer;
+
+            if (game == null)
+                return false;
 
             var gameName = game.Name;
             var buttonMap = new Dictionary<string, string>();
@@ -141,22 +425,23 @@ namespace EmulatorLauncher.Libretro
             gameMapping.Add(gameName, buttonMap);
 
             if (buttonMap.Count == 0)
-                return;
+                return false;
 
             for (int i = 1; i <= _playerCount; i++)
             {
                 foreach (var button in buttonMap)
                     inputremap["input_player" + i + "_" + button.Key] = button.Value;
             }
+            return true;
         }
 
-        private enum mame_remap
+        private enum Mame_remap
         {
             L3 = 14,
             R3 = 15,
         };
 
-        private enum atari800_remap
+        private enum Atari800_remap
         {
             FIRE1 = 0,
             FIRE2 = 8,
@@ -164,7 +449,7 @@ namespace EmulatorLauncher.Libretro
             NUMPAD_STAR = 9,
         };
 
-        private enum dolphin_gamecube_remap
+        private enum Dolphin_gamecube_remap
         {
             X = 9,
             A = 8,
@@ -175,7 +460,7 @@ namespace EmulatorLauncher.Libretro
             EMPTY = -1,
         };
 
-        private enum snes_remap
+        private enum Snes_remap
         {
             X = 9,
             A = 8,
@@ -183,7 +468,7 @@ namespace EmulatorLauncher.Libretro
             B = 0,
         };
 
-        private enum nes_remap
+        private enum Nes_remap
         {
             TURBO_A = 9,
             A = 8,
@@ -191,7 +476,7 @@ namespace EmulatorLauncher.Libretro
             B = 0,
         };
 
-        private enum flycast_remap
+        private enum Flycast_remap
         {
             LP = 0,
             BLOW_OFF = 1,

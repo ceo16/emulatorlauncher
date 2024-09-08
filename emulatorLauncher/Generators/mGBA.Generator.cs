@@ -6,7 +6,7 @@ using EmulatorLauncher.Common.FileFormats;
 
 namespace EmulatorLauncher
 {
-    class mGBAGenerator : Generator
+    class MGBAGenerator : Generator
     {
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
@@ -20,13 +20,13 @@ namespace EmulatorLauncher
                 return null;
 
             //Applying bezels
-            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
             _resolution = resolution;
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
-            SetupConfiguration(path, rom, system, fullscreen);
+            SetupConfiguration(path, system, fullscreen);
 
             var commandArray = new List<string>();
 
@@ -54,8 +54,7 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
             {
@@ -66,7 +65,7 @@ namespace EmulatorLauncher
             return ret;
         }
 
-        private void SetupConfiguration(string path, string rom, string system, bool fullscreen)
+        private void SetupConfiguration(string path, string system, bool fullscreen)
         {
             string conf = Path.Combine(path, "config.ini");
 

@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.IO;
 using System.Diagnostics;
-using Microsoft.Win32;
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Security.Policy;
-using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Launchers;
+using EmulatorLauncher.Common;
 
 namespace EmulatorLauncher
 {
@@ -24,7 +18,7 @@ namespace EmulatorLauncher
             public override int RunAndWait(System.Diagnostics.ProcessStartInfo path)
             {
                 bool uiExists = Process.GetProcessesByName("steam").Any();
-
+                SimpleLogger.Instance.Info("[INFO] Executable name : " + LauncherExe);
                 KillExistingLauncherExes();
 
                 Process.Start(path);

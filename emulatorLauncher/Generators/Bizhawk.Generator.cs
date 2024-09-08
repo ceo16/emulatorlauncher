@@ -4,6 +4,7 @@ using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common;
+using System;
 
 namespace EmulatorLauncher
 {
@@ -11,22 +12,42 @@ namespace EmulatorLauncher
     {
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
+        private string _path;
 
-        private static List<string> preferredRomExtensions = new List<string>() { ".bin", ".cue", ".img", ".iso", ".rom" };
+        private static readonly List<string> preferredRomExtensions = new List<string>() { ".bin", ".cue", ".img", ".iso", ".rom" };
+        private static readonly List<string> zipSystems = new List<string>() { "psx", "saturn", "n64", "n64dd", "pcenginecd", "jaguarcd", "vectrex", "odyssey2", "uzebox" };
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
-            // Define path
-            string path = AppConfig.GetFullPath("bizhawk");
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
 
+            string path = AppConfig.GetFullPath("bizhawk");
             if (string.IsNullOrEmpty(path))
                 return null;
 
-            // Define exe
             string exe = Path.Combine(path, "EmuHawk.exe");
-
             if (!File.Exists(exe))
                 return null;
+
+            _path = path;
+
+            string[] romExtensions = new string[] { ".m3u", ".chd", ".cue", ".ccd", ".cdi", ".iso", ".mds", ".nrg", ".z64", ".n64", ".v64", ".ndd", ".vec", ".uze", ".o2"};
+
+            if (zipSystems.Contains(system) && (Path.GetExtension(rom).ToLowerInvariant() == ".zip" || Path.GetExtension(rom).ToLowerInvariant() == ".7z" || Path.GetExtension(rom).ToLowerInvariant() == ".squashfs"))
+            {
+                string uncompressedRomPath = this.TryUnZipGameIfNeeded(system, rom, false, false);
+                if (Directory.Exists(uncompressedRomPath))
+                {
+                    string[] romFiles = Directory.GetFiles(uncompressedRomPath, "*.*", SearchOption.AllDirectories).OrderBy(file => Array.IndexOf(romExtensions, Path.GetExtension(file).ToLowerInvariant())).ToArray();
+                    rom = romFiles.FirstOrDefault(file => romExtensions.Any(ext => Path.GetExtension(file).Equals(ext, StringComparison.OrdinalIgnoreCase)));
+                    ValidateUncompressedGame();
+                }
+            }
+
+            if (Path.GetExtension(rom) == ".chd")
+                throw new ApplicationException("Extension CHD not compatible with Bizhawk");
+
+            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             // Json Config file
             string configFile = Path.Combine(path, "config.ini");
@@ -35,9 +56,9 @@ namespace EmulatorLauncher
             {
                 var json = DynamicJson.Load(configFile);
 
-                SetupGeneralConfig(json,system, core, rom, emulator);
+                SetupGeneralConfig(json,system, core, rom, emulator, fullscreen);
                 SetupCoreOptions(json, system, core, rom);
-                SetupFirmwares(json, system, core);
+                SetupFirmwares(json, system);
                 SetupRetroAchievements(json);
                 CreateControllerConfiguration(json, system, core);
 
@@ -45,10 +66,35 @@ namespace EmulatorLauncher
                 json.Save();
             }
 
-            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
             // Bezels
+            /*if (fullscreen)
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+
+            _resolution = resolution;*/
+
             if (fullscreen)
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            {
+                string renderer = "2";
+                if (SystemConfig.isOptSet("bizhawk_renderer") && !string.IsNullOrEmpty(SystemConfig["bizhawk_renderer"]))
+                    renderer = SystemConfig["bizhawk_renderer"];
+
+                switch (renderer)
+                {
+                    case "2":
+                        ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, path);
+                        if (!ReshadeManager.Setup(ReshadeBezelType.d3d9, ReshadePlatform.x64, system, rom, path, resolution, emulator))
+                            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+                        break;
+                    case "0":
+                        ReshadeManager.UninstallReshader(ReshadeBezelType.d3d9, path);
+                        if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
+                            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+                        break;
+                    case "1":
+                        SystemConfig["forceNoBezel"] = "1";
+                        break;
+                }
+            }
 
             _resolution = resolution;
 
@@ -62,11 +108,18 @@ namespace EmulatorLauncher
             }
 
             // Command line arguments
-            var commandArray = new List<string>();
+            var commandArray = new List<string>
+            {
+                "\"" + rom + "\""
+            };
 
-            commandArray.Add("\"" + rom + "\"");
             if (fullscreen)
                 commandArray.Add("--fullscreen");
+
+            if (core == "melonDS" && !SystemConfig.getOptBoolean("bizhawk_nds_mouse"))
+            {
+                commandArray.Add("--lua=Lua\\NDS\\StylusInputDisplay.lua");
+            }
 
             string args = string.Join(" ", commandArray);
 
@@ -79,7 +132,7 @@ namespace EmulatorLauncher
             };
         }
 
-        private static Dictionary<string, string> bizhawkPreferredCore = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> bizhawkPreferredCore = new Dictionary<string, string>()
         {
             { "gb", "GB" },
             { "gbc", "GBC" },
@@ -97,7 +150,7 @@ namespace EmulatorLauncher
             { "ti83", "TI83" },
         };
 
-        private void SetupGeneralConfig(DynamicJson json, string system, string core, string rom, string emulator)
+        private void SetupGeneralConfig(DynamicJson json, string system, string core, string rom, string emulator, bool fullscreen)
         {
             // First, set core to use !
             if (bizhawkPreferredCore.ContainsKey(system))
@@ -117,10 +170,16 @@ namespace EmulatorLauncher
 
             // General settings
             json["PauseWhenMenuActivated"] = "true";
+            json["MainFormStayOnTop"] = "true";
             json["SingleInstanceMode"] = "true";
             json["ShowContextMenu"] = "false";
             json["UpdateAutoCheckEnabled"] = "false";
             json["HostInputMethod"] = "0";
+
+            if (fullscreen)
+                json["StartFullscreen"] = "true";
+            else
+                json["StartFullscreen"] = "false";
 
             // Set Paths
             var pathEntries = json.GetOrCreateContainer("PathEntries");
@@ -210,7 +269,7 @@ namespace EmulatorLauncher
             pathEntries.SetObject("Paths", paths);
 
             // Display options
-            json["DispFixAspectRatio"] = "true";
+            BindBoolFeature(json, "DispFixAspectRatio", "bizhawk_fixed_ratio", "true", "false");
             json["DispFullscreenHacks"] = "true";
             BindBoolFeature(json, "DisplayFps", "bizhawk_fps", "true", "false");
             BindBoolFeature(json, "DispFixScaleInteger", "integerscale", "true", "false");
@@ -253,7 +312,7 @@ namespace EmulatorLauncher
                 json["GbAsSgb"] = "false";
         }
 
-        private void SetupFirmwares(DynamicJson json, string system, string core)
+        private void SetupFirmwares(DynamicJson json, string system)
         {
             var firmware = json.GetOrCreateContainer("FirmwareUserSpecifications");
 
@@ -535,16 +594,21 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
+            {
+                ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
+                ReshadeManager.UninstallReshader(ReshadeBezelType.d3d9, _path);
                 return 0;
+            }
 
+            ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
+            ReshadeManager.UninstallReshader(ReshadeBezelType.d3d9, _path);
             return ret;
         }
 
-        private static Dictionary<string, string> bizHawkSystems = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> bizHawkSystems = new Dictionary<string, string>()
         {
             { "amstradcpc", "AmstradCPC" },
             { "apple2", "AppleII" },
@@ -593,7 +657,7 @@ namespace EmulatorLauncher
             { "zxspectrum", "ZXSpectrum" },
         };
 
-        private static Dictionary<string, string> bizHawkShortSystems = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> bizHawkShortSystems = new Dictionary<string, string>()
         {
             { "atari2600", "A26" },
             { "atari7800", "A78" },

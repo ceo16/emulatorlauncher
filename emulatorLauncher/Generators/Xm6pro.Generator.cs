@@ -27,13 +27,13 @@ namespace EmulatorLauncher
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
-            SetupConfiguration(path, rom, system, fullscreen);
+            SetupConfiguration(path, fullscreen);
 
             if (SystemConfig.isOptSet("68k_stretch") && SystemConfig["68k_stretch"] == "true")
                 SystemConfig["bezel"] = "none";
 
             if (fullscreen)
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
             _resolution = resolution;
 
@@ -55,8 +55,7 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
                 return 0;
@@ -64,7 +63,7 @@ namespace EmulatorLauncher
             return ret;
         }
 
-        private void SetupConfiguration(string path, string rom, string system, bool fullscreen)
+        private void SetupConfiguration(string path, bool fullscreen)
         {
             string iniFile = Path.Combine(path, "XM6.ini");
 

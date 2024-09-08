@@ -14,11 +14,13 @@ using EmulatorLauncher.VPinballLauncher;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.EmulationStation;
+using System.Runtime.InteropServices;
+using System.Xml.Linq;
 
 namespace EmulatorLauncher
 {
     partial class TeknoParrotGenerator : Generator
-    {        
+    {
         static Dictionary<string, string> executables = new Dictionary<string, string>()
         {                        
             { "Batman",                          @"Batman\ZeusSP\sdaemon.exe" },
@@ -159,11 +161,6 @@ namespace EmulatorLauncher
         private string _exename;
         private GameProfile _gameProfile;
 
-        public TeknoParrotGenerator()
-        {
-            DependsOnDesktopResolution = true;
-        }
-
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
             string path = AppConfig.GetFullPath("TeknoParrot");
@@ -264,6 +261,7 @@ namespace EmulatorLauncher
 
             List<string> commandArray = new List<string>();
             commandArray.Add("--profile=" + profileName);
+
             if (!SystemConfig.isOptSet("tp_minimize") || SystemConfig.getOptBoolean("tp_minimize"))
                 commandArray.Add("--startMinimized");
             string args = string.Join(" ", commandArray);
@@ -282,35 +280,68 @@ namespace EmulatorLauncher
             string parrotData = Path.Combine(path, "ParrotData.xml");
 
             ParrotData data = null;
+            XElement xdoc = null;
 
-            try { data = XmlExtensions.FromXml<ParrotData>(parrotData); }
-            catch { data = new ParrotData(); }
-
-            if (!data.SilentMode || data.ConfirmExit)
+            if (File.Exists(parrotData))
             {
-                data.SilentMode = true;
-                data.ConfirmExit = false; 
+                xdoc = XElement.Load(parrotData);
+
+                xdoc.SetElementValue("SilentMode", true);
+                xdoc.SetElementValue("ConfirmExit", false);
+                xdoc.SetElementValue("HideVanguardWarning", true);
+                xdoc.SetElementValue("DisableAnalytics", true);
+                xdoc.SetElementValue("HasReadPolicies", true);
+
+                if (Program.SystemConfig.isOptSet("tp_stooz") && !string.IsNullOrEmpty(Program.SystemConfig["tp_stooz"]))
+                {
+                    xdoc.SetElementValue("UseSto0ZDrivingHack", true);
+                    xdoc.SetElementValue("StoozPercent", Program.SystemConfig["tp_stooz"].ToInteger());
+                }
+                else
+                {
+                    xdoc.SetElementValue("UseSto0ZDrivingHack", false);
+                    xdoc.SetElementValue("StoozPercent", 0);
+                }
+                
+                if (Program.SystemConfig.isOptSet("discord") && Program.SystemConfig.getOptBoolean("discord"))
+                    xdoc.SetElementValue("UseDiscordRPC", true);
+                else
+                    xdoc.SetElementValue("UseDiscordRPC", false);
+
+                xdoc.Save(parrotData);
             }
 
-            if (Program.SystemConfig.isOptSet("tp_stooz") && !string.IsNullOrEmpty(Program.SystemConfig["tp_stooz"]))
-            {
-                data.UseSto0ZDrivingHack = true;
-                data.StoozPercent = Program.SystemConfig["tp_stooz"].ToInteger();
-            }
             else
             {
-                data.UseSto0ZDrivingHack = false;
-                data.StoozPercent = 0;
+                data = new ParrotData();
+
+                if (!data.SilentMode || data.ConfirmExit)
+                {
+                    data.SilentMode = true;
+                    data.ConfirmExit = false;
+                }
+
+                if (Program.SystemConfig.isOptSet("tp_stooz") && !string.IsNullOrEmpty(Program.SystemConfig["tp_stooz"]))
+                {
+                    data.UseSto0ZDrivingHack = true;
+                    data.StoozPercent = Program.SystemConfig["tp_stooz"].ToInteger();
+                }
+                else
+                {
+                    data.UseSto0ZDrivingHack = false;
+                    data.StoozPercent = 0;
+                }
+
+                if (Program.SystemConfig.isOptSet("discord") && Program.SystemConfig.getOptBoolean("discord"))
+                    data.UseDiscordRPC = true;
+                else
+                    data.UseDiscordRPC = false;
+
+                data.HideVanguardWarning = true;
+                data.DisableAnalytics = true;
+
+                File.WriteAllText(parrotData, data.ToXml());
             }
-            
-            if (Program.SystemConfig.isOptSet("discord") && Program.SystemConfig.getOptBoolean("discord"))
-                data.UseDiscordRPC = true;
-            else
-                data.UseDiscordRPC = false;
-
-            data.CheckForUpdates = false;
-
-            File.WriteAllText(parrotData, data.ToXml());
         }
 
         private static void ExtractUserProfiles(string path)
@@ -497,12 +528,11 @@ namespace EmulatorLauncher
             }
         }
 
-        private void killIDZ()
+        private void KillIDZ()
         {
             if (_gameProfile == null || _gameProfile.EmulationProfile != "SegaToolsIDZ")
                 return;
 
-            var currentId = Process.GetCurrentProcess().Id;
             Regex regex = new Regex(@"amdaemon.*");
 
             foreach (Process p in Process.GetProcesses("."))
@@ -648,7 +678,7 @@ namespace EmulatorLauncher
 
             KillProcessTree("BudgieLoader");
             KillProcessTree("OpenParrotKonamiLoader");
-            killIDZ();
+            KillIDZ();
 
             return 0;
         }
@@ -668,10 +698,13 @@ namespace EmulatorLauncher
             ConfirmExit = true;
             DownloadIcons = true;
             UiDisableHardwareAcceleration = false;
+            HideVanguardWarning = true;
 
             UiColour = "lightblue";
             UiDarkMode = false;
             UiHolidayThemes = true;
+            HasReadPolicies = true;
+            DisableAnalytics = true;
         }
 
         public bool UseSto0ZDrivingHack { get; set; }
@@ -693,13 +726,14 @@ namespace EmulatorLauncher
         public bool UseDiscordRPC { get; set; }
         public bool SilentMode { get; set; }
         public bool CheckForUpdates { get; set; }
-
         public bool ConfirmExit { get; set; }
         public bool DownloadIcons { get; set; }
         public bool UiDisableHardwareAcceleration { get; set; }
-
+        public bool HideVanguardWarning { get; set; }
         public string UiColour { get; set; }
         public bool UiDarkMode { get; set; }
         public bool UiHolidayThemes { get; set; }
+        public bool HasReadPolicies { get; set; }
+        public bool DisableAnalytics { get; set; }
     }
 }

@@ -15,6 +15,8 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
+            SimpleLogger.Instance.Info("[INFO] Creating controller configuration for SSF");
+
             // clear existing Input section of ini file
             ini.ClearSection("Input");
 
@@ -111,11 +113,12 @@ namespace EmulatorLauncher
 
             // Define variables to be used
             bool isXinput = ctrl.IsXInputDevice;
-            SdlToDirectInput dinputController = null;
+            bool invertTriggers = SystemConfig.getOptBoolean("saturn_invert_triggers");
+            SdlToDirectInput dinputController;
 
             // Find controllerMapping in Gamecontrollerdb.txt file
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
-            string guid = (ctrl.Guid.ToString()).Substring(0, 27) + "00000";
+            string guid = (ctrl.Guid.ToString()).Substring(0, 24) + "00000000";
             
             if (!File.Exists(gamecontrollerDB))
             {
@@ -155,38 +158,38 @@ namespace EmulatorLauncher
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.right, dinputController, isXinput)) + (index * 65536)).ToString());
             }
 
-            if (SystemConfig.isOptSet("ssf_padlayout") && SystemConfig["ssf_padlayout"] == "lr_yz")
+            if (SystemConfig.isOptSet("saturn_padlayout") && SystemConfig["saturn_padlayout"] == "lr_yz")
             {
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.y, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.a, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.b, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.x, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.l2 : InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.r2 : InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
             }
 
-            else if (SystemConfig.isOptSet("ssf_padlayout") && SystemConfig["ssf_padlayout"] == "lr_xz")
+            else if (SystemConfig.isOptSet("saturn_padlayout") && SystemConfig["saturn_padlayout"] == "lr_xz")
             {
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.y, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.a, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.b, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.l2 : InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.x, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.r2 : InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
             }
 
             else
             {
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.a, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.b, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.r2 : InputKey.pagedown, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.y, dinputController, isXinput)) + (index * 65536)).ToString());
                 buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.x, dinputController, isXinput)) + (index * 65536)).ToString());
-                buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
+                buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.l2 : InputKey.pageup, dinputController, isXinput)) + (index * 65536)).ToString());
             }
 
-            buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.l2, dinputController, isXinput, true)) + (index * 65536)).ToString());
-            buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.r2, dinputController, isXinput, true)) + (index * 65536)).ToString());
+            buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.pageup : InputKey.l2, dinputController, isXinput, true)) + (index * 65536)).ToString());
+            buttonMapping.Add("1/" + ((GetInputCode(ctrl, invertTriggers ? InputKey.pagedown : InputKey.r2, dinputController, isXinput, true)) + (index * 65536)).ToString());
             buttonMapping.Add("1/" + ((GetInputCode(ctrl, InputKey.start, dinputController, isXinput)) + (index * 65536)).ToString());
 
             buttonMapping.Add("0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0");
@@ -194,13 +197,13 @@ namespace EmulatorLauncher
             string mapping = string.Join("/", buttonMapping);
 
             ini.WriteValue("Input", padKey, "\"" + mapping + "\"");
+
+            SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
         }
 
         private static int GetInputCode(Controller c, InputKey key, SdlToDirectInput ctrl, bool isXinput = false, bool trigger = false)
         {
-
-            bool revertAxis = false;
-            key = key.GetRevertedAxis(out revertAxis);
+            key = key.GetRevertedAxis(out bool revertAxis);
 
             string esName = (c.Config[key].Name).ToString();
 
@@ -271,7 +274,7 @@ namespace EmulatorLauncher
             return 0;
         }
 
-        private static Dictionary<int, string> ssfPadOrder = new Dictionary<int, string>()
+        private static readonly Dictionary<int, string> ssfPadOrder = new Dictionary<int, string>()
         {
             { 1, "0_0" },
             { 2, "1_0" },
@@ -287,7 +290,7 @@ namespace EmulatorLauncher
             { 12, "1_5" },
         };
 
-        private static Dictionary<string, string> esToDinput = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> esToDinput = new Dictionary<string, string>()
         {
             { "a", "a" },
             { "b", "b" },

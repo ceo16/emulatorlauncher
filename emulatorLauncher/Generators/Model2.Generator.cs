@@ -12,12 +12,12 @@ namespace EmulatorLauncher
 {
     partial class Model2Generator : Generator
     {
-
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
         private bool _dinput;
         private string _destFile;
         private string _destParent;
+        private string _path;
 
         public Model2Generator()
         {
@@ -26,7 +26,13 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             string path = AppConfig.GetFullPath("m2emulator");
+            if (!Directory.Exists(path))
+                return null;
+
+            _path = path;
 
             string exe = Path.Combine(path, "emulator_multicpu.exe");
             if (core != null && core.ToLower().Contains("singlecpu"))
@@ -34,6 +40,8 @@ namespace EmulatorLauncher
 
             if (!File.Exists(exe))
                 return null;
+
+            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             string pakDir = Path.Combine(path, "roms");
             if (!Directory.Exists(pakDir))
@@ -56,8 +64,7 @@ namespace EmulatorLauncher
                 catch { }
             }
 
-            string parentRom = null;
-            if (parentRoms.TryGetValue(Path.GetFileNameWithoutExtension(rom).ToLowerInvariant(), out parentRom))
+            if (parentRoms.TryGetValue(Path.GetFileNameWithoutExtension(rom).ToLowerInvariant(), out string parentRom))
             {
                 parentRom = Path.Combine(Path.GetDirectoryName(rom), parentRom + ".zip");
                 _destParent = Path.Combine(pakDir, Path.GetFileName(parentRom));
@@ -73,15 +80,18 @@ namespace EmulatorLauncher
 
             _resolution = resolution;
 
-            if (!ReshadeManager.Setup(ReshadeBezelType.d3d9, ReshadePlatform.x86, system, rom, path, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            if (fullscreen)
+            {
+                if (!ReshadeManager.Setup(ReshadeBezelType.d3d9, ReshadePlatform.x86, system, rom, path, resolution, emulator))
+                    _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+            }
 
             _dinput = false;
             if (SystemConfig.isOptSet("m2_joystick_driver") && SystemConfig["m2_joystick_driver"] == "dinput")
                 _dinput = true;
 
-            SetupConfig(path, resolution, rom);
-            SetupLUAScript(path, resolution, rom);
+            SetupConfig(path, resolution, rom, fullscreen);
+            SetupLUAScript(path, rom);
 
             string arg = Path.GetFileNameWithoutExtension(_destFile);
 
@@ -93,11 +103,9 @@ namespace EmulatorLauncher
             };
         }
 
-        private void SetupConfig(string path, ScreenResolution resolution, string rom)
+        private void SetupConfig(string path, ScreenResolution resolution, string rom, bool fullscreen)
         {
             string iniFile = Path.Combine(path, "Emulator.ini");
-
-            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             try
             {
@@ -170,6 +178,12 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return;
 
+            if (!Controllers.Any(c => c.IsXInputDevice) && SystemConfig["m2_joystick_driver"] != "xinput")
+            {
+                SimpleLogger.Instance.Info("No XInput controllers found, switching to DirectInput");
+                ini.WriteValue("Input", "XInput", "0");
+            }
+
             else if (Program.SystemConfig.isOptSet("m2_joystick_autoconfig") && Program.SystemConfig["m2_joystick_autoconfig"] == "template")
             {
                 string inputCFGpath = Path.Combine(path, "CFG");
@@ -216,7 +230,7 @@ namespace EmulatorLauncher
                 else
                     bytes = new byte[hexLength];
 
-                ConfigureControllers(bytes, ini, parentRom, hexLength);
+                ConfigureControllers(bytes, ini, parentRom);
 
                 SimpleLogger.Instance.Info("Saving input file " + inputFile);
                 File.WriteAllBytes(inputFile, bytes);
@@ -276,14 +290,13 @@ namespace EmulatorLauncher
             catch { }
             finally
             {
-                if (bezel != null)
-                    bezel.Dispose();
+                bezel?.Dispose();
             }
 
             return -1;
         }
 
-        static Dictionary<string, string> parentRoms = new Dictionary<string, string>()
+        static readonly Dictionary<string, string> parentRoms = new Dictionary<string, string>()
         { 
             // Daytona USA
             { "dayton93", "daytona" },
@@ -337,7 +350,7 @@ namespace EmulatorLauncher
             { "zeroguna", "zerogun" },
         };
 
-        static Dictionary<string, int> byteLength = new Dictionary<string, int>()
+        static readonly Dictionary<string, int> byteLength = new Dictionary<string, int>()
         {
             { "bel", 108 },
             { "daytona", 104 },
@@ -373,7 +386,7 @@ namespace EmulatorLauncher
             { "zerogun", 108 }
         };
 
-        private void SetupLUAScript(string path, ScreenResolution resolution, string rom)
+        private void SetupLUAScript(string path, string rom)
         {
             string luaFile = Path.Combine(path, "scripts", Path.GetFileNameWithoutExtension(rom) + ".lua");
 

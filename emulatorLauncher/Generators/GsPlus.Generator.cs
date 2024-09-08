@@ -87,13 +87,15 @@ namespace EmulatorLauncher
                     conf.WriteValue(null, "s7d1", rom);
             }
 
-            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x86, system, rom, path, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x86, system, rom, path, resolution, emulator))
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
             _resolution = resolution;
 
-            List<string> commandArray = new List<string>();
-            commandArray.Add("-borderless");
+            List<string> commandArray = new List<string>
+            {
+                "-borderless"
+            };
 
             if (this.Controllers.Any(c => !c.IsKeyboard))
             {
@@ -129,8 +131,7 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             // GsPlus always returns 1
             if (ret == 1)

@@ -61,7 +61,7 @@ namespace EmulatorLauncher
                                 regKeyc.SetValue("JoypadDigitalPlunger", JoystickValue(InputKey.a, controller));
                                 regKeyc.SetValue("JoypadToggleHud", JoystickValue(InputKey.y, controller));
                                 regKeyc.SetValue("JoypadNextCamera", JoystickValue(InputKey.b, controller));
-                                regKeyc.SetValue("JoypadExit", -1); //JoystickValue(InputKey.x, controller));
+                                regKeyc.SetValue("JoypadExit", JoystickValue(InputKey.r3, controller));
 
                                 regKeyc.SetValue("JoypadLeftFlipper", JoystickValue(InputKey.pageup, controller));
                                 regKeyc.SetValue("JoypadRightFlipper", JoystickValue(InputKey.pagedown, controller));
@@ -69,7 +69,6 @@ namespace EmulatorLauncher
                                 regKeyc.SetValue("JoypadStartGame", JoystickValue(InputKey.start, controller));
                                 regKeyc.SetValue("JoypadInsertCoin", JoystickValue(InputKey.select, controller));
 
-                                //regKeyc.SetValue("JoypadPause", JoystickValue(InputKey.r3, controller));
                                 regKeyc.SetValue("JoypadPause", JoystickValue(InputKey.x, controller));
                                 regKeyc.SetValue("JoypadBackbox", JoystickValue(InputKey.l3, controller));
 
@@ -102,7 +101,6 @@ namespace EmulatorLauncher
         }
 
         string _bam;
-        string _rom;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -124,7 +122,6 @@ namespace EmulatorLauncher
                     throw new ApplicationException("Unable to find any table in the provided folder");
             }
             
-            _rom = rom;
             _splash = ShowSplash(rom);
 
             if ("bam".Equals(emulator, StringComparison.InvariantCultureIgnoreCase) || "bam".Equals(core, StringComparison.InvariantCultureIgnoreCase))
@@ -204,7 +201,7 @@ namespace EmulatorLauncher
 
         public override int RunAndWait(ProcessStartInfo path)
         {
-            Process process = null;
+            Process process;
 
             if (_bam != null && File.Exists(_bam))
             {
@@ -319,7 +316,7 @@ namespace EmulatorLauncher
                     regKeyc.SetValue("PlayfieldMonitorID", "\\\\.\\DISPLAY1");
 
                 if (SystemConfig.isOptSet("DefaultCamera") && !string.IsNullOrEmpty(SystemConfig["DefaultCamera"]))
-                    regKeyc.SetValue("DefaultCamera", SystemConfig["DefaultCamera"]);
+                    regKeyc.SetValue("DefaultCamera", SystemConfig["DefaultCamera"].ToInteger());
                 else
                     regKeyc.SetValue("DefaultCamera", 0);
 
@@ -393,19 +390,19 @@ namespace EmulatorLauncher
                     regKeyc.SetValue("RenderOrnaments", 0);
 
                 if (SystemConfig.isOptSet("fp_texture_filter"))
-                    regKeyc.SetValue("TextureFilter", SystemConfig["fp_texture_filter"]);
+                    regKeyc.SetValue("TextureFilter", SystemConfig["fp_texture_filter"].ToInteger());
                 else
-                    regKeyc.SetValue("TextureFilter", "0");
+                    regKeyc.SetValue("TextureFilter", 0);
 
                 if (SystemConfig.isOptSet("fp_anisotropic"))
-                    regKeyc.SetValue("AnisotropicFiltering", SystemConfig["fp_anisotropic"]);
+                    regKeyc.SetValue("AnisotropicFiltering", SystemConfig["fp_anisotropic"].ToInteger());
                 else
-                    regKeyc.SetValue("AnisotropicFiltering", "1");
+                    regKeyc.SetValue("AnisotropicFiltering", 1);
 
                 if (SystemConfig.isOptSet("fp_antialiasing"))
-                    regKeyc.SetValue("AntiAliasing", SystemConfig["fp_antialiasing"]);
+                    regKeyc.SetValue("AntiAliasing", SystemConfig["fp_antialiasing"].ToInteger());
                 else
-                    regKeyc.SetValue("AntiAliasing", "2");
+                    regKeyc.SetValue("AntiAliasing", 2);
 
                 regKeyc.Close();
             }
@@ -431,8 +428,10 @@ namespace EmulatorLauncher
                 var controller = Controllers.FirstOrDefault(c => c.PlayerIndex == 1 && c.Config != null && c.Config.Type != "keyboard");
                 if (controller != null)
                 {
-                    LoadingForm frm = new LoadingForm();
-                    frm.WarningText = Properties.Resources.FPinballDeveloperMode;
+                    LoadingForm frm = new LoadingForm
+                    {
+                        WarningText = Properties.Resources.FPinballDeveloperMode
+                    };
                     frm.Show();
                 }
             }

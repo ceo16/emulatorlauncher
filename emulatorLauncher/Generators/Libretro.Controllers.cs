@@ -1,20 +1,24 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
+using EmulatorLauncher.Common.Joysticks;
 
 namespace EmulatorLauncher.Libretro
 {
     class LibretroControllers
     {
+        private static bool _n64specialController = false;
+        private static bool _noHotkey = false;
         private static string _inputDriver = "sdl2";
-        private static HashSet<string> disabledAnalogModeSystems = new HashSet<string> { "n64", "dreamcast", "gamecube", "3ds" };
+        private static readonly HashSet<string> disabledAnalogModeSystems = new HashSet<string> { "n64", "dreamcast", "gamecube", "3ds" };
 
-        static List<string> systemButtonInvert = new List<string>() { "snes", "snes-msu", "sattelaview", "sufami" };
-        static List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
+        static readonly List<string> systemButtonInvert = new List<string>() { "snes", "snes-msu", "sattelaview", "sufami" };
+        static readonly List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
 
 
         public static bool WriteControllersConfig(ConfigFile retroconfig, string system, string core)
@@ -22,10 +26,13 @@ namespace EmulatorLauncher.Libretro
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return false;
 
+            var c1 = Program.Controllers.FirstOrDefault(c => c.PlayerIndex == 1);
+            bool forceDInput = c1 != null && c1.SdlController == null && !c1.IsXInputDevice;
+
             if (Program.SystemConfig["input_driver"] == "xinput")
                 _inputDriver = "xinput";
 
-            if (Program.SystemConfig["input_driver"] == "dinput")
+            if (Program.SystemConfig["input_driver"] == "dinput" || forceDInput)
                 _inputDriver = "dinput";
 
             // no menu in non full uimode
@@ -37,6 +44,9 @@ namespace EmulatorLauncher.Libretro
             foreach (var controller in Program.Controllers)
                 WriteControllerConfig(retroconfig, controller, system, core);
 
+            WriteKBHotKeyConfig(retroconfig, core);
+            if (_n64specialController)
+                return true;
             WriteHotKeyConfig(retroconfig);
 
             return true;
@@ -105,7 +115,7 @@ namespace EmulatorLauncher.Libretro
                 retroconfig.DisableAll("input_" + specialkey.Value);
         }
 
-        private static void WriteHotKeyConfig(ConfigFile config)
+        private static void WriteKBHotKeyConfig(ConfigFile config, string core)
         {
             // Keyboard defaults
             config["input_enable_hotkey"] = "nul";
@@ -118,7 +128,42 @@ namespace EmulatorLauncher.Libretro
 #else
             config["input_exit_emulator"] = "escape";
 #endif            
+            // Overwrite hotkeys with a file
+            string kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "retroarch_kb_hotkeys.yml");
 
+            if (File.Exists(kbHotkeyFile))
+            {
+                YmlFile ymlFile = YmlFile.Load(kbHotkeyFile);
+
+                if (ymlFile != null)
+                {
+                    YmlContainer kbHotkeyList = ymlFile.Elements.Where(c => c.Name == core).FirstOrDefault() as YmlContainer;
+
+                    if (kbHotkeyList == null)
+                        kbHotkeyList = ymlFile.Elements.Where(c => c.Name == "default").FirstOrDefault() as YmlContainer;
+
+                    if (kbHotkeyList != null)
+                    {
+                        SimpleLogger.Instance.Info("[GENERATOR] Overwriting keyboard hotkeys with values from : " + kbHotkeyFile);
+
+                        var kbHotkeys = kbHotkeyList.Elements;
+
+                        if (kbHotkeys != null & kbHotkeys.Count > 0)
+                        {
+                            foreach (var kbHotkey in kbHotkeys)
+                            {
+                                var hotkey = kbHotkey as YmlElement;
+
+                                if (hotkey != null && hotkey.Name.StartsWith("input_") && !hotkey.Name.EndsWith("_btn") && !hotkey.Name.EndsWith("_mbtn") && !hotkey.Name.EndsWith("_axis"))
+                                    config[hotkey.Name] = hotkey.Value;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // If no file use RetroBat standard
             config["input_menu_toggle"] = "f1";
             config["input_save_state"] = "f2";
             config["input_load_state"] = "f4";
@@ -127,12 +172,14 @@ namespace EmulatorLauncher.Libretro
             config["input_state_slot_increase"] = "f7";
             config["input_screenshot"] = "f8";
             config["input_rewind"] = "backspace";
-            config["hold_fast_forward"] = "l";
+            config["input_hold_fast_forward"] = "l";
             config["input_shader_next"] = "m";
             config["input_shader_prev"] = "n";
             config["input_bind_hold"] = "2";
             config["input_bind_timeout"] = "5";
-
+        }
+        private static void WriteHotKeyConfig(ConfigFile config)
+        {
             var c0 = Program.Controllers.FirstOrDefault(c => c.PlayerIndex == 1);
             if (c0 == null || c0.Config == null)
                 return;
@@ -149,10 +196,7 @@ namespace EmulatorLauncher.Libretro
                             config[string.Format("input_{0}", specialkey.Value)] = GetConfigValue(input);
                     }
 
-                    var wiiMoteHotKey = GetInputCode(keyB, InputKey.hotkey);
-                    if (wiiMoteHotKey == null)
-                        wiiMoteHotKey = GetInputCode(keyB, InputKey.select);
-
+                    var wiiMoteHotKey = GetInputCode(keyB, InputKey.hotkey) ?? GetInputCode(keyB, InputKey.select);
                     if (wiiMoteHotKey != null && wiiMoteHotKey.Type == "key")
                         config["input_enable_hotkey"] = GetConfigValue(wiiMoteHotKey);
                 }
@@ -196,6 +240,8 @@ namespace EmulatorLauncher.Libretro
                 { InputKey.select, "select"}
             };
 
+            var config = new Dictionary<string, string>();
+
             if (system == "mame")
             {
                 // Invert Dip switches and set it on r3 instead ( less annoying )
@@ -205,6 +251,61 @@ namespace EmulatorLauncher.Libretro
 
             if (system == "n64")
             {
+                string guid = controller.Guid.ToString().ToLowerInvariant();
+                string n64json = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+
+                if (File.Exists(n64json))
+                {
+                    try
+                    {
+                        var n64Controllers = N64Controller.LoadControllersFromJson(n64json);
+
+                        if (n64Controllers != null)
+                        {
+                            N64Controller n64Gamepad = N64Controller.GetN64Controller("libretro", guid, n64Controllers);
+                            if (n64Gamepad != null)
+                            {
+                                SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + n64Gamepad.Name);
+
+                                if (n64Gamepad.ControllerInfo != null)
+                                {
+                                    if (n64Gamepad.ControllerInfo.ContainsKey("input_analog_sensitivity"))
+                                        retroconfig["input_analog_sensitivity"] = n64Gamepad.ControllerInfo["input_analog_sensitivity"];
+                                }
+
+                                if (n64Gamepad.Mapping != null)
+                                {
+                                    foreach (var button in n64Gamepad.Mapping)
+                                        config[string.Format("input_player{0}_{1}", controller.PlayerIndex, button.Key)] = button.Value;
+                                }
+                                else
+                                    SimpleLogger.Instance.Info("[Controller] Missing mapping for libretro : " + n64Gamepad.Name);
+
+                                if (n64Gamepad.HotKeyMapping != null)
+                                {
+                                    foreach (var hotkey in n64Gamepad.HotKeyMapping)
+                                        config[hotkey.Key] = hotkey.Value;
+                                }
+                                else
+                                    SimpleLogger.Instance.Info("[Controller] Missing mapping for libretro hotkeys : " + n64Gamepad.Name);
+
+                                _inputDriver = "sdl2";
+
+                                if (config["input_joypad_driver"] != null)
+                                    _inputDriver = config["input_joypad_driver"];
+
+                                _n64specialController = true;
+                                return config;
+                            }
+                            else
+                                SimpleLogger.Instance.Info("[Controller] No specific mapping found for N64 controller.");
+                        }
+                        else
+                            SimpleLogger.Instance.Info("[Controller] Error loading JSON file.");
+                    }
+                    catch { }
+                }
+
                 // some input adaptations for some cores...
                 // z is important, in case l2 (z) is not available for this pad, use l1
                 if (controller.Config != null && controller.Config.Input != null && !controller.Config.Input.Any(i => i.Name == InputKey.r2))
@@ -224,8 +325,6 @@ namespace EmulatorLauncher.Libretro
             }
 
             var conflicts = new List<string>();
-
-            var config = new Dictionary<string, string>();
 
             foreach (var btnkey in retroarchbtns)
             {
@@ -273,7 +372,14 @@ namespace EmulatorLauncher.Libretro
                 }
             }
 
-            if (controller.PlayerIndex == 1)
+            var hotKey = GetInputCode(controller, InputKey.hotkey);
+            if (hotKey == null)
+            {
+                SimpleLogger.Instance.Info("[GENERATOR] No hotkey configured, all retroarch shortcuts will be disabled.");
+                _noHotkey = true;
+            }
+            
+            if (controller.PlayerIndex == 1 && !_noHotkey)
             {
                 foreach (var specialkey in retroarchspecials)
                 {
@@ -623,7 +729,7 @@ namespace EmulatorLauncher.Libretro
             RETROK_LAST
         }
 
-        static Dictionary<string, retro_key> input_config_names = new Dictionary<string, retro_key>()
+        static readonly Dictionary<string, retro_key> input_config_names = new Dictionary<string, retro_key>()
         {
            { "left", retro_key.RETROK_LEFT },
            { "right", retro_key.RETROK_RIGHT },
@@ -747,7 +853,7 @@ namespace EmulatorLauncher.Libretro
            { "nul", retro_key.RETROK_UNKNOWN }
         };        
         
-        static Dictionary<SDL.SDL_Keycode, retro_key> input_config_key_map = new Dictionary<SDL.SDL_Keycode, retro_key>()
+        static readonly Dictionary<SDL.SDL_Keycode, retro_key> input_config_key_map = new Dictionary<SDL.SDL_Keycode, retro_key>()
         {
            { SDL.SDL_Keycode.SDLK_BACKSPACE, retro_key.RETROK_BACKSPACE },
            { SDL.SDL_Keycode.SDLK_TAB, retro_key.RETROK_TAB },
@@ -883,6 +989,5 @@ namespace EmulatorLauncher.Libretro
            { SDL.SDL_Keycode.SDLK_UNDO, retro_key.RETROK_UNDO },
       //     { 0, retro_key.RETROK_UNKNOWN },*/
         };
-
     }
 }

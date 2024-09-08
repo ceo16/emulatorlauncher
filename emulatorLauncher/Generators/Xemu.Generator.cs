@@ -25,6 +25,8 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             string path = AppConfig.GetFullPath("xemu");
             if (string.IsNullOrEmpty(path))
                 return null;
@@ -37,12 +39,13 @@ namespace EmulatorLauncher
                 return null;
 
             //Applying bezels
-            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution))
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+            if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
-            _resolution = resolution;                  
+            _resolution = resolution;
 
             // Extract SDL2 version info
+            SimpleLogger.Instance.Info("[Generator] Getting SDL version from: " + exe);
             _sdlVersion = SdlJoystickGuidManager.GetSdlVersionFromStaticBinary(exe, SdlVersion.SDL2_0_X);
 
             try
@@ -50,7 +53,6 @@ namespace EmulatorLauncher
                 // Define Paths
                 string eepromPath = null;
                 string hddPath = null;
-                string flashPath = null;
                 string bootRom = null;
 
                 if (!string.IsNullOrEmpty(AppConfig["saves"]) && Directory.Exists(AppConfig.GetFullPath("saves")))
@@ -61,11 +63,15 @@ namespace EmulatorLauncher
 
                     // Copy eeprom file from resources if file does not exist yet
                     if (!File.Exists(Path.Combine(savePath, "eeprom.bin")))
+                    {
+                        SimpleLogger.Instance.Info("[Generator] eeprom.bin not found, copying from template.");
                         File.WriteAllBytes(Path.Combine(savePath, "eeprom.bin"), Properties.Resources.eeprom);
+                    }
 
                     // Unzip and Copy hdd image file from resources if file does not exist yet
                     if (!File.Exists(Path.Combine(savePath, "xbox_hdd.qcow2")))
                     {
+                        SimpleLogger.Instance.Info("[Generator] xbox_hdd.qcow2 not found, copying from template.");
                         string zipFile = Path.Combine(savePath, "xbox_hdd.qcow2.zip");
                         File.WriteAllBytes(zipFile, Properties.Resources.xbox_hdd_qcow2);
 
@@ -96,18 +102,12 @@ namespace EmulatorLauncher
                 // BIOS file paths
                 if (!string.IsNullOrEmpty(AppConfig["bios"]) && Directory.Exists(AppConfig.GetFullPath("bios")))
                 {
-                    if (File.Exists(Path.Combine(AppConfig.GetFullPath("bios"), "Complex_4627.bin")))
-                        flashPath = Path.Combine(AppConfig.GetFullPath("bios"), "Complex_4627.bin");
-
                     if (File.Exists(Path.Combine(AppConfig.GetFullPath("bios"), "mcpx_1.0.bin")))
                         bootRom = Path.Combine(AppConfig.GetFullPath("bios"), "mcpx_1.0.bin");
                 }
 
-                // Save to old INI format
-                SetupiniConfiguration(path, eepromPath, hddPath, flashPath, bootRom, rom);
-
                 // Save to new TOML format
-                SetupTOMLConfiguration(path, eepromPath, hddPath, flashPath, bootRom, rom);
+                SetupTOMLConfiguration(path, system, eepromPath, hddPath, bootRom);
                 
             }
             catch { }
@@ -117,8 +117,7 @@ namespace EmulatorLauncher
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
-            Rectangle emulationStationBounds;
-            if (IsEmulationStationWindowed(out emulationStationBounds, true) && !SystemConfig.getOptBoolean("forcefullscreen"))
+            if (IsEmulationStationWindowed(out Rectangle emulationStationBounds, true) && !SystemConfig.getOptBoolean("forcefullscreen"))
             {
                 _windowRect = emulationStationBounds;
                 _bezelFileInfo = null;
@@ -135,7 +134,7 @@ namespace EmulatorLauncher
             if (!SystemConfig.isOptSet("bezel") && SystemConfig["scale"] == "stretch")
             {
                 SystemConfig["forceNoBezel"] = "1";
-                ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution);
+                ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator);
             }
 
             // Launch emulator
@@ -152,14 +151,16 @@ namespace EmulatorLauncher
         /// </summary> 
         public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
         {
-            return PadToKey.AddOrUpdateKeyMapping(mapping, "xemu", InputKey.hotkey | InputKey.start, "(%{KILL})");
+            return PadToKey.AddOrUpdateKeyMapping(mapping, "xemu", InputKey.hotkey | InputKey.start, "(%{CLOSE})");
         }
 
         /// <summary>
         /// Get XBOX language to write to eeprom, value from features or default language of ES.
         /// </summary>
-        private int getXboxLangFromEnvironment()
+        private int GetXboxLangFromEnvironment()
         {
+            SimpleLogger.Instance.Info("[Generator] Getting Language from RetroBat language.");
+
             var availableLanguages = new Dictionary<string, int>()
             {
                 { "en", 1 },
@@ -177,8 +178,7 @@ namespace EmulatorLauncher
             var lang = GetCurrentLanguage();
             if (!string.IsNullOrEmpty(lang))
             {
-                int ret;
-                if (availableLanguages.TryGetValue(lang, out ret))
+                if (availableLanguages.TryGetValue(lang, out int ret))
                     return ret;
             }
 
@@ -191,13 +191,13 @@ namespace EmulatorLauncher
         /// <param name="path"></param>
         /// <param name="eepromPath"></param>
         /// <param name="hddPath"></param>
-        /// <param name="flashPath"></param>
         /// <param name="bootRom"></param>
-        /// <param name="rom"></param>
-        private void SetupTOMLConfiguration(string path, string eepromPath, string hddPath, string flashPath, string bootRom, string rom)
+        private void SetupTOMLConfiguration(string path, string system, string eepromPath, string hddPath, string bootRom)
         {
             using (IniFile ini = new IniFile(Path.Combine(path, "xemu.toml"), IniOptions.KeepEmptyLines | IniOptions.UseSpaces))
             {
+                SimpleLogger.Instance.Info("[Generator] Writing settings to 'xemu.toml' file.");
+
                 // Force settings
                 ini.WriteValue("general", "show_welcome", "false");
                 ini.WriteValue("general.updates", "check", "false");
@@ -265,8 +265,11 @@ namespace EmulatorLauncher
                 if (!string.IsNullOrEmpty(hddPath))
                     ini.WriteValue("sys.files", "hdd_path", "'" + hddPath + "'");
 
-                if (!string.IsNullOrEmpty(flashPath))
-                    ini.WriteValue("sys.files", "flashrom_path", "'" + flashPath + "'");
+                string flashromPath = Path.Combine(AppConfig.GetFullPath("bios"));
+                if (SystemConfig.isOptSet("xemu_flashrom") && !string.IsNullOrEmpty(SystemConfig["xemu_flashrom"]))
+                    ini.WriteValue("sys.files", "flashrom_path", "'" + Path.Combine(flashromPath, SystemConfig["xemu_flashrom"] + "'"));
+                else
+                    ini.WriteValue("sys.files", "flashrom_path", system == "chihiro" ? "'" + Path.Combine(flashromPath, "Cerbios.bin") + "'" : "'" + Path.Combine(flashromPath, "Complex_4627.bin") + "'");
 
                 if (!string.IsNullOrEmpty(bootRom))
                     ini.WriteValue("sys.files", "bootrom_path", "'" + bootRom + "'");
@@ -280,52 +283,6 @@ namespace EmulatorLauncher
         }
 
         /// <summary>
-        /// Configure emulator, write to .ini file for older version of XEMU.
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="eepromPath"></param>
-        /// <param name="hddPath"></param>
-        /// <param name="flashPath"></param>
-        /// <param name="bootRom"></param>
-        /// <param name="rom"></param>
-        private void SetupiniConfiguration(string path, string eepromPath, string hddPath, string flashPath, string bootRom, string rom)
-        {
-            using (IniFile ini = new IniFile(Path.Combine(path, "xemu.ini"), IniOptions.UseSpaces))
-            {
-                if (!string.IsNullOrEmpty(eepromPath))
-                    ini.WriteValue("system", "eeprom_path", eepromPath);
-
-                if (!string.IsNullOrEmpty(hddPath))
-                    ini.WriteValue("system", "hdd_path", hddPath);
-
-                if (!string.IsNullOrEmpty(flashPath))
-                    ini.WriteValue("system", "flash_path", flashPath);
-
-                if (!string.IsNullOrEmpty(bootRom))
-                    ini.WriteValue("system", "bootrom_path", bootRom);
-
-                ini.WriteValue("system", "shortanim", "true");
-                ini.WriteValue("system", "dvd_path", rom);
-                ini.WriteValue("display", "scale", "scale");
-
-                if (SystemConfig.isOptSet("render_scale") && !string.IsNullOrEmpty(SystemConfig["render_scale"]))
-                    ini.WriteValue("display", "render_scale", SystemConfig["render_scale"]);
-                else if (Features.IsSupported("render_scale"))
-                    ini.WriteValue("display", "render_scale", "1");
-
-                if (SystemConfig.isOptSet("scale") && !string.IsNullOrEmpty(SystemConfig["scale"]))
-                    ini.WriteValue("display", "scale", SystemConfig["scale"]);
-                else if (Features.IsSupported("scale"))
-                    ini.WriteValue("display", "scale", "scale");
-
-                if (SystemConfig.isOptSet("system_memory") && !string.IsNullOrEmpty(SystemConfig["system_memory"]))
-                    ini.WriteValue("system", "memory", SystemConfig["system_memory"]);
-                else
-                    ini.WriteValue("system", "memory", "128");
-            }
-        }
-
-        /// <summary>
         /// Write data to XboX eeprom (language).
         /// </summary>
         /// <param name="path"></param>
@@ -334,12 +291,14 @@ namespace EmulatorLauncher
             if (!File.Exists(path))
                 return;
 
-            int langId = 1;
+            SimpleLogger.Instance.Info("[Generator] Writing language in XBOX eeprom.");
+
+            int langId;
 
             if (SystemConfig.isOptSet("xbox_language") && !string.IsNullOrEmpty(SystemConfig["xbox_language"]))
                 langId = SystemConfig["xbox_language"].ToInteger();
             else
-                langId = getXboxLangFromEnvironment();
+                langId = GetXboxLangFromEnvironment();
 
             // Read eeprom file
             byte[] bytes = File.ReadAllBytes(path);
@@ -436,8 +395,7 @@ namespace EmulatorLauncher
                 }
             }
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, path.WorkingDirectory);
 

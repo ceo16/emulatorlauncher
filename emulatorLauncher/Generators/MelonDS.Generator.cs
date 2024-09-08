@@ -14,6 +14,7 @@ namespace EmulatorLauncher
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
         private bool _bezelsEnabled = false;
+        private string _path;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -23,13 +24,16 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            _path = path;
+
             bool bootToDSINand = Path.GetExtension(rom).ToLowerInvariant() == ".bin";
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             //Applying bezels
             if (fullscreen)
             {
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+                if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
+                    _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
                 _bezelsEnabled = true;
             }
 
@@ -186,8 +190,16 @@ namespace EmulatorLauncher
                 
                 if (_bezelsEnabled)
                 {
-                    BindIniFeature(ini, "", "ScreenAspectTop", "melonds_ratio_top", "3");
-                    BindIniFeature(ini, "", "ScreenAspectBot", "melonds_ratio_bottom", "3");
+                    if (SystemConfig.isOptSet("melonds_screen_sizing") && (SystemConfig["melonds_screen_sizing"] == "4" || SystemConfig["melonds_screen_sizing"] == "5"))
+                    {
+                        BindIniFeature(ini, "", "ScreenAspectTop", "melonds_ratio_top", "0");
+                        BindIniFeature(ini, "", "ScreenAspectBot", "melonds_ratio_bottom", "0");
+                    }
+                    else
+                    {
+                        BindIniFeature(ini, "", "ScreenAspectTop", "melonds_ratio_top", "3");
+                        BindIniFeature(ini, "", "ScreenAspectBot", "melonds_ratio_bottom", "3");
+                    }
                 }
                 else
                 {
@@ -208,11 +220,15 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             if (ret == 1)
+            {
+                ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
                 return 0;
+            }
+
+            ReshadeManager.UninstallReshader(ReshadeBezelType.opengl, _path);
 
             return ret;
         }

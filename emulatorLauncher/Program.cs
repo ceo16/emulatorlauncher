@@ -42,7 +42,7 @@ namespace EmulatorLauncher
             { "duckstation", () => new DuckstationGenerator() },
             { "kega-fusion", () => new KegaFusionGenerator() },
             { "mesen", () => new MesenGenerator() },
-            { "mgba", () => new mGBAGenerator() },
+            { "mgba", () => new MGBAGenerator() },
             { "model2", () => new Model2Generator() }, { "m2emulator", () => new Model2Generator() },
             { "model3", () => new Model3Generator() }, { "supermodel", () => new Model3Generator() },
             { "openbor", () => new OpenBorGenerator() },
@@ -63,20 +63,22 @@ namespace EmulatorLauncher
             { "simcoupe", () => new SimCoupeGenerator() },               
             { "cxbx", () => new CxbxGenerator() }, { "chihiro", () => new CxbxGenerator() }, { "xbox", () => new CxbxGenerator() },               
             { "redream", () => new RedreamGenerator() },                  
-            { "mugen", () => new ExeLauncherGenerator() }, { "windows", () => new ExeLauncherGenerator() },
+            { "mugen", () => new ExeLauncherGenerator() }, { "ikemen", () => new ExeLauncherGenerator() }, { "windows", () => new ExeLauncherGenerator() },
             { "demul", () => new DemulGenerator() }, { "demul-old", () => new DemulGenerator() }, 
             { "mednafen", () => new MednafenGenerator() },
             { "daphne", () => new DaphneGenerator() },
             { "hypseus", () => new HypseusGenerator() },
             { "raine", () => new RaineGenerator() },
             { "snes9x", () => new Snes9xGenerator() },
-            { "citra", () => new CitraGenerator() },
-            { "citra-canary", () => new CitraGenerator() },
+            { "citra", () => new CitraGenerator() }, { "citra-canary", () => new CitraGenerator() },
+            { "lime3ds", () => new Lime3dsGenerator() },
             { "pico8", () => new Pico8Generator() },
             { "xenia", () => new XeniaGenerator() }, { "xenia-canary", () => new XeniaGenerator() },
             { "mame64", () => new Mame64Generator() }, { "hbmame", () => new Mame64Generator() },
             { "oricutron", () => new OricutronGenerator() },
-            { "switch", () => new YuzuGenerator() }, { "yuzu", () => new YuzuGenerator() }, { "yuzu-early-access", () => new YuzuGenerator() },
+            { "yuzu", () => new YuzuGenerator() }, { "yuzu-early-access", () => new YuzuGenerator() },
+            { "suyu", () => new SuyuGenerator() },
+            { "sudachi", () => new SudachiGenerator() },
             { "ryujinx", () => new RyujinxGenerator() },
             { "teknoparrot", () => new TeknoParrotGenerator() },    
             { "easyrpg", () => new EasyRpgGenerator() },                
@@ -113,7 +115,19 @@ namespace EmulatorLauncher
             { "kronos", () => new KronosGenerator() },
             { "gzdoom", () => new GZDoomGenerator() },
             { "magicengine", () => new MagicEngineGenerator() },
-            { "psxmame", () => new PSXMameGenerator() }
+            { "gemrb", () => new GemRBGenerator() },
+            { "psxmame", () => new PSXMameGenerator() },
+            { "fbneo", () => new FbneoGenerator() },
+            { "sonic3air", () => new PortsLauncherGenerator() },
+            { "sonicmania", () => new PortsLauncherGenerator() },
+            { "sonicretro", () => new PortsLauncherGenerator() },
+            { "sonicretrocd", () => new PortsLauncherGenerator() },
+            { "opengoal", () => new PortsLauncherGenerator() },
+            { "devilutionx", () => new DevilutionXGenerator() },
+            { "jgenesis", () => new JgenesisGenerator() },
+            { "singe2", () => new Singe2Generator() },
+            { "capriceforever", () => new CapriceForeverGenerator() },
+            { "shadps4", () => new ShadPS4Generator() }
         };
 
         public static ConfigFile AppConfig { get; private set; }
@@ -274,10 +288,12 @@ namespace EmulatorLauncher
             try { SetProcessDPIAware(); }
             catch { }
 
+            SimpleLogger.Instance.Info("[Startup] Loading configuration.");
             LocalPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
             AppConfig = ConfigFile.FromFile(Path.Combine(LocalPath, "emulatorLauncher.cfg"));
             AppConfig.ImportOverrides(ConfigFile.FromArguments(args));
 
+            SimpleLogger.Instance.Info("[Startup] Loading ES settings.");
             SystemConfig = ConfigFile.LoadEmulationStationSettings(Path.Combine(Program.AppConfig.GetFullPath("home"), "es_settings.cfg"));
             SystemConfig.ImportOverrides(ConfigFile.FromArguments(args));
             SystemConfig.ImportOverrides(SystemConfig.LoadAll("global"));
@@ -285,12 +301,20 @@ namespace EmulatorLauncher
             SystemConfig.ImportOverrides(SystemConfig.LoadAll(SystemConfig["system"] + "[\"" + Path.GetFileName(SystemConfig["rom"]) + "\"]"));
             SystemConfig.ImportOverrides(ConfigFile.FromArguments(args));
 
-            if (!SystemConfig.isOptSet("use_guns") && args.Any(a => a == "-lightgun"))
+            // Automatically switch on lightgun if -lightgun is passed and not disabled in the config (except for wii where we do not want to switch on with real wiimote)
+            if (!SystemConfig.isOptSet("use_guns") && args.Any(a => a == "-lightgun") && SystemConfig["system"] != "wii")
+            {
                 SystemConfig["use_guns"] = "true";
+                SimpleLogger.Instance.Info("[GUNS] Lightgun game : setting default lightung value to true.");
+            }
 
             /* for later wheels
             if (!SystemConfig.isOptSet("use_wheel") && args.Any(a => a == "-wheel"))
                 SystemConfig["use_wheel"] = "true";*/
+
+            // Change disable automatic controller configuration from "on" to "1"
+            if (SystemConfig.isOptSet("disableautocontrollers") && SystemConfig["disableautocontrollers"] == "on")
+                SystemConfig["disableautocontrollers"] = "1";
 
             ImportShaderOverrides();
             
@@ -515,8 +539,13 @@ namespace EmulatorLauncher
             if (installer != null)
             {
                 bool updatesEnabled = !SystemConfig.isOptSet("updates.enabled") || SystemConfig.getOptBoolean("updates.enabled");
+
+                if (!updatesEnabled)
+                    SimpleLogger.Instance.Info("[Startup] Updates not enabled, not looking for updates.");
+
                 if ((!installer.IsInstalled() || (updatesEnabled && installer.HasUpdateAvailable())) && installer.CanInstall())
                 {
+                    SimpleLogger.Instance.Info("[Startup] Emulator update found : proposing to update.");
                     using (InstallerFrm frm = new InstallerFrm(installer))
                         if (frm.ShowDialog() != DialogResult.OK)
                             return;
@@ -538,6 +567,7 @@ namespace EmulatorLauncher
                     return;
                 }
 
+                SimpleLogger.Instance.Info("[Generator] Loading features.");
                 Features.SetFeaturesContext(SystemConfig["system"], SystemConfig["emulator"], SystemConfig["core"]);
 
                 using (var screenResolution = ScreenResolution.Parse(SystemConfig["videomode"]))
@@ -720,9 +750,11 @@ namespace EmulatorLauncher
                     if (!Enum.TryParse<InputKey>(string.Join(", ", action.Triggers.ToArray()).ToLower(), out k))
                         continue;
 
-                    PadToKeyInput input = new PadToKeyInput();
-                    input.Name = k;
-                    input.ControllerIndex = controller == null ? playerIndex : controller.DeviceIndex;
+                    PadToKeyInput input = new PadToKeyInput
+                    {
+                        Name = k,
+                        ControllerIndex = controller == null ? playerIndex : controller.DeviceIndex
+                    };
 
                     bool custom = false;
 
@@ -787,6 +819,7 @@ namespace EmulatorLauncher
 
         private static InputConfig[] LoadControllerConfiguration(string[] args)
         {
+            SimpleLogger.Instance.Info("[Startup] Loading Controller configuration.");
             var controllers = new Dictionary<int, Controller>();
 
             for (int i = 0; i < args.Length; i++)

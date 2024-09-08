@@ -10,6 +10,8 @@ using System.Globalization;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.Lightguns;
+using EmulatorLauncher.Common.EmulationStation;
+using EmulatorLauncher.PadToKeyboard;
 
 namespace EmulatorLauncher.Libretro
 {
@@ -27,6 +29,7 @@ namespace EmulatorLauncher.Libretro
 
         private LibRetroStateFileManager _stateFileManager;
         private ScreenShotsWatcher _screenShotWatcher;
+        private bool _noHotkey = false;
 
         public LibRetroGenerator()
         {
@@ -74,6 +77,9 @@ namespace EmulatorLauncher.Libretro
             BindBoolFeature(retroarchConfig, "pause_nonactive", "use_guns", "true", "false", true); // Pause when calibrating gun...
             BindBoolFeature(retroarchConfig, "input_autodetect_enable", "disableautocontrollers", "true", "false", true);
             BindFeature(retroarchConfig, "input_analog_deadzone", "analog_deadzone", "0.000000");
+            BindFeature(retroarchConfig, "input_analog_sensitivity", "analog_sensitivity", "1.000000");
+            retroarchConfig["input_remap_binds_enable"] = "true";
+            retroarchConfig["input_remapping_directory"] = ":\\config\\remaps";
 
             SetupUIMode(retroarchConfig);
 
@@ -398,6 +404,13 @@ namespace EmulatorLauncher.Libretro
             if (LibretroControllers.WriteControllersConfig(retroarchConfig, system, core))
                 UseEsPadToKey = false;
 
+            // If no hotkey if configured, add pad2key to exit retroarch
+            if (retroarchConfig["input_enable_hotkey"] == "nul" && retroarchConfig["input_enable_hotkey_btn"] == "nul" && retroarchConfig["input_enable_hotkey_axis"] == "nul" && retroarchConfig["input_enable_hotkey_mbtn"] == "nul")
+            {
+                if (Controllers.Any(c => !c.IsKeyboard))
+                    _noHotkey = true;
+            }
+
             // Core, services & bezel configs
             ConfigureRetroachievements(retroarchConfig);
             ConfigureNetPlay(retroarchConfig);
@@ -414,6 +427,10 @@ namespace EmulatorLauncher.Libretro
             // Language
             SetLanguage(retroarchConfig);
 
+            // Force raw input
+            if (SystemConfig.isOptSet("libretro_rawinput") && SystemConfig.getOptBoolean("libretro_rawinput"))
+                retroarchConfig["input_driver"] = "raw";
+
             if (hdrCompatibleVideoDrivers.Contains(_video_driver))
                 BindBoolFeature(retroarchConfig, "video_hdr_enable", "enable_hdr", "true", "false");
             else
@@ -423,7 +440,7 @@ namespace EmulatorLauncher.Libretro
             foreach (var user_config in SystemConfig)
                 if (user_config.Name.StartsWith("retroarch."))
                     retroarchConfig[user_config.Name.Substring("retroarch.".Length)] = user_config.Value;
-                        
+                
             if (retroarchConfig.IsDirty)
                 retroarchConfig.Save(Path.Combine(RetroarchPath, "retroarch.cfg"), true);
         }
@@ -473,6 +490,11 @@ namespace EmulatorLauncher.Libretro
             {
                 _video_driver = retroarchConfig["video_driver"];
                 retroarchConfig["video_driver"] = "d3d11";
+            }
+            if (core.StartsWith("mupen64") && SystemConfig["RDP_Plugin"] == "parallel")
+            {
+                _video_driver = "vulkan";
+                retroarchConfig["video_driver"] = "vulkan";
             }
 
             // Set default video driver per core
@@ -538,7 +560,7 @@ namespace EmulatorLauncher.Libretro
                     retroarchConfig["video_hard_sync_frames"] = "0";
                 }
             }
-            BindFeature(retroarchConfig, "video_swap_interval", "video_swap_interval", "1");
+            BindFeature(retroarchConfig, "video_swap_interval", "video_swap_interval", "0");
             BindFeature(retroarchConfig, "video_black_frame_insertion", "video_black_frame_insertion", "0");
             BindFeature(retroarchConfig, "vrr_runloop_enable", "vrr_runloop_enable", "false");
 
@@ -676,6 +698,12 @@ namespace EmulatorLauncher.Libretro
 
                 // Netplay hide the gameplay
                 BindBoolFeature(retroarchConfig, "netplay_public_announce", "netplay_public_announce", "true", "false");
+
+                // custom relay server
+                if (SystemConfig["netplay.relay"] == "custom" && SystemConfig.isOptSet("netplay.customserver") && !string.IsNullOrEmpty(SystemConfig["netplay.customserver"]))
+                    retroarchConfig["netplay_custom_mitm_server"] = SystemConfig["netplay.customserver"];
+                else
+                    retroarchConfig["netplay_custom_mitm_server"] = "";
             }
 
             BindBoolFeature(retroarchConfig, "content_show_netplay", "netplay", "true", "false");
@@ -790,7 +818,6 @@ namespace EmulatorLauncher.Libretro
             new UIModeSetting("menu_show_latency", "false", "true", "true"),
             new UIModeSetting("menu_show_legacy_thumbnail_updater", "false", "false", "true"),
             new UIModeSetting("menu_show_load_content", "false", "false", "true"),
-            //new UIModeSetting("menu_show_load_content_animation", "false", "false", "true"), // not a menu element but a notification
             new UIModeSetting("menu_show_load_core", "false", "false", "true"),
             new UIModeSetting("menu_show_load_disc", "false", "false", "true"),
             new UIModeSetting("menu_show_online_updater", "false", "true", "true"),
@@ -911,8 +938,9 @@ namespace EmulatorLauncher.Libretro
             if (systemName == "wii" && (!SystemConfig.isOptSet("ratio")))
                 return;
 
-            var bezelInfo = BezelFiles.GetBezelFiles(systemName, rom, resolution);
-            if (bezelInfo == null)
+            bool animatedBezel = SystemConfig["bezel"] == "animated";
+            var bezelInfo = BezelFiles.GetBezelFiles(systemName, rom, resolution, "libretro");
+            if (bezelInfo == null && !animatedBezel)
                 return;
 
             string overlay_png_file = bezelInfo.PngFile;
@@ -979,11 +1007,25 @@ namespace EmulatorLauncher.Libretro
                     retroarchConfig["aspect_ratio_index"] = ratioIndexes.IndexOf("core").ToString(); // overwritten from the beginning of this file
             }
 
+            string animatedBezelPath = null;
+
+            if (animatedBezel)
+            {
+                animatedBezelPath = Path.Combine(AppConfig.GetFullPath("decorations"), "animated", "systems", systemName, systemName + ".cfg") ;
+
+                if (!File.Exists(animatedBezelPath))
+                {
+                    animatedBezelPath = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "decorations", "animated", "systems", systemName, systemName + ".cfg");
+                    if (!File.Exists(animatedBezelPath))
+                        animatedBezel = false;
+                }
+            }
+
             string overlay_cfg_file = Path.Combine(RetroarchPath, "custom-overlay.cfg");
-            
+
             retroarchConfig["input_overlay_enable"] = "true";
             retroarchConfig["input_overlay_scale"] = "1.0";
-            retroarchConfig["input_overlay"] = overlay_cfg_file;
+            retroarchConfig["input_overlay"] = animatedBezel ? animatedBezelPath : overlay_cfg_file;
             retroarchConfig["input_overlay_hide_in_menu"] = "true";
                     
             if (!infos.opacity.HasValue)
@@ -1070,7 +1112,6 @@ namespace EmulatorLauncher.Libretro
         }
 
         private string _dosBoxTempRom;
-        private string _gemdosTempFolder;
 
         public override void Cleanup()
         {
@@ -1079,12 +1120,6 @@ namespace EmulatorLauncher.Libretro
 
             if (_dosBoxTempRom != null && File.Exists(_dosBoxTempRom))
                 File.Delete(_dosBoxTempRom);
-
-            if (_gemdosTempFolder != null && Directory.Exists(_gemdosTempFolder))
-            {
-                try { Directory.Delete(_gemdosTempFolder, true); }
-                catch { }
-            }
 
             if (!string.IsNullOrEmpty(_video_driver))
             {
@@ -1364,8 +1399,15 @@ namespace EmulatorLauncher.Libretro
                     commandArray.Add("--connect " + SystemConfig["netplayip"]);
                     commandArray.Add("--port " + SystemConfig["netplayport"]);
                 }
-            }
 
+                if (!string.IsNullOrEmpty(SystemConfig["netplaysession"]))
+                {
+                    // Suported with retroarch 1.17+ only
+                    if (IsVersionAtLeast(new Version(1, 17, 0, 0)))
+                        commandArray.Add("--mitm-session " + SystemConfig["netplaysession"]);
+                }
+            }
+            
             // RetroArch 1.7.8 requires the shaders to be passed as command line argument      
             if (AppConfig.isOptSet("shaders") && SystemConfig.isOptSet("shader") && SystemConfig["shader"] != "None")
             {
@@ -1524,7 +1566,7 @@ namespace EmulatorLauncher.Libretro
         static List<string> ratioIndexes = new List<string> { "4/3", "16/9", "16/10", "16/15", "21/9", "1/1", "2/1", "3/2", "3/4", "4/1", "4/4", "5/4", "6/5", "7/9", "8/3",
                 "8/7", "19/12", "19/14", "30/17", "32/9", "config", "squarepixel", "core", "custom", "full" };
 
-        static List<string> systemNoRewind = new List<string>() { "nds", "3ds", "sega32x", "wii", "gamecube", "gc", "psx", "zxspectrum", "odyssey2", "n64", "dreamcast", "atomiswave", "naomi", "naomi2", "neogeocd", "saturn", "mame", "hbmame", "fbneo", "dos", "scummvm" };
+        static List<string> systemNoRewind = new List<string>() { "nds", "3ds", "sega32x", "wii", "gamecube", "gc", "psx", "zxspectrum", "odyssey2", "n64", "dreamcast", "atomiswave", "naomi", "naomi2", "neogeocd", "saturn", "mame", "hbmame", "fbneo", "dos", "scummvm", "psp" };
         static List<string> systemNoRunahead = new List<string>() { "nds", "3ds", "sega32x", "wii", "gamecube", "n64", "dreamcast", "atomiswave", "naomi", "naomi2", "neogeocd", "saturn" };
         static List<string> coreNoPreemptiveFrames = new List<string>() { "2048", "4do", "81", "atari800", "bluemsx", "bsnes", "bsnes_hd_beta", "cannonball", "cap32", "citra", "craft", "crocods", "desmume", "desmume2015", "dolphin", "dosbox_pure", "easyrpg", "fbalpha2012_cps1", "fbalpha2012_cps2", "fbalpha2012_cps3", "flycast", "frodo", "gw", "handy", "hatari", "hatarib", "imageviewer", "kronos", "lutro", "mame2000", "mame2003", "mame2003_plus", "mame2003_midway", "mame2010", "mame2014", "mame2016", "mednafen_psx_hw", "mednafen_snes", "mupen64plus_next", "nekop2", "nestopia", "np2kai", "nxengine", "o2em", "opera", "parallel_n64", "pcsx2", "ppsspp", "prboom", "prosystem", "puae", "px68k", "race", "retro8", "sameduck", "same_cdi", "scummvm", "swanstation", "theodore", "tic80", "tyrquake", "vice_x128", "vice_x64", "vice_x64sc", "vice_xpet", "vice_xplus4", "vice_xvic", "vecx", "virtualjaguar" };
         static List<string> capsimgCore = new List<string>() { "hatari", "hatarib", "puae" };
@@ -1575,6 +1617,30 @@ namespace EmulatorLauncher.Libretro
             {"tr", retro_language.RETRO_LANGUAGE_TURKISH},
             {"uk_UA", retro_language.RETRO_LANGUAGE_UKRAINIAN}
         };
+
+        private static bool IsVersionAtLeast(Version ver)
+        {
+            var ist = Installer.GetInstaller("libretro");
+            if (ist != null)
+            {
+                var local = ist.GetInstalledVersion();
+                return (!string.IsNullOrEmpty(local) && Version.Parse(local) >= ver);
+            }
+
+            return false;
+        }
+
+        public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
+        {
+            if (_noHotkey)
+            {
+                SimpleLogger.Instance.Info("[GENERATOR] No hotkey defined, adding select + start to exit in padtokey.");
+                return PadToKey.AddOrUpdateKeyMapping(mapping, "retroarch", InputKey.select | InputKey.start, "(%{CLOSE})");
+            }
+            else
+                return mapping;
+        }
+
     }
 
     // https://github.com/libretro/RetroArch/blob/master/libretro-common/include/libretro.h#L260
@@ -1666,6 +1732,4 @@ namespace EmulatorLauncher.Libretro
         public string Core { get; set; }
         public string SubSystemId { get; set; }
     }
-    
-
 }

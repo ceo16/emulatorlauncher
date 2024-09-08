@@ -20,6 +20,8 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             string path = AppConfig.GetFullPath("flycast");
             if (!Directory.Exists(path))
                 return null;
@@ -34,15 +36,16 @@ namespace EmulatorLauncher
 
             //Applying bezels
             if (_fullscreen && !wide)
-                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution);
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
             _resolution = resolution;
 
             SetupConfiguration(path, system, resolution);
 
-            List<string> commandArray = new List<string>();
-
-            commandArray.Add("\"" + rom + "\"");
+            List<string> commandArray = new List<string>
+            {
+                "\"" + rom + "\""
+            };
 
             string args = string.Join(" ", commandArray);
 
@@ -59,8 +62,31 @@ namespace EmulatorLauncher
         {
             string configfile = Path.Combine(path, "emu.cfg");
 
-            using (var ini = IniFile.FromFile(configfile, IniOptions.UseSpaces))
+            SimpleLogger.Instance.Info("[INFO] Writing configuration to 'emu.cfg' file.");
+
+            using (var ini = IniFile.FromFile(configfile, IniOptions.UseSpaces | IniOptions.KeepEmptyValues | IniOptions.KeepEmptyLines))
             {
+                // RetroAchievements
+                if (Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements"))
+                {
+                    ini.WriteValue("achievements", "Enabled", "yes");
+                    ini.WriteValue("achievements", "HardcoreMode", SystemConfig.getOptBoolean("retroachievements.hardcore") ? "yes" : "no");
+
+                    // Inject credentials
+                    if (SystemConfig.isOptSet("retroachievements.username") && SystemConfig.isOptSet("retroachievements.token"))
+                    {
+                        ini.WriteValue("achievements", "Token", SystemConfig["retroachievements.token"]);
+                        ini.WriteValue("achievements", "UserName", SystemConfig["retroachievements.username"]);
+                    }
+                }
+                else
+                {
+                    ini.WriteValue("achievements", "Enabled", "no");
+                    ini.WriteValue("achievements", "HardcoreMode", "no");
+                    ini.WriteValue("achievements", "Token", null);
+                    ini.WriteValue("achievements", "UserName", null);
+                }
+
                 // General
                 BindIniFeature(ini, "config", "Dreamcast.Language", "flycast_language", "6");
                 BindIniFeature(ini, "config", "Dreamcast.Broadcast", "flycast_broadcast", "4");
@@ -180,8 +206,32 @@ namespace EmulatorLauncher
                 BindBoolIniFeature(ini, "config", "rend.WidescreenGameHacks", "flycast_widescreen_hack", "yes", "no");
                 BindIniFeature(ini, "config", "rend.AnisotropicFiltering", "flycast_fxaa", "1");
                 BindIniFeature(ini, "config", "rend.TextureFiltering", "flycast_texture_filter", "0");
-                BindIniFeature(ini, "config", "rend.vsync", "flycast_vsync", "yes");
-                BindBoolIniFeature(ini, "config", "rend.DupeFrames", "flycast_dupeframes", "yes", "no");
+                
+                if (SystemConfig.isOptSet("flycast_vsync") && !string.IsNullOrEmpty(SystemConfig["flycast_vsync"]))
+                {
+                    string fvsync = SystemConfig["flycast_vsync"];
+                    switch (fvsync)
+                    {
+                        case "no":
+                            ini.WriteValue("config", "rend.vsync", "no");
+                            ini.WriteValue("config", "rend.DupeFrames", "no");
+                            break;
+                        case "yes":
+                            ini.WriteValue("config", "rend.vsync", "yes");
+                            ini.WriteValue("config", "rend.DupeFrames", "no");
+                            break;
+                        case "dupframes":
+                            ini.WriteValue("config", "rend.vsync", "yes");
+                            ini.WriteValue("config", "rend.DupeFrames", "yes");
+                            break;
+                    }
+                }
+                else
+                {
+                    ini.WriteValue("config", "rend.vsync", "yes");
+                    ini.WriteValue("config", "rend.DupeFrames", "no");
+                }
+
                 BindBoolIniFeature(ini, "config", "rend.Rotate90", "flycast_rotate", "yes", "no");
                 BindBoolIniFeature(ini, "config", "rend.ShowFPS", "flycast_fps", "yes", "no");
                 BindIniFeature(ini, "config", "rend.RenderToTextureBuffer", "flycast_copytovram", "yes");
@@ -197,10 +247,51 @@ namespace EmulatorLauncher
                 // Advanced
                 ini.WriteValue("config", "rend.ThreadedRendering", "yes");
                 BindIniFeature(ini, "config", "Dynarec.Enabled", "flycast_dynarec", "yes");
+                BindBoolIniFeature(ini, "config", "UseReios", "flycast_hlebios", "yes", "no");
+                BindBoolIniFeature(ini, "config", "Dreamcast.RamMod32MB", "flycast_ram32", "yes", "no");
 
                 CreateControllerConfiguration(path, system, ini);
 
                 BindBoolIniFeature(ini, "config", "PerGameVmu", "flycast_vmupergame", "yes", "no");
+
+                // Network features
+                BindBoolIniFeature(ini, "network", "NetworkOutput", "flycast_output", "yes", "no");
+                BindBoolIniFeature(ini, "network", "EnableUPnP", "flycast_upnp", "no", "yes");
+                BindIniFeature(ini, "network", "server", "flycast_server", null);
+                BindIniFeature(ini, "network", "LocalPort", "flycast_localport", "37391");
+                BindBoolIniFeature(ini, "network", "ActAsServer", "flycast_host", "yes", "no");
+
+                if (SystemConfig.isOptSet("flycast_network") && !string.IsNullOrEmpty(SystemConfig["flycast_network"]))
+                {
+                    string fnet = SystemConfig["flycast_network"];
+                    switch (fnet)
+                    {
+                        case "disabled":
+                            ini.WriteValue("network", "BattleCable", "no");
+                            ini.WriteValue("network", "Enable", "no");
+                            ini.WriteValue("network", "GGPO", "no");
+                            break;
+                        case "ggpo":
+                            ini.WriteValue("network", "BattleCable", "no");
+                            ini.WriteValue("network", "Enable", "no");
+                            ini.WriteValue("network", "GGPO", "yes");
+                            break;
+                        case "naomi":
+                            ini.WriteValue("network", "BattleCable", "no");
+                            ini.WriteValue("network", "Enable", "yes");
+                            ini.WriteValue("network", "GGPO", "no");
+                            break;
+                        case "battle":
+                            ini.WriteValue("network", "BattleCable", "yes");
+                            ini.WriteValue("network", "Enable", "no");
+                            ini.WriteValue("network", "GGPO", "no");
+                            break;
+                    }
+                }
+                else
+                {
+                    ini.WriteValue("network", "Network", "no");
+                }
 
                 ini.Save();
             }
@@ -215,8 +306,7 @@ namespace EmulatorLauncher
 
             int ret = base.RunAndWait(path);
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             return ret;
         }

@@ -35,8 +35,8 @@ namespace EmulatorLauncher
             pcsx2ini.ClearSection("USB1");
             pcsx2ini.ClearSection("USB2");
 
-            _forceSDL = Program.SystemConfig.isOptSet("input_forceSDL") && Program.SystemConfig.getOptBoolean("input_forceSDL");
-            _forceDInput = Program.SystemConfig.isOptSet("input_forceSDL") && Program.SystemConfig["input_forceSDL"] == "dinput";
+            _forceSDL = Program.SystemConfig.isOptSet("pcsx2_input_driver_force") && Program.SystemConfig.getOptBoolean("pcsx2_input_driver_force");
+            _forceDInput = Program.SystemConfig.isOptSet("pcsx2_input_driver_force") && Program.SystemConfig["pcsx2_input_driver_force"] == "dinput";
 
             SdlToDirectInput dinputController = null;
             string techPadNumber = null;
@@ -51,7 +51,7 @@ namespace EmulatorLauncher
                     SimpleLogger.Instance.Info("[WHEELS] gamecontrollerdb.txt file not found in tools folder. Controller mapping will not be available.");
                     gamecontrollerDB = null;
                 }
-                string guid = (ctrl.Guid.ToString()).Substring(0, 27) + "00000";
+                string guid = (ctrl.Guid.ToString()).Substring(0, 24) + "00000000";
                 SimpleLogger.Instance.Info("[INFO] Player " + ctrl.PlayerIndex + ". Fetching gamecontrollerdb.txt file with guid : " + guid);
 
                 try { dinputController = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid); }

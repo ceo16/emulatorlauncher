@@ -23,8 +23,7 @@ namespace EmulatorLauncher
             DependsOnDesktopResolution = true;
         }
 
-        private LoadingForm _splash;
-        private string _rom;        
+        private LoadingForm _splash;       
         private Version _version;
         private string _processName;
         private string _exe;        
@@ -44,7 +43,11 @@ namespace EmulatorLauncher
             _exe = exe;
             _processName = Path.GetFileNameWithoutExtension(exe);
             _version = new Version(10, 0, 0, 0);
-            Version.TryParse(FileVersionInfo.GetVersionInfo(exe).ProductVersion.Replace(",", ".").Replace(" ", ""), out _version);
+
+            // Get version from executable
+            var versionInfo = FileVersionInfo.GetVersionInfo(exe);
+            string versionString = versionInfo.FileMajorPart + "." + versionInfo.FileMinorPart + "." + versionInfo.FileBuildPart + "." + versionInfo.FilePrivatePart;
+            Version.TryParse(versionString, out _version);
 
             rom = this.TryUnZipGameIfNeeded(system, rom, true, false);
             if (Directory.Exists(rom))
@@ -54,7 +57,6 @@ namespace EmulatorLauncher
                     return null;
             }
 
-            _rom = rom;
             _splash = ShowSplash(rom);
 
             ScreenResolution.SetHighDpiAware(exe);
@@ -230,16 +232,18 @@ namespace EmulatorLauncher
 
                     try
                     {
-                        Bulb item = new Bulb();
-                        item.ID = bulb.GetAttribute("ID").ToInteger();
-                        item.LightColor = bulb.GetAttribute("LightColor");
-                        item.LocX = bulb.GetAttribute("LocX").ToInteger();
-                        item.LocY = bulb.GetAttribute("LocY").ToInteger();
-                        item.Width = bulb.GetAttribute("Width").ToInteger();
-                        item.Height = bulb.GetAttribute("Height").ToInteger();
-                        item.Visible = bulb.GetAttribute("Visible") == "1";
-                        item.IsImageSnippit = bulb.GetAttribute("IsImageSnippit") == "1";
-                        item.Image = Misc.Base64ToImage(bulb.GetAttribute("Image"));
+                        Bulb item = new Bulb
+                        {
+                            ID = bulb.GetAttribute("ID").ToInteger(),
+                            LightColor = bulb.GetAttribute("LightColor"),
+                            LocX = bulb.GetAttribute("LocX").ToInteger(),
+                            LocY = bulb.GetAttribute("LocY").ToInteger(),
+                            Width = bulb.GetAttribute("Width").ToInteger(),
+                            Height = bulb.GetAttribute("Height").ToInteger(),
+                            Visible = bulb.GetAttribute("Visible") == "1",
+                            IsImageSnippit = bulb.GetAttribute("IsImageSnippit") == "1",
+                            Image = Misc.Base64ToImage(bulb.GetAttribute("Image"))
+                        };
 
                         if (item.Visible && item.Image != null)
                             bulbs.Add(item);
@@ -348,8 +352,10 @@ namespace EmulatorLauncher
                 int last = Environment.TickCount;
                 int index = 0;
 
-                var frm = new LoadingForm();
-                frm.Image = data.RenderBackglass(index);
+                var frm = new LoadingForm
+                {
+                    Image = data.RenderBackglass(index)
+                };
                 frm.Timer += (a, b) =>
                     {
                         int now = Environment.TickCount;
@@ -419,6 +425,8 @@ namespace EmulatorLauncher
         {
             try
             {
+                SimpleLogger.Instance.Info("[Generator] Ensuring UltraDMD is registered.");
+
                 // Check for valid out-of-process COM server ( UltraDMD ) 
                 if (IsComServerAvailable(@"CLSID\{E1612654-304A-4E07-A236-EB64D6D4F511}\LocalServer32"))
                     return;
@@ -433,8 +441,10 @@ namespace EmulatorLauncher
 
                 if (File.Exists(ultraDMD))
                 {
-                    Process px = new Process();
-                    px.EnableRaisingEvents = true;
+                    Process px = new Process
+                    {
+                        EnableRaisingEvents = true
+                    };
                     px.StartInfo.Verb = "RunAs";
                     px.StartInfo.FileName = ultraDMD;
                     px.StartInfo.Arguments = " /i";
@@ -504,9 +514,13 @@ namespace EmulatorLauncher
                 return;
 
             try
-            {            
-                Process px = new Process();
-                px.EnableRaisingEvents = true;
+            {
+                SimpleLogger.Instance.Info("[Generator] Ensuring BackGlass Server is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
                 px.StartInfo.Verb = "RunAs";
                 px.StartInfo.FileName = Path.Combine(GetRegAsmPath(view), "regasm.exe");
                 px.StartInfo.Arguments = "\"" + dllPath + "\" /codebase";
@@ -599,8 +613,12 @@ namespace EmulatorLauncher
 
             try
             {
-                Process px = new Process();
-                px.EnableRaisingEvents = true;
+                SimpleLogger.Instance.Info("[Generator] Ensuring VpinMame is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
                 px.StartInfo.Verb = "RunAs";
                 px.StartInfo.FileName = Path.Combine(FileTools.GetSystemDirectory(view), "regsvr32.exe");
                 px.StartInfo.Arguments = "/s \"" + dllPath + "\"";
@@ -615,20 +633,24 @@ namespace EmulatorLauncher
         private void SetupOptions(string path, string romPath, ScreenResolution resolution)
         {
             if (_version >= new Version(10, 8, 0, 0))
-                SetupOptionsIniFile(path, romPath, resolution);
+                SetupOptionsIniFile(path, resolution);
             else
-                SetupOptionsRegistry(path, romPath, resolution);
+                SetupOptionsRegistry(resolution);
 
             SetupVPinMameOptions(path, romPath);
         }
 
-        private void SetupOptionsIniFile(string path, string romPath, ScreenResolution resolution)
+        private void SetupOptionsIniFile(string path, ScreenResolution resolution)
         {
             string iniFile = Path.Combine(path, "VPinballX.ini");
 
             using (var ini = new IniFile(iniFile, IniOptions.UseSpaces | IniOptions.KeepEmptyValues | IniOptions.KeepEmptyLines))
             {
-                if (Screen.AllScreens.Length >= 1 && SystemConfig["enableb2s"] != "0" && !SystemInformation.TerminalServerSession)
+                SimpleLogger.Instance.Info("[Generator] Writing config to VPinballX.ini file.");
+
+                if (Screen.AllScreens.Length > 1 && SystemConfig["enableb2s"] != "0" && !SystemInformation.TerminalServerSession)
+                    ini.WriteValue("Controller", "ForceDisableB2S", "0");
+                else if (SystemConfig.getOptBoolean("enableb2s"))
                     ini.WriteValue("Controller", "ForceDisableB2S", "0");
                 else
                     ini.WriteValue("Controller", "ForceDisableB2S", "1");
@@ -673,8 +695,6 @@ namespace EmulatorLauncher
                     ini.WriteValue("Player", "SyncMode", "3");
 
                 // Video options
-                ini.WriteValue("Player", "BallReflection", SystemConfig["vp_ballreflection"] == "1" ? "1" : "0");
-
                 if (SystemConfig.isOptSet("vp_ambient_occlusion") && SystemConfig["vp_ambient_occlusion"] == "dynamic")
                 {
                     ini.WriteValue("Player", "DisableAO", "0");
@@ -699,11 +719,14 @@ namespace EmulatorLauncher
                 ini.WriteValue("Player", "PlayMusic", SystemConfig.getOptBoolean("vp_music_off") ? "0" : "1");
 
                 // Controls
-                ini.WriteValue("Player", "LRAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "1");
-                ini.WriteValue("Player", "UDAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "2");
-                ini.WriteValue("Player", "PlungerAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "3");
 
-                ini.WriteValue("Player", "DeadZone", SystemConfig.GetValueOrDefault("joy_deadzone", "15"));
+                if (SystemConfig["disableautocontrollers"] != "1")
+                {
+                    ini.WriteValue("Player", "LRAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "1");
+                    ini.WriteValue("Player", "UDAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "2");
+                    ini.WriteValue("Player", "PlungerAxis", SystemConfig["nouse_joyaxis"] == "1" ? "0" : "3");
+                    ini.WriteValue("Player", "DeadZone", SystemConfig.GetValueOrDefault("joy_deadzone", "15"));
+                }
 
                 ini.WriteValue("Editor", "WindowTop", (Screen.PrimaryScreen.Bounds.Height / 2 - 300).ToString());
                 ini.WriteValue("Editor", "WindowBottom", (Screen.PrimaryScreen.Bounds.Height / 2 + 300).ToString());
@@ -715,7 +738,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void SetupOptionsRegistry(string path, string romPath, ScreenResolution resolution)
+        private void SetupOptionsRegistry(ScreenResolution resolution)
         {
             //HKEY_CURRENT_USER\Software\Visual Pinball\VP10\Player
 
@@ -728,7 +751,9 @@ namespace EmulatorLauncher
             regKeyc = vp.CreateSubKey("Controller");
             if (regKeyc != null)
             {
-                if (Screen.AllScreens.Length >= 1 && SystemConfig["enableb2s"] != "0" && !SystemInformation.TerminalServerSession)
+                SimpleLogger.Instance.Info("[Generator] Writing config to registry.");
+
+                if (Screen.AllScreens.Length > 1 && SystemConfig["enableb2s"] != "0" && !SystemInformation.TerminalServerSession)
                     SetOption(regKeyc, "ForceDisableB2S", 0);
                 else
                     SetOption(regKeyc, "ForceDisableB2S", 1);
@@ -816,17 +841,19 @@ namespace EmulatorLauncher
                 SetOption(regKeyc, "PlayMusic", SystemConfig.getOptBoolean("vp_music_off") ? 0 : 1);
 
                 // Controls
-                SetOption(regKeyc, "LRAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 1);
-                SetOption(regKeyc, "UDAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 2);
-                SetOption(regKeyc, "PlungerAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 3);
+                if (SystemConfig["disableautocontrollers"] != "1")
+                {
+                    SetOption(regKeyc, "LRAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 1);
+                    SetOption(regKeyc, "UDAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 2);
+                    SetOption(regKeyc, "PlungerAxis", SystemConfig["nouse_joyaxis"] == "1" ? 0 : 3);
 
-                int deadzone = 15;
+                    int deadzone = 15;
 
-                if (SystemConfig.isOptSet("joy_deadzone") && !string.IsNullOrEmpty(SystemConfig["joy_deadzone"]))
-                    deadzone = SystemConfig["joy_deadzone"].ToInteger();
-                
-                SetOption(regKeyc, "DeadZone", deadzone);
+                    if (SystemConfig.isOptSet("joy_deadzone") && !string.IsNullOrEmpty(SystemConfig["joy_deadzone"]))
+                        deadzone = SystemConfig["joy_deadzone"].ToInteger();
 
+                    SetOption(regKeyc, "DeadZone", deadzone);
+                }
                 regKeyc.Close();
             }
 
@@ -855,6 +882,8 @@ namespace EmulatorLauncher
             var visualPinMame = softwareKey.CreateSubKey("Freeware").CreateSubKey("Visual PinMame");
             if (visualPinMame != null)
             {
+                SimpleLogger.Instance.Info("[Generator] Writing VPinMame config to Registry.");
+
                 DisableVPinMameLicenceDialogs(romPath, visualPinMame);
 
                 visualPinMame.CreateSubKey("default");
@@ -900,6 +929,8 @@ namespace EmulatorLauncher
             if (romPath == null || !Directory.Exists(romPath))
                 return;
 
+            SimpleLogger.Instance.Info("[Generator] Disabling VPinMame Licence prompts for all available table roms.");
+
             string[] romList = Directory.GetFiles(romPath, "*.zip").Select(r => Path.GetFileNameWithoutExtension(r)).Distinct().ToArray();
             foreach (var rom in romList)
             {
@@ -907,8 +938,7 @@ namespace EmulatorLauncher
                 if (romKey == null)
                 {
                     romKey = visualPinMame.CreateSubKey(rom);
-                    if (romKey != null)
-                        romKey.SetValue(null, 1);
+                    romKey?.SetValue(null, 1);
                 }
                 
                 if (romKey != null)

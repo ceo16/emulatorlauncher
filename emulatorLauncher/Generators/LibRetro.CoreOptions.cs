@@ -69,6 +69,7 @@ namespace EmulatorLauncher.Libretro
                 { "emux_gb", "Emux GB" },
                 { "emux_nes", "Emux NES" },
                 { "emux_sms", "Emux SMS" },
+                { "fake08", "fake-08" },
                 { "fbalpha2012_cps1", "FB Alpha 2012 CPS-1" },
                 { "fbalpha2012_cps2", "FB Alpha 2012 CPS-2" },
                 { "fbalpha2012_cps3", "FB Alpha 2012 CPS-3" },
@@ -115,7 +116,7 @@ namespace EmulatorLauncher.Libretro
                 { "lutro", "Lutro" },
                 { "mame2000", "MAME 2000" },
                 { "mame2003", "MAME 2003 (0.78)" },
-                { "mame2003_midway", "MAME 2003 Midway (0.78)" },
+                { "mame2003_midway", "MAME 2003 Midway" },
                 { "mame2003_plus", "MAME 2003-Plus" },
                 { "mame2009", "MAME 2009 (0.135u4)" },
                 { "mame2010", "MAME 2010" },
@@ -263,8 +264,7 @@ namespace EmulatorLauncher.Libretro
                 { "yabause", "Yabause" }
             };
 
-            string ret;
-            if (coreNames.TryGetValue(core, out ret))
+            if (coreNames.TryGetValue(core, out string ret))
                 return ret;
 
             var sb = new StringBuilder(core.Replace("_", " "));
@@ -311,6 +311,7 @@ namespace EmulatorLauncher.Libretro
             ConfigureDoublecherrygb(retroarchConfig, coreSettings, system, core);
             Configureecwolf(retroarchConfig, coreSettings, system, core);
             ConfigureEmuscv(retroarchConfig, coreSettings, system, core);
+            ConfigureFake08(retroarchConfig, coreSettings, system, core);
             ConfigureFbalpha(retroarchConfig, coreSettings, system, core);
             ConfigureFbalpha2012(retroarchConfig, coreSettings, system, core);
             ConfigureFbalpha2012Neogeo(retroarchConfig, coreSettings, system, core);
@@ -323,6 +324,8 @@ namespace EmulatorLauncher.Libretro
             ConfigureFrodo(retroarchConfig, coreSettings, system, core);
             ConfigureFuse(retroarchConfig, coreSettings, system, core);
             ConfigureGambatte(retroarchConfig, coreSettings, system, core);
+            ConfigureGearColeco(retroarchConfig, coreSettings, system, core);
+            ConfigureGearSystem(retroarchConfig, coreSettings, system, core);
             ConfigureGenesisPlusGX(retroarchConfig, coreSettings, system, core);
             ConfigureGenesisPlusGXWide(retroarchConfig, coreSettings, system, core);
             ConfigureGeolith(retroarchConfig, coreSettings, system, core);
@@ -344,6 +347,7 @@ namespace EmulatorLauncher.Libretro
             ConfigureMednafenPsxHW(retroarchConfig, coreSettings, system, core);
             ConfigureMednafenSaturn(retroarchConfig, coreSettings, system, core);
             ConfigureMednafenSuperGrafx(retroarchConfig, coreSettings, system, core);
+            ConfigureMednafenWswan(retroarchConfig, coreSettings, system, core);
             ConfigureMesen(retroarchConfig, coreSettings, system, core);
             ConfigureMesenS(retroarchConfig, coreSettings, system, core);
             ConfigureMupen64(retroarchConfig, coreSettings, system, core);
@@ -353,6 +357,7 @@ namespace EmulatorLauncher.Libretro
             ConfigureMrBoom(retroarchConfig, coreSettings, system, core);
             ConfigureNeocd(retroarchConfig, coreSettings, system, core);
             ConfigureNestopia(retroarchConfig, coreSettings, system, core);
+            ConfigureNp2kai(retroarchConfig, coreSettings, system, core);
             ConfigureO2em(retroarchConfig, coreSettings, system, core);
             ConfigureOpenLara(retroarchConfig, coreSettings, system, core);
             ConfigureOpera(retroarchConfig, coreSettings, system, core);
@@ -360,6 +365,7 @@ namespace EmulatorLauncher.Libretro
             ConfigurePcsx2(retroarchConfig, coreSettings, system, core);
             ConfigurePcsxRearmed(retroarchConfig, coreSettings, system, core);
             ConfigurePicodrive(retroarchConfig, coreSettings, system, core);
+            ConfigurePocketCDG(retroarchConfig, coreSettings, system, core);
             ConfigurePokeMini(retroarchConfig, coreSettings, system, core);
             ConfigurePotator(retroarchConfig, coreSettings, system, core);
             ConfigurePpsspp(retroarchConfig, coreSettings, system, core);
@@ -369,6 +375,7 @@ namespace EmulatorLauncher.Libretro
             ConfigurePX68k(retroarchConfig, coreSettings, system, core);
             ConfigureQuasi88(retroarchConfig, coreSettings, system, core);
             ConfigureRace(retroarchConfig, coreSettings, system, core);
+            ConfigureRetro8(retroarchConfig, coreSettings, system, core);
             ConfigureSameBoy(retroarchConfig, coreSettings, system, core);
             ConfigureSameCDI(retroarchConfig, coreSettings, system, core);
             ConfigureSameDuck(retroarchConfig, coreSettings, system, core);
@@ -478,7 +485,6 @@ namespace EmulatorLauncher.Libretro
             if (core != "81")
                 return;
 
-            BindFeature(coreSettings, "81_hide_border", "81_hide_border", "disabled");
             BindFeature(coreSettings, "81_highres", "81_highres", "auto");
             BindFeature(coreSettings, "81_chroma_81", "81_chroma_81", "auto");
             BindFeature(coreSettings, "81_video_presets", "81_video_presets", "clean");
@@ -523,7 +529,7 @@ namespace EmulatorLauncher.Libretro
             bool atari800 = (system == "atari800");
             bool atariXE = !atari800 && system.IndexOf("xe", StringComparison.InvariantCultureIgnoreCase) >= 0;
 
-            BindFeature(coreSettings, "atari800_artifacting", "atari800_artifacting", "disabled");
+            BindFeature(coreSettings, "atari800_artifacting_mode", "atari800_artifacting", "none");
             BindFeature(coreSettings, "atari800_ntscpal", "atari800_ntscpal", "NTSC");
             BindFeature(coreSettings, "atari800_resolution", "atari800_resolution", "336x240");
 
@@ -742,6 +748,16 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             coreSettings["cap32_autorun"] = "enabled";
+            
+            // disable autorun if m3u file contains #COMMAND
+            string rom = SystemConfig["rom"];
+            if (Path.GetExtension(rom).ToLower() == ".m3u")
+            {
+                string[] lines = File.ReadAllLines(rom);
+
+                if (lines.Length > 0 && lines.Any(line => line.StartsWith("#COMMAND")))
+                    coreSettings["cap32_autorun"] = "disabled";
+            }            
 
             // Virtual Keyboard by default (select+start) change to (start+Y)
             coreSettings["cap32_combokey"] = "y";
@@ -806,6 +822,8 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "citra_resolution_factor", "citra_resolution_factor", "1x (Native)");
             BindFeature(coreSettings, "citra_swap_screen", "citra_swap_screen", "Top");
             BindFeature(coreSettings, "citra_custom_textures", "citra_custom_textures", "disabled");
+            BindFeature(coreSettings, "citra_use_hw_renderer", "citra_use_hw_renderer", "enabled");
+            BindFeature(coreSettings, "citra_use_virtual_sd", "citra_use_virtual_sd", "enabled");
 
             BindFeature(coreSettings, "citra_analog_function", "citra_analog_function", "C-Stick and Touchscreen Pointer");
             BindFeature(coreSettings, "citra_mouse_touchscreen", "citra_mouse_touchscreen", "enabled");
@@ -1026,6 +1044,16 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "emuscv_palette", "emuscv_palette", "AUTO");
             BindFeature(coreSettings, "emuscv_pixelaspect", "emuscv_pixelaspect", "AUTO");
             BindFeature(coreSettings, "emuscv_resolution", "emuscv_resolution", "AUTO");
+        }
+
+        private void ConfigureFake08(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "fake08")
+                return;
+
+            string rom = SystemConfig["rom"];
+            if (Path.GetExtension(rom).ToLowerInvariant() == ".png")
+                retroarchConfig["builtin_imageviewer_enable"] = "false";
         }
 
         private void ConfigureFbalpha(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -1261,7 +1289,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "fbneo-neogeo-mode", "fbneo_neogeo_mode", "UNIBIOS");
             BindFeature(coreSettings, "fbneo-vertical-mode", "fbneo-vertical-mode", "disabled");
             BindFeature(coreSettings, "fbneo-diagnostic-input", "fbneo_diagkey", "Start + L + R");
-            BindFeature(coreSettings, "fbneo-cpu-speed-adjust", "fbneo_cpu_overclock", "100");
+            BindFeature(coreSettings, "fbneo-cpu-speed-adjust", "fbneo_cpu_overclock", "100%");
             BindFeature(coreSettings, "fbneo-samplerate", "fbneo_samplerate", "44100");
             BindFeature(coreSettings, "fbneo-lowpass-filter", "fbneo_lowpass_filter", "disabled");
             BindFeature(coreSettings, "fbneo-hiscores", "fbneo_hiscore", "enabled");
@@ -1327,35 +1355,61 @@ namespace EmulatorLauncher.Libretro
             if (core != "fceumm")
                 return;
 
-            if (Features.IsSupported("fceumm_cropoverscan"))
+            if (SystemConfig.isOptSet("fceumm_cropoverscan") && !string.IsNullOrEmpty(SystemConfig["fceumm_cropoverscan"]))
             {
-                if (SystemConfig.isOptSet("fceumm_cropoverscan") && SystemConfig["fceumm_cropoverscan"] == "none")
+                if (SystemConfig["fceumm_cropoverscan"] == "none")
                 {
-                    coreSettings["fceumm_overscan_h"] = "disabled";
-                    coreSettings["fceumm_overscan_v"] = "disabled";
+                    coreSettings["fceumm_overscan_h_left"] = "0";
+                    coreSettings["fceumm_overscan_h_right"] = "0";
+                    coreSettings["fceumm_overscan_v_top"] = "0";
+                    coreSettings["fceumm_overscan_v_bottom"] = "0";
                 }
-                else if (SystemConfig.isOptSet("fceumm_cropoverscan") && SystemConfig["fceumm_cropoverscan"] == "h")
+
+                else if (SystemConfig["fceumm_cropoverscan"] == "core_default")
                 {
-                    coreSettings["fceumm_overscan_h"] = "enabled";
-                    coreSettings["fceumm_overscan_v"] = "disabled";
+                    coreSettings["fceumm_overscan_h_left"] = "0";
+                    coreSettings["fceumm_overscan_h_right"] = "0";
+                    coreSettings["fceumm_overscan_v_top"] = "8";
+                    coreSettings["fceumm_overscan_v_bottom"] = "8";
                 }
-                else if (SystemConfig.isOptSet("fceumm_cropoverscan") && SystemConfig["fceumm_cropoverscan"] == "v")
-                {
-                    coreSettings["fceumm_overscan_h"] = "disabled";
-                    coreSettings["fceumm_overscan_v"] = "enabled";
-                }
+
                 else
                 {
-                    coreSettings["fceumm_overscan_h"] = "enabled";
-                    coreSettings["fceumm_overscan_v"] = "enabled";
+                    string[] overscans = SystemConfig["fceumm_cropoverscan"].Split('_');
+                    string overscanType = overscans[0];
+                    string overscanValue = overscans[1];
+
+                    if (overscanType == "h")
+                    {
+                        coreSettings["fceumm_overscan_h_left"] = overscanValue;
+                        coreSettings["fceumm_overscan_h_right"] = overscanValue;
+                        coreSettings["fceumm_overscan_v_top"] = "0";
+                        coreSettings["fceumm_overscan_v_bottom"] = "0";
+                    }
+                    else if (overscanType == "v")
+                        {
+                        coreSettings["fceumm_overscan_h_left"] = "0";
+                        coreSettings["fceumm_overscan_h_right"] = "0";
+                        coreSettings["fceumm_overscan_v_top"] = overscanValue;
+                        coreSettings["fceumm_overscan_v_bottom"] = overscanValue;
+                    }
+                    else if (overscanType == "both")
+                    {
+                        coreSettings["fceumm_overscan_h_left"] = overscanValue;
+                        coreSettings["fceumm_overscan_h_right"] = overscanValue;
+                        coreSettings["fceumm_overscan_v_top"] = overscanValue;
+                        coreSettings["fceumm_overscan_v_bottom"] = overscanValue;
+                    }
                 }
             }
 
+            BindFeature(coreSettings, "fceumm_aspect", "fceumm_aspect", "8:7 PAR");
+            BindBoolFeature(coreSettings, "fceumm_turbo_enable", "nes_turbo_enable", "Both", "None");
             BindFeature(coreSettings, "fceumm_palette", "fceumm_palette", "default");
             BindFeature(coreSettings, "fceumm_ntsc_filter", "fceumm_ntsc_filter", "disabled");
             BindFeature(coreSettings, "fceumm_sndquality", "fceumm_sndquality", "Low");
             BindFeature(coreSettings, "fceumm_overclocking", "fceumm_overclocking", "disabled");
-            BindFeature(coreSettings, "fceumm_nospritelimit", "fceumm_nospritelimit", "enabled");
+            BindFeature(coreSettings, "fceumm_nospritelimit", "fceumm_nospritelimit", "disabled");
             BindFeature(coreSettings, "fceumm_show_crosshair", "fceumm_show_crosshair", "enabled");
             BindFeature(coreSettings, "fceumm_zapper_mode", "gun_input", "clightgun");
 
@@ -1505,15 +1559,35 @@ namespace EmulatorLauncher.Libretro
             if (core != "gambatte")
                 return;
 
-            coreSettings["gambatte_gb_bootloader"] = "enabled";
             coreSettings["gambatte_gbc_color_correction_mode"] = "accurate";
             coreSettings["gambatte_gbc_color_correction"] = "GBC only";
             coreSettings["gambatte_up_down_allowed"] = "disabled";
 
+            BindFeature(coreSettings, "gambatte_gb_bootloader", "gambatte_gb_bootloader", "enabled");
             BindFeature(coreSettings, "gambatte_gb_hwmode", "gambatte_gb_hwmode", "Auto");
             BindFeature(coreSettings, "gambatte_mix_frames", "gambatte_mix_frames", "lcd_ghosting");
             BindFeature(coreSettings, "gambatte_gb_internal_palette", "gambatte_gb_internal_palette", "GB - DMG");
             BindFeature(coreSettings, "gambatte_gb_colorization", "gambatte_gb_colorization", "disabled");
+        }
+
+        private void ConfigureGearColeco(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "gearcoleco")
+                return;
+
+            // Controls
+            BindFeature(retroarchConfig, "input_libretro_device_p1", "gearcoleco_controller", "1");
+            BindFeature(retroarchConfig, "input_libretro_device_p2", "gearcoleco_controller", "1");
+        }
+
+        private void ConfigureGearSystem(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "gearsystem")
+                return;
+
+            // Controls
+            BindFeature(retroarchConfig, "input_libretro_device_p1", "gearcoleco_controller", "1");
+            BindFeature(retroarchConfig, "input_libretro_device_p2", "gearcoleco_controller", "1");
         }
 
         private void ConfigureGenesisPlusGX(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -1532,7 +1606,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "genesis_plus_gx_overscan", "overscan", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_render", "render", "single field");
             BindFeature(coreSettings, "genesis_plus_gx_force_dtack", "genesis_plus_gx_force_dtack", "enabled");
-            BindFeature(coreSettings, "genesis_plus_gx_overclock", "genesis_plus_gx_overclock", "100%");
+            BindFeature(coreSettings, "genesis_plus_gx_overclock", "genesis_plus_gx_overclock", "100");
             BindFeature(coreSettings, "genesis_plus_gx_no_sprite_limit", "genesis_plus_gx_no_sprite_limit", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_bios", "genesis_plus_gx_bios", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_add_on", "genesis_plus_gx_add_on", "auto");
@@ -1623,7 +1697,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "genesis_plus_gx_wide_overscan", "overscan", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_wide_render", "render", "single field");
             BindFeature(coreSettings, "genesis_plus_gx_wide_force_dtack", "genesis_plus_gx_force_dtack", "enabled");
-            BindFeature(coreSettings, "genesis_plus_gx_wide_overclock", "genesis_plus_gx_overclock", "100%");
+            BindFeature(coreSettings, "genesis_plus_gx_wide_overclock", "genesis_plus_gx_overclock", "100");
             BindFeature(coreSettings, "genesis_plus_gx_wide_no_sprite_limit", "genesis_plus_gx_no_sprite_limit", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_wide_bios", "genesis_plus_gx_bios", "disabled");
             BindFeature(coreSettings, "genesis_plus_gx_wide_add_on", "genesis_plus_gx_add_on", "auto");
@@ -1698,7 +1772,7 @@ namespace EmulatorLauncher.Libretro
             if (core != "handy")
                 return;
 
-            BindFeature(coreSettings, "handy_rot", "handy_rot", "None");
+            BindFeature(coreSettings, "handy_rot", "handy_rot", "Auto");
             BindFeature(coreSettings, "handy_gfx_colors", "handy_gfx_colors", "16bit");
             BindFeature(coreSettings, "handy_lcd_ghosting", "handy_lcd_ghosting", "disabled");
         }
@@ -1790,19 +1864,43 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             coreSettings["kronos_use_beetle_saves"] = "enabled";
-            coreSettings["kronos_multitap_port2"] = "disabled";
             coreSettings["kronos_sh2coretype"] = "kronos";
 
-            BindFeature(coreSettings, "kronos_addon_cartridge", "addon_cartridge", "512K_backup_ram");
-            BindFeature(coreSettings, "kronos_force_downsampling", "force_downsampling", "disabled");
-            BindFeature(coreSettings, "kronos_language_id", "language_id", "English");
-            BindFeature(coreSettings, "kronos_meshmode", "meshmode", "disabled");
-            BindFeature(coreSettings, "kronos_multitap_port1", "multitap_port1", "disabled");
-            BindFeature(coreSettings, "kronos_polygon_mode", "polygon_mode", "cpu_tesselation");
-            BindFeature(coreSettings, "kronos_resolution_mode", "resolution_mode", "original");
-            BindFeature(coreSettings, "kronos_use_cs", "use_cs", "disabled");
-            BindFeature(coreSettings, "kronos_videocoretype", "videocoretype", "opengl");
-            BindFeature(coreSettings, "kronos_videoformattype", "videoformattype", "auto");
+            coreSettings["kronos_multitap_port1"] = "disabled";
+            coreSettings["kronos_multitap_port2"] = "disabled";
+            if (SystemConfig.isOptSet("kronos_multitap") && !string.IsNullOrEmpty(SystemConfig["kronos_multitap"]))
+            {
+                switch (SystemConfig["kronos_multitap"])
+                {
+                    case "disabled":
+                        coreSettings["kronos_multitap_port1"] = "disabled";
+                        coreSettings["kronos_multitap_port2"] = "disabled";
+                        break;
+                    case "port1":
+                        coreSettings["kronos_multitap_port1"] = "enabled";
+                        coreSettings["kronos_multitap_port2"] = "disabled";
+                        break;
+                    case "port2":
+                        coreSettings["kronos_multitap_port1"] = "disabled";
+                        coreSettings["kronos_multitap_port2"] = "enabled";
+                        break;
+                    case "ports":
+                        coreSettings["kronos_multitap_port1"] = "enabled";
+                        coreSettings["kronos_multitap_port2"] = "enabled";
+                        break;
+                }
+            }
+
+            BindFeature(coreSettings, "kronos_addon_cartridge", "kronos_addon_cartridge", "none");
+            BindFeature(coreSettings, "kronos_bandingmode", "kronos_bandingmode", "disabled");
+            BindFeature(coreSettings, "kronos_force_downsampling", "kronos_force_downsampling", "disabled");
+            BindFeature(coreSettings, "kronos_language_id", "kronos_language_id", "English");
+            BindFeature(coreSettings, "kronos_meshmode", "kronos_meshmode", "disabled");
+            BindFeature(coreSettings, "kronos_polygon_mode", "kronos_polygon_mode", "cpu_tesselation");
+            BindFeature(coreSettings, "kronos_resolution_mode", "kronos_resolution_mode", "original");
+            BindFeature(coreSettings, "kronos_videocoretype", "kronos_videocoretype", "opengl");
+            BindFeature(coreSettings, "kronos_videoformattype", "kronos_videoformattype", "auto");
+            BindFeature(coreSettings, "kronos_skipframe", "kronos_skipframe", "0");
 
             if (system == "segastv")
             {
@@ -1875,7 +1973,6 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "mame_rotation_mode", "mame_rotation_mode", "internal");
             BindFeature(coreSettings, "mame_thread_mode", "mame_thread_mode", "enabled");
             BindFeature(coreSettings, "mame_throttle", "mame_throttle", "disabled");
-            BindFeature(coreSettings, "mame_boot_from_cli", "boot_from_cli", "enabled", true);
             BindFeature(coreSettings, "mame_boot_to_bios", "boot_to_bios", "disabled", true);
             BindFeature(coreSettings, "mame_boot_to_osd", "boot_to_osd", "disabled", true);
 
@@ -1887,6 +1984,28 @@ namespace EmulatorLauncher.Libretro
                 if (!SystemConfig.isOptSet("alternate_renderer"))
                     coreSettings["mame_alternate_renderer"] = "enabled";
             }
+
+            ConfigureMameini(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "ini"));
+
+            string mameOptFileFolder = Path.Combine(AppConfig.GetFullPath("retroarch"), "config", "MAME");
+            if (!Directory.Exists(mameOptFileFolder))
+                try { Directory.CreateDirectory(mameOptFileFolder); } catch { }
+            
+            string mameOptFile = Path.Combine(mameOptFileFolder, "MAME.opt");
+            if (!File.Exists(mameOptFile))
+                try { File.Create(mameOptFile).Close(); } catch { }
+            
+            var mameCoreSettings = ConfigFile.FromFile(mameOptFile, new ConfigFileOptions() { CaseSensitive = true });
+
+            foreach (var setting in coreSettings)
+            {
+                if (setting.Name.StartsWith("mame_") && !setting.Name.Contains("_current"))
+                {
+                    mameCoreSettings[setting.Name] = setting.Value;
+                }
+            }
+
+            mameCoreSettings.Save(mameOptFile, true);
         }
 
         private void CleanupMameMessConfigFiles(MessSystem messSystem)
@@ -1930,6 +2049,38 @@ namespace EmulatorLauncher.Libretro
                 }
             }
             catch { }
+        }
+
+        private void ConfigureMameini(string path)
+        {
+            var ini = MameIniFile.FromFile(Path.Combine(path, "mame.ini"));
+
+            if (ini["writeconfig"] != "0")
+            {
+                ini["writeconfig"] = "0";
+            }
+
+            if (SystemConfig.isOptSet("mame_output") && !string.IsNullOrEmpty(SystemConfig["mame_output"]))
+                ini["output"] = SystemConfig["mame_output"];
+            else
+                ini["output"] = "auto";
+
+            ini.Save();
+
+            // Plugin.ini
+            var pluginsIni = MameIniFile.FromFile(Path.Combine(path, "plugin.ini"));
+
+            if (SystemConfig.isOptSet("cheats_enable") && SystemConfig.getOptBoolean("cheats_enable"))
+                pluginsIni["cheat"] = "1";
+            else
+                pluginsIni["cheat"] = "0";
+
+            if (SystemConfig.isOptSet("mame_hiscore") && SystemConfig.getOptBoolean("mame_hiscore"))
+                pluginsIni["hiscore"] = "1";
+            else
+                pluginsIni["hiscore"] = "0";
+
+            pluginsIni.Save();
         }
 
         private void ConfigureMame2000(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -2047,6 +2198,8 @@ namespace EmulatorLauncher.Libretro
             if (core != "mednafen_pcfx")
                 return;
 
+            BindBoolFeature(coreSettings, "sgx_nospritelimit", "sgx_nospritelimit", "enabled", "disabled");
+
             BindFeature(retroarchConfig, "input_libretro_device_p1", "pcfx_controller1", "1");
             BindFeature(retroarchConfig, "input_libretro_device_p2", "pcfx_controller2", "1");
         }
@@ -2057,6 +2210,8 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             coreSettings["pce_show_advanced_input_settings"] = "enabled";
+
+            BindBoolFeature(coreSettings, "pce_nospritelimit", "pce_nospritelimit", "enabled", "disabled");
 
             BindFeature(coreSettings, "pce_psgrevision", "pce_psgrevision", "auto");
             BindFeature(coreSettings, "pce_resamp_quality", "pce_resamp_quality", "3");
@@ -2075,8 +2230,24 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "pce_cdpsgvolume", "pcecdvolume", "100");
 
             // Controls
+            BindFeature(retroarchConfig, "pce_multitap", "pce_multitap", "disabled");
             BindFeature(retroarchConfig, "input_libretro_device_p1", "pce_controller1", "1");
             BindFeature(retroarchConfig, "input_libretro_device_p2", "pce_controller2", "1");
+
+            if (SystemConfig.isOptSet("pce_6button") && SystemConfig.getOptBoolean("pce_6button"))
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["pce_default_joypad_type_p" + i] = "6 Buttons";
+                }
+            }
+            else
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["pce_default_joypad_type_p" + i] = "2 Buttons";
+                }
+            }
         }
 
         private void ConfigureMednafenPceFast(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -2084,9 +2255,26 @@ namespace EmulatorLauncher.Libretro
             if (core != "mednafen_pce_fast")
                 return;
 
+            BindBoolFeature(coreSettings, "pce_fast_nospritelimit", "pce_fast_nospritelimit", "enabled", "disabled");
+
             // Controls
             BindFeature(retroarchConfig, "input_libretro_device_p1", "pce_controller1", "1");
             BindFeature(retroarchConfig, "input_libretro_device_p2", "pce_controller2", "1");
+            
+            if (SystemConfig.isOptSet("pce_6button") && SystemConfig.getOptBoolean("pce_6button"))
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["pce_fast_default_joypad_type_p" + i] = "6 Buttons";
+                }
+            }
+            else
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["pce_fast_default_joypad_type_p" + i] = "2 Buttons";
+                }
+            }
         }
 
         private void ConfigureMednafenPsxHW(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -2273,6 +2461,43 @@ namespace EmulatorLauncher.Libretro
 
             BindFeature(retroarchConfig, "input_libretro_device_p1", "supergrafx_controller1", "1");
             BindFeature(retroarchConfig, "input_libretro_device_p2", "supergrafx_controller2", "1");
+
+            if (SystemConfig.isOptSet("sgx_6button") && SystemConfig.getOptBoolean("sgx_6button"))
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["sgx_default_joypad_type_p" + i] = "6 Buttons";
+                }
+            }
+            else
+            {
+                for (int i = 1; i < 6; i++)
+                {
+                    coreSettings["sgx_default_joypad_type_p" + i] = "2 Buttons";
+                }
+            }
+        }
+
+        private void ConfigureMednafenWswan(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "mednafen_wswan")
+                return;
+
+            BindFeature(coreSettings, "wswan_rotate_display", "mednafen_wswan_rotate", "manual");
+
+            if (!SystemConfig.isOptSet("mednafen_wswan_rotatekeymap"))
+            {
+                if (SystemConfig["mednafen_wswan_rotate"] == "landscape")
+                    coreSettings["wswan_rotate_keymap"] = "disabled";
+                else if (SystemConfig["mednafen_wswan_rotate"] == "portrait")
+                    coreSettings["wswan_rotate_keymap"] = "enabled";
+                else
+                    coreSettings["wswan_rotate_keymap"] = "auto";
+            }
+            else if (!string.IsNullOrEmpty(SystemConfig["mednafen_wswan_rotatekeymap"]))
+            {
+                coreSettings["wswan_rotate_keymap"] = SystemConfig["mednafen_wswan_rotatekeymap"];
+            }
         }
 
         private void ConfigureMesen(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -2280,17 +2505,17 @@ namespace EmulatorLauncher.Libretro
             if (core != "mesen")
                 return;
 
-            coreSettings["mesen_aspect_ratio"] = "Auto";
-
+            BindFeature(coreSettings, "mesen_aspect_ratio", "mesen_aspect_ratio", "Auto");
             BindFeature(coreSettings, "mesen_hdpacks", "hd_packs", "disabled");
             BindFeature(coreSettings, "mesen_ntsc_filter", "ntsc_filter", "Disabled");
             BindFeature(coreSettings, "mesen_palette", "palette", "Default");
-            BindFeature(coreSettings, "mesen_shift_buttons_clockwise", "mesen_shift_buttons", "disabled");
+            BindBoolFeature(coreSettings, "mesen_shift_buttons_clockwise", "rotate_buttons", "disabled", "enabled");
             BindFeature(coreSettings, "mesen_fake_stereo", "fake_stereo", "disabled");
             BindBoolFeature(coreSettings, "mesen_nospritelimit", "mesen_nospritelimit", "enabled", "disabled");
             BindFeature(coreSettings, "mesen_overclock", "mesen_overclock", "None");
             BindBoolFeature(coreSettings, "mesen_fdsautoinsertdisk", "mesen_fdsautoinsertdisk", "enabled", "disabled");
             BindBoolFeature(coreSettings, "mesen_fdsfastforwardload", "mesen_fdsfastforwardload", "enabled", "disabled");
+            BindFeature(coreSettings, "mesen_controllerturbospeed", "mesen_nes_turbo", "Disabled");
 
             bool overscan = SystemConfig.isOptSet("mesen_overscan_pixels") && !string.IsNullOrEmpty(SystemConfig["mesen_overscan_pixels"]);
 
@@ -2356,7 +2581,6 @@ namespace EmulatorLauncher.Libretro
 
             if (system == "n64dd")
             {
-
                 // Nintendo 64DD IPL bios selection workaround
                 // mupen64plus doesn't allow multiple bios selection and looks only for a IPL.n64 file in bios\mupen64plus
                 string biosPath = Path.Combine(AppConfig.GetFullPath("bios"), "Mupen64plus");
@@ -2372,11 +2596,8 @@ namespace EmulatorLauncher.Libretro
 
                         if (File.Exists(biosFileSource))
                             File.Copy(biosFileSource, biosFileTarget);
-
                     }
-
                 }
-
             }
 
             coreSettings["mupen64plus-rsp-plugin"] = "hle";
@@ -2393,7 +2614,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "mupen64plus-Framerate", "mupen64plus_framerate", "Original");
 
             // Set RSP plugin: HLE for Glide, LLE for Parallel
-            if (SystemConfig.isOptSet("RDP_Plugin") && coreSettings["mupen64plus-rdp-plugin"] == "parallel")
+            if (SystemConfig.isOptSet("RDP_Plugin") && SystemConfig["RDP_Plugin"] == "parallel")
                 coreSettings["mupen64plus-rsp-plugin"] = "parallel";
             else
                 coreSettings["mupen64plus-rsp-plugin"] = "hle";
@@ -2479,7 +2700,7 @@ namespace EmulatorLauncher.Libretro
                 SystemConfig["bezel"] = "none";
             }
             else
-                coreSettings["mupen64plus-aspect"] = "4/3";
+                coreSettings["mupen64plus-aspect"] = "4:3";
 
             // Player packs
             BindFeature(coreSettings, "mupen64plus-pak1", "mupen64plus-pak1", "memory");
@@ -2518,17 +2739,15 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "melonds_boot_directly", "nds_boot", "enabled");
             BindFeature(coreSettings, "melonds_console_mode", "nds_console", "DS");
 
-            if (SystemConfig.isOptSet("melonds_screen_layout") && SystemConfig["melonds_screen_layout"] == "duplicate")
+            if (SystemConfig.isOptSet("melonds_screen_layout") && (SystemConfig["melonds_screen_layout"] == "Hybrid Top" || SystemConfig["melonds_screen_layout"] == "Hybrid Bottom"))
             {
-                coreSettings["melonds_screen_layout"] = "Hybrid Top";
-                coreSettings["melonds_hybrid_small_screen"] = "Duplicate";
+                coreSettings["melonds_screen_layout"] = SystemConfig["melonds_screen_layout"];
+                BindFeature(coreSettings, "melonds_hybrid_small_screen", "melonds_hybrid_small_screen", "Bottom");
             }
             else
-            {
                 BindFeature(coreSettings, "melonds_screen_layout", "melonds_screen_layout", "Top/Bottom");
-                coreSettings["melonds_hybrid_small_screen"] = "Bottom";
-            }
 
+            BindFeature(coreSettings, "melonds_hybrid_ratio", "melonds_hybrid_ratio", "3");
             BindFeature(coreSettings, "melonds_touch_mode", "melonds_touch_mode", "Joystick");
 
             // Boot to firmware directly if a .bin file is loaded
@@ -2572,9 +2791,10 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "melonds_show_cursor", "melondsds_cursor_mode", "touching");
             coreSettings["melonds_cursor_timeout"] = "3";
             BindFeature(coreSettings, "melonds_touch_mode", "melondsds_touch_mode", "auto");
-            BindFeature(coreSettings, "melonds_hybrid_ratio", "melondsds_hybrid_ratio", "2");
+            BindFeature(coreSettings, "melonds_hybrid_ratio", "melondsds_hybrid_ratio", "3");
             BindFeature(coreSettings, "melonds_hybrid_small_screen", "melondsds_hybrid_smallscreen", "both");
             BindFeature(coreSettings, "melonds_screen_gap", "melondsds_screengap", "0");
+            BindBoolFeature(coreSettings, "melonds_show_current_layout", "melonds_show_current_layout", "enabled", "disabled");
 
             coreSettings["melonds_number_of_screen_layouts"] = "8";
 
@@ -2708,7 +2928,7 @@ namespace EmulatorLauncher.Libretro
 
             // Firmware
             BindFeature(coreSettings, "melonds_firmware_language", "melondsds_language", "auto");
-            BindFeature(coreSettings, "melonds_console_mode", "melondsds_console", "DS");
+            BindFeature(coreSettings, "melonds_console_mode", "melondsds_console", "ds");
             BindFeature(coreSettings, "melonds_boot_mode", "melondsds_boot", "direct");
 
             if (SystemConfig["melondsds_console"] == "dsi")
@@ -2796,23 +3016,38 @@ namespace EmulatorLauncher.Libretro
             {
                 if (SystemConfig.isOptSet("nestopia_cropoverscan") && SystemConfig["nestopia_cropoverscan"] == "none")
                 {
-                    coreSettings["nestopia_overscan_h"] = "disabled";
-                    coreSettings["nestopia_overscan_v"] = "disabled";
+                    coreSettings["nestopia_overscan_h_left"] = "0";
+                    coreSettings["nestopia_overscan_h_right"] = "0";
+                    coreSettings["nestopia_overscan_v_bottom"] = "0";
+                    coreSettings["nestopia_overscan_v_top"] = "0";
                 }
                 else if (SystemConfig.isOptSet("nestopia_cropoverscan") && SystemConfig["nestopia_cropoverscan"] == "h")
                 {
-                    coreSettings["nestopia_overscan_h"] = "enabled";
-                    coreSettings["nestopia_overscan_v"] = "disabled";
+                    coreSettings["nestopia_overscan_h_left"] = "8";
+                    coreSettings["nestopia_overscan_h_right"] = "8";
+                    coreSettings["nestopia_overscan_v_bottom"] = "0";
+                    coreSettings["nestopia_overscan_v_top"] = "0";
                 }
                 else if (SystemConfig.isOptSet("nestopia_cropoverscan") && SystemConfig["nestopia_cropoverscan"] == "v")
                 {
-                    coreSettings["nestopia_overscan_h"] = "disabled";
-                    coreSettings["nestopia_overscan_v"] = "enabled";
+                    coreSettings["nestopia_overscan_h_left"] = "0";
+                    coreSettings["nestopia_overscan_h_right"] = "0";
+                    coreSettings["nestopia_overscan_v_bottom"] = "8";
+                    coreSettings["nestopia_overscan_v_top"] = "8";
+                }
+                else if (SystemConfig.isOptSet("nestopia_cropoverscan") && SystemConfig["nestopia_cropoverscan"] == "both")
+                {
+                    coreSettings["nestopia_overscan_h_left"] = "8";
+                    coreSettings["nestopia_overscan_h_right"] = "8";
+                    coreSettings["nestopia_overscan_v_bottom"] = "8";
+                    coreSettings["nestopia_overscan_v_top"] = "8";
                 }
                 else
                 {
-                    coreSettings["nestopia_overscan_h"] = "enabled";
-                    coreSettings["nestopia_overscan_v"] = "enabled";
+                    coreSettings["nestopia_overscan_h_left"] = "0";
+                    coreSettings["nestopia_overscan_h_right"] = "0";
+                    coreSettings["nestopia_overscan_v_bottom"] = "8";
+                    coreSettings["nestopia_overscan_v_top"] = "8";
                 }
             }
 
@@ -2823,7 +3058,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "nestopia_select_adapter", "nestopia_select_adapter", "auto");
             BindFeature(coreSettings, "nestopia_show_crosshair", "nestopia_show_crosshair", "disabled");
             BindFeature(coreSettings, "nestopia_favored_system", "nestopia_favored_system", "auto");
-            BindFeature(coreSettings, "nestopia_button_shift", "nestopia_button_shift", "disabled");
+            BindBoolFeature(coreSettings, "nestopia_button_shift", "rotate_buttons", "disabled", "enabled");
 
             // Controls
             BindFeature(retroarchConfig, "input_libretro_device_p1", "nestopia_controller1", "1");
@@ -2831,6 +3066,17 @@ namespace EmulatorLauncher.Libretro
 
             coreSettings["nestopia_zapper_device"] = "lightgun";
             SetupLightGuns(retroarchConfig, "262", core, 2);
+        }
+
+        private void ConfigureNp2kai(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "np2kai")
+                return;
+
+            BindFeature(coreSettings, "np2kai_model", "np2kai_model", "PC-9801VX");
+
+            // Controls
+            BindFeature(coreSettings, "np2kai_joymode", "np2kai_joymode", "OFF");
         }
 
         private void ConfigureO2em(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -2881,7 +3127,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "openlara_resolution", "openlara_resolution", "320x240");
         }
 
-        static List<KeyValuePair<string, string>> operaHacks = new List<KeyValuePair<string, string>>()
+        static readonly List<KeyValuePair<string, string>> operaHacks = new List<KeyValuePair<string, string>>()
             {
                 new KeyValuePair<string, string>("crashnburn", "hack_timing_1"),
                 new KeyValuePair<string, string>("dinopark tycoon", "hack_timing_3"),
@@ -2899,7 +3145,7 @@ namespace EmulatorLauncher.Libretro
 
             BindFeature(coreSettings, "opera_high_resolution", "high_resolution", "enabled");
             BindFeature(coreSettings, "opera_cpu_overclock", "cpu_overclock", "1.0x (12.50Mhz)");
-            BindFeature(coreSettings, "opera_bios", "opera_bios", "Panasonic FZ-1 (U)");
+            BindFeature(coreSettings, "opera_bios", "opera_bios", "panafz1.bin");
             BindFeature(coreSettings, "opera_region", "opera_region", "ntsc");
 
             // Game hacks
@@ -3158,12 +3404,11 @@ namespace EmulatorLauncher.Libretro
 
             BindFeature(coreSettings, "picodrive_aspect", "core_aspect", "PAR");
             BindFeature(coreSettings, "picodrive_overclk68k", "overclk68k", "disabled");
-            BindFeature(coreSettings, "picodrive_overscan", "overscan", "disabled");
             BindFeature(coreSettings, "picodrive_region", "region", "Auto");
             BindFeature(coreSettings, "picodrive_renderer", "renderer", "accurate");
             BindFeature(coreSettings, "picodrive_drc", "dynamic_recompiler", "disabled");
-            BindFeature(coreSettings, "picodrive_input1", "picodrive_input1", "3 button pad");
-            BindFeature(coreSettings, "picodrive_input2", "picodrive_input2", "3 button pad");
+            BindBoolFeature(coreSettings, "picodrive_input1", "md_3buttons", "3 button pad", "6 button pad");
+            BindBoolFeature(coreSettings, "picodrive_input2", "md_3buttons", "3 button pad", "6 button pad");
             BindFeature(coreSettings, "picodrive_smsfm", "picodrive_smsfm", "off");
             BindFeature(coreSettings, "picodrive_smsmapper", "picodrive_smsmapper", "Auto");
             BindBoolFeature(coreSettings, "picodrive_sprlim", "picodrive_nospritelimit", "enabled", "disabled");
@@ -3189,6 +3434,13 @@ namespace EmulatorLauncher.Libretro
                     coreSettings["picodrive_lowpass_range"] = "60";
                 }
             }
+        }
+
+        private void ConfigurePocketCDG(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "pocketcpg")
+                return;
+
         }
 
         private void ConfigurePokeMini(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3271,10 +3523,9 @@ namespace EmulatorLauncher.Libretro
             coreSettings["ppsspp_auto_frameskip"] = "disabled";
             coreSettings["ppsspp_frameskip"] = "disabled";
             coreSettings["ppsspp_frameskiptype"] = "Number of frames";
-            coreSettings["ppsspp_rendering_mode"] = "Buffered";
             coreSettings["ppsspp_locked_cpu_speed"] = "disabled";
 
-            if (Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements") && SystemConfig.getOptBoolean("retroachievements.hardcore"))
+            if ((Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements") && SystemConfig.getOptBoolean("retroachievements.hardcore")) || !SystemConfig.getOptBoolean("ppsspp_cheats"))
                 coreSettings["ppsspp_cheats"] = "disabled";
             else
                 coreSettings["ppsspp_cheats"] = "enabled";
@@ -3282,58 +3533,46 @@ namespace EmulatorLauncher.Libretro
             switch (SystemConfig["PerformanceMode"])
             {
                 case "Fast":
-                    coreSettings["ppsspp_block_transfer_gpu"] = "disabled";
                     coreSettings["ppsspp_spline_quality"] = "Low";
                     coreSettings["ppsspp_software_skinning"] = "enabled";
                     coreSettings["ppsspp_gpu_hardware_transform"] = "enabled";
                     coreSettings["ppsspp_vertex_cache"] = "enabled";
                     coreSettings["ppsspp_fast_memory"] = "enabled";
                     coreSettings["ppsspp_lazy_texture_caching"] = "enabled";
-                    coreSettings["ppsspp_retain_changed_textures"] = "enabled";
                     coreSettings["ppsspp_force_lag_sync"] = "disabled";
-                    coreSettings["ppsspp_disable_slow_framebuffer_effects"] = "enabled";
                     break;
                 case "Balanced":
-                    coreSettings["ppsspp_block_transfer_gpu"] = "enabled";
                     coreSettings["ppsspp_spline_quality"] = "Medium";
                     coreSettings["ppsspp_software_skinning"] = "disabled";
                     coreSettings["ppsspp_gpu_hardware_transform"] = "enabled";
                     coreSettings["ppsspp_vertex_cache"] = "enabled";
                     coreSettings["ppsspp_fast_memory"] = "enabled";
                     coreSettings["ppsspp_lazy_texture_caching"] = "disabled";
-                    coreSettings["ppsspp_retain_changed_textures"] = "disabled";
                     coreSettings["ppsspp_force_lag_sync"] = "disabled";
-                    coreSettings["ppsspp_disable_slow_framebuffer_effects"] = "disabled";
                     break;
                 case "Accurate":
-                    coreSettings["ppsspp_block_transfer_gpu"] = "enabled";
                     coreSettings["ppsspp_spline_quality"] = "High";
                     coreSettings["ppsspp_software_skinning"] = "disabled";
                     coreSettings["ppsspp_gpu_hardware_transform"] = "disabled";
                     coreSettings["ppsspp_vertex_cache"] = "disabled";
                     coreSettings["ppsspp_fast_memory"] = "disabled";
                     coreSettings["ppsspp_lazy_texture_caching"] = "disabled";
-                    coreSettings["ppsspp_retain_changed_textures"] = "disabled";
                     coreSettings["ppsspp_force_lag_sync"] = "enabled";
-                    coreSettings["ppsspp_disable_slow_framebuffer_effects"] = "disabled";
                     break;
                 default:
-                    coreSettings["ppsspp_block_transfer_gpu"] = "enabled";
-                    coreSettings["ppsspp_spline_quality"] = "Medium";
+                    coreSettings["ppsspp_spline_quality"] = "High";
                     coreSettings["ppsspp_software_skinning"] = "enabled";
                     coreSettings["ppsspp_gpu_hardware_transform"] = "enabled";
                     coreSettings["ppsspp_vertex_cache"] = "disabled";
                     coreSettings["ppsspp_fast_memory"] = "enabled";
                     coreSettings["ppsspp_lazy_texture_caching"] = "disabled";
-                    coreSettings["ppsspp_retain_changed_textures"] = "disabled";
                     coreSettings["ppsspp_force_lag_sync"] = "disabled";
-                    coreSettings["ppsspp_disable_slow_framebuffer_effects"] = "disabled";
                     break;
             }
 
             BindFeature(coreSettings, "ppsspp_cpu_core", "ppsspp_cpu_core", "JIT");
-            BindFeature(coreSettings, "ppsspp_inflight_frames", "ppsspp_inflight_frames", "1440x816");
-            BindFeature(coreSettings, "ppsspp_internal_resolution", "ppsspp_internal_resolution", "1440x816");
+            BindFeature(coreSettings, "ppsspp_inflight_frames", "ppsspp_inflight_frames", "Up to 2");
+            BindFeature(coreSettings, "ppsspp_internal_resolution", "ppsspp_internal_resolution", "480x272");
             BindFeature(coreSettings, "ppsspp_texture_anisotropic_filtering", "ppsspp_texture_anisotropic_filtering", "disabled");
             BindFeature(coreSettings, "ppsspp_texture_filtering", "ppsspp_texture_filtering", "Auto");
             BindFeature(coreSettings, "ppsspp_texture_scaling_type", "ppsspp_texture_scaling_type", "xbrz");
@@ -3342,9 +3581,8 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "ppsspp_language", "ppsspp_language", "Automatic");
             BindFeature(coreSettings, "ppsspp_io_timing_method", "ppsspp_io_timing_method", "Fast");
             BindFeature(coreSettings, "ppsspp_ignore_bad_memory_access", "ppsspp_ignore_bad_memory_access", "enabled");
-            BindFeature(coreSettings, "ppsspp_texture_replacement", "ppsspp_texture_replacement", "disabled");
+            BindBoolFeature(coreSettings, "ppsspp_texture_replacement", "ppsspp_texture_replacement", "enabled", "disabled");
             BindFeature(coreSettings, "ppsspp_button_preference", "ppsspp_button_preference", "Cross");
-            BindFeature(coreSettings, "ppsspp_mulitsample_level", "ppsspp_mulitsample_level", "Disabled");
         }
 
         private void ConfigurePrBoom(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3439,6 +3677,61 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "px68k_joytype2", "px68k_joytype", "Default (2 Buttons)");
             BindFeature(coreSettings, "px68k_joy1_select", "px68k_joy1_select", "Default");
             BindFeature(coreSettings, "px68k_joy_mouse", "px68k_joy_mouse", "Mouse");
+
+            // Write config.ini file
+            string iniFile = Path.Combine(AppConfig.GetFullPath("bios"), "keropi", "config");
+
+            try
+            {
+                using (var ini = new IniFile(iniFile, IniOptions.KeepEmptyValues))
+                {
+                    if (SystemConfig["rom"] != null)
+                    {
+                        string rom = SystemConfig["rom"];
+                        string romPath = Path.GetDirectoryName(SystemConfig["rom"]);
+                        string ext = Path.GetExtension(rom).ToLowerInvariant();
+                        ini.WriteValue("WinX68k", "StartDir", romPath);
+
+                        if (ext == ".hdf")
+                        {
+                            ini.WriteValue("WinX68k", "HDD0", rom);
+                            ini.WriteValue("WinX68k", "FDD0", null);
+                            ini.WriteValue("WinX68k", "FDD1", null);
+
+                        }
+                        else if (ext == ".dim")
+                        {
+                            ini.WriteValue("WinX68k", "FDD0", rom);
+                            for (int i = 0; i < 16; i++)
+                            {
+                                ini.WriteValue("WinX68k", "HDD" + i, null);
+                            }
+                        }
+                        else if (ext == ".m3u")
+                        {
+                            var lines = File.ReadAllLines(rom);
+                            if (lines.Length > 1 && lines[0].EndsWith(".dim"))
+                            {
+                                ini.WriteValue("WinX68k", "FDD0", Path.Combine(romPath, lines[0]));
+                                ini.WriteValue("WinX68k", "FDD1", Path.Combine(romPath, lines[1]));
+                                for (int i = 0; i < 16; i++)
+                                {
+                                    ini.WriteValue("WinX68k", "HDD" + i, null);
+                                }
+                            }
+                            else if (lines.Length > 0 && lines[0].EndsWith(".dim"))
+                            {
+                                ini.WriteValue("WinX68k", "FDD0", Path.Combine(romPath, lines[0]));
+                                for (int i = 0; i < 16; i++)
+                                {
+                                    ini.WriteValue("WinX68k", "HDD" + i, null);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         private void ConfigureQuasi88(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3461,6 +3754,16 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             BindFeature(coreSettings, "race_language", "race_language", "english");
+        }
+
+        private void ConfigureRetro8(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "retro8")
+                return;
+
+            string rom = SystemConfig["rom"];
+            if (Path.GetExtension(rom).ToLowerInvariant() == ".png")
+                retroarchConfig["builtin_imageviewer_enable"] = "false";
         }
 
         private void ConfigureSameBoy(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3849,7 +4152,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "swanstation_Console_Region", "swanstation_region", "Auto");
             BindFeature(coreSettings, "swanstation_GPU_Renderer", "swanstation_GPU", "Auto");
             BindFeature(coreSettings, "swanstation_GPU_TextureFilter", "swanstation_texturefilter", "Nearest");
-            BindFeature(coreSettings, "swanstation_Display_AspectRatio", "swanstation_aspectratio", "Auto");
+            BindFeature(coreSettings, "swanstation_Display_AspectRatio", "swanstation_aspectratio", "Native");
             BindFeature(coreSettings, "swanstation_Display_CropMode", "swanstation_cropmode", "Overscan");
             BindFeature(coreSettings, "swanstation_GPU_ResolutionScale", "internal_resolution", "1");
             BindFeature(coreSettings, "swanstation_GPU_ForceNTSCTimings", "force_ntsc_timings", "false");
@@ -3859,6 +4162,8 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "swanstation_GPU_TrueColor", "truecolor", "false");
             BindFeature(coreSettings, "swanstation_BIOS_PatchFastBoot", "skip_bios", "true");
             BindFeature(coreSettings, "swanstation_CPU_ExecutionMode", "swanstation_cpucore", "Interpreter");
+            BindFeature(coreSettings, "swanstation_MemoryCards_Card1Type", "swanstation_memcard1", "Libretro");
+            BindFeature(coreSettings, "swanstation_MemoryCards_Card2Type", "swanstation_memcard2", "None");
 
             // PGXP
             if (SystemConfig.isOptSet("swanstation_pgxp") && SystemConfig.getOptBoolean("swanstation_pgxp"))

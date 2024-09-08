@@ -22,6 +22,8 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
+
             string folderName = (emulator == "demul-old" || core == "demul-old") ? "demul-old" : "demul";
             if (folderName == "demul-old")
                 _oldVersion = true;
@@ -29,6 +31,9 @@ namespace EmulatorLauncher
             string path = AppConfig.GetFullPath(folderName);
             if (string.IsNullOrEmpty(path))
                 path = AppConfig.GetFullPath("demul");
+
+            if (!Directory.Exists(path))
+                return null;
 
             string exe = Path.Combine(path, "demul.exe");
             if (!File.Exists(exe))
@@ -40,8 +45,8 @@ namespace EmulatorLauncher
             if (SystemConfig.isOptSet("demul_ratio") && SystemConfig["demul_ratio"] != "1")
                 SystemConfig["bezel"] = "none";
 
-            var bezels = BezelFiles.GetBezelFiles(system, rom, resolution);
-            _isUsingReshader = ReshadeManager.Setup(ReshadeBezelType.dxgi, ReshadePlatform.x86, system, rom, path, resolution, bezels != null);
+            var bezels = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+            _isUsingReshader = ReshadeManager.Setup(ReshadeBezelType.dxgi, ReshadePlatform.x86, system, rom, path, resolution, emulator, bezels != null);
             if (_isUsingReshader)
             {
                 if (bezels != null)
@@ -54,7 +59,7 @@ namespace EmulatorLauncher
             }
 
             SetupGeneralConfig(path, rom, system, core, demulCore);
-            SetupDx11Config(path, rom, system, resolution);
+            SetupDx11Config(path, resolution);
 
             if (demulCore == "dc")
             {
@@ -90,12 +95,14 @@ namespace EmulatorLauncher
                     var biosPath = AppConfig.GetFullPath("bios");
                     var romsPath = AppConfig.GetFullPath("roms");
 
-                    var romsPaths = new List<string>();
-                    romsPaths.Add(Path.Combine(biosPath, "dc"));
-                    romsPaths.Add(biosPath);
-                    romsPaths.Add(Path.GetDirectoryName(rom));
+                    var romsPaths = new List<string>
+                    {
+                        Path.Combine(biosPath, "dc"),
+                        biosPath,
+                        Path.GetDirectoryName(rom)
+                    };
 
-                    foreach (var sys in new string[] { "dreamcast", "naomi", "naomi2", "hikaru", "gaelco", "atomiswave" })
+                    foreach (var sys in new string[] { "cave", "dreamcast", "naomi", "naomi2", "hikaru", "gaelco", "atomiswave" })
                     {
                         var sysPath = Path.Combine(romsPath, sys);
                         if (Directory.Exists(sysPath) && !romsPaths.Contains(sysPath))
@@ -177,7 +184,7 @@ namespace EmulatorLauncher
 
         private string _videoDriverName = "gpuDX11";
 
-        private void SetupDx11Config(string path, string rom, string system, ScreenResolution resolution)
+        private void SetupDx11Config(string path, ScreenResolution resolution)
         {
             string iniFile = Path.Combine(path, _videoDriverName + ".ini");
 
@@ -227,6 +234,8 @@ namespace EmulatorLauncher
                         return "naomi";
                     case "atomiswave":
                         return "awave";
+                    case "cave":
+                        return "cave3rd";
                 }
             }
             
@@ -286,8 +295,7 @@ namespace EmulatorLauncher
             {
                 process.WaitForExit();
 
-                if (bezel != null)
-                    bezel.Dispose();
+                bezel?.Dispose();
 
                 ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, path.WorkingDirectory);
 
@@ -295,8 +303,7 @@ namespace EmulatorLauncher
                 catch { }
             }
 
-            if (bezel != null)
-                bezel.Dispose();
+            bezel?.Dispose();
 
             ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, path.WorkingDirectory);
 
