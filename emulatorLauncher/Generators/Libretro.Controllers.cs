@@ -252,7 +252,7 @@ namespace EmulatorLauncher.Libretro
             if (system == "n64")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string n64json = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
+                string n64json = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
 
                 if (File.Exists(n64json))
                 {
