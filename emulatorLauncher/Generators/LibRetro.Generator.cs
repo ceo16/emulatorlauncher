@@ -1500,7 +1500,7 @@ namespace EmulatorLauncher.Libretro
 
 
         /// <summary>
-        /// Patch Retroarch to display @LUMACA in netplay architecture
+        /// Patch Retroarch to display @RETROBAT in netplay architecture
         /// </summary>
         /// <returns></returns>
         private string GetNetPlayPatchedRetroarch()
