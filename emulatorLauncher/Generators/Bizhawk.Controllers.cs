@@ -11,18 +11,20 @@ namespace EmulatorLauncher
 {
     partial class BizhawkGenerator : Generator
     {
-        private static readonly List<string> systemMonoPlayer = new List<string>() { "apple2", "gb", "gbc", "gba", "lynx", "nds" };
+        private static readonly List<string> systemMonoPlayer = new List<string>() { "3ds", "apple2", "gb", "gbc", "gba", "lynx", "nds" };
         private static readonly List<string> computersystem = new List<string>() { "apple2" };
 
         private static readonly Dictionary<string, int> inputPortNb = new Dictionary<string, int>()
         {
             { "A26", 2 },
+            { "Atari2600Hawk", 2 },
             { "A78", 2 },
             { "AppleII", 1 },
             { "Ares64", 4 },
             { "BSNES", 8 },
             { "Coleco", 2 },
             { "Cygne", 1 },
+            { "Encore", 1 },
             { "Faust", 8 },
             { "Gambatte", 1 },
             { "GBHawk", 1 },
@@ -42,6 +44,7 @@ namespace EmulatorLauncher
             { "PCEHawk", 5 },
             { "PCFX", 2 },
             { "PicoDrive", 2 },
+            { "quickerNES", 2 },
             { "QuickNes", 2 },
             { "SameBoy", 1 },
             { "Saturnus", 12 },
@@ -79,6 +82,25 @@ namespace EmulatorLauncher
 
             foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex).Take(maxPad))
                 ConfigureInput(controller, json, system, core);
+
+            ConfigureHotkeys(json);
+        }
+
+        private void ConfigureHotkeys(DynamicJson json)
+        {
+            var hotkeyBindings = json.GetOrCreateContainer("HotkeyBindings");
+            for (int i = 1; i < 11; i++)
+            {
+                hotkeyBindings["Save State " + i] = "Ctrl+F" + i;
+            }
+            hotkeyBindings["Rewind"] = "F1";
+            hotkeyBindings["Fast Forward"] = "F2";
+            hotkeyBindings["Pause"] = "F9";
+            hotkeyBindings["Quick Load"] = "F3";
+            hotkeyBindings["Quick Save"] = "F4";
+            hotkeyBindings["Screenshot"] = "F12";
+            hotkeyBindings["Previous Slot"] = "F5";
+            hotkeyBindings["Next Slot"] = "F6";
         }
 
         private void ConfigureInput(Controller controller, DynamicJson json, string system, string core)
@@ -146,10 +168,14 @@ namespace EmulatorLauncher
             if (controller.SdlController == null && !controller.IsXInputDevice)
                 isDInput = true;
 
+            #region specialControllers
             // Special treatment for N64 controllers
             N64Controller n64Gamepad = null;
             bool n64ControllerFound = false;
             string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+            bool needn64ActivationSwitch = false;
+            bool n64_pad = Program.SystemConfig.getOptBoolean("n64_pad");
+
             if (File.Exists(n64json) && system == "n64")
             {
                 try
@@ -161,6 +187,18 @@ namespace EmulatorLauncher
 
                         if (n64Gamepad != null)
                         {
+                            if (n64Gamepad.ControllerInfo != null)
+                            {
+                                if (n64Gamepad.ControllerInfo.ContainsKey("needActivationSwitch"))
+                                    needn64ActivationSwitch = n64Gamepad.ControllerInfo["needActivationSwitch"] == "yes";
+
+                                if (needn64ActivationSwitch && !n64_pad)
+                                {
+                                    SimpleLogger.Instance.Info("[Controller] Specific n64 mapping needs to be activated for this controller.");
+                                    goto Bypassn64Controllers;
+                                }
+                            }
+
                             SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + n64Gamepad.Name);
 
                             bool useDInput = false;
@@ -190,8 +228,141 @@ namespace EmulatorLauncher
                 }
                 catch { }
             }
-                
-            if (!n64ControllerFound)
+
+            Bypassn64Controllers:
+
+            // Special treatment for Megadrive controllers
+            MegadriveController mdGamepad = null;
+            bool mdControllerFound = false;
+            string mdjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+            bool needMDActivationSwitch = false;
+            bool md_pad = Program.SystemConfig.getOptBoolean("md_pad");
+
+            if (File.Exists(mdjson) && _mdSystems.Contains(system))
+            {
+                try
+                {
+                    var mdControllers = MegadriveController.LoadControllersFromJson(mdjson);
+                    if (mdControllers != null)
+                    {
+                        mdGamepad = MegadriveController.GetMDController("bizhawk", guid, mdControllers);
+
+                        if (mdGamepad != null)
+                        {
+                            if (mdGamepad.ControllerInfo != null)
+                            {
+                                if (mdGamepad.ControllerInfo.ContainsKey("needActivationSwitch"))
+                                    needMDActivationSwitch = mdGamepad.ControllerInfo["needActivationSwitch"] == "yes";
+
+                                if (needMDActivationSwitch && !md_pad)
+                                {
+                                    SimpleLogger.Instance.Info("[Controller] Specific MD mapping needs to be activated for this controller.");
+                                    goto BypassMDControllers;
+                                }
+                            }
+
+                            SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + mdGamepad.Name);
+
+                            bool useDInput = false;
+
+                            if (mdGamepad.ControllerInfo != null)
+                            {
+                                if (mdGamepad.ControllerInfo.ContainsKey("dinput"))
+                                    useDInput = mdGamepad.ControllerInfo["dinput"] == "true";
+                            }
+
+                            if (mdGamepad.Mapping != null)
+                            {
+                                foreach (var x in mdGamepad.Mapping)
+                                {
+                                    string key = x.Key;
+                                    string value = x.Value;
+                                    controllerConfig["P" + playerIndex + " " + key] = useDInput ? "J" + index + " " + value : "X" + index + " " + value;
+                                }
+                                mdControllerFound = true;
+                            }
+
+                            SimpleLogger.Instance.Info("[INFO] Assigned controller " + controller.DevicePath + " to player : " + controller.PlayerIndex.ToString());
+                            return;
+                        }
+                        else
+                            SimpleLogger.Instance.Info("[Controller] No specific mapping found for Megadrive controller.");
+                    }
+                    else
+                        SimpleLogger.Instance.Info("[Controller] Error loading JSON file.");
+                }
+                catch { }
+            }
+
+            BypassMDControllers:
+
+            // Special treatment for Saturn controllers
+            MegadriveController saturnGamepad = null;
+            bool saturnControllerFound = false;
+            bool needSATActivationSwitch = false;
+            bool sat_pad = Program.SystemConfig.getOptBoolean("saturn_pad");
+
+            string saturnjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "saturnControllers.json");
+            if (File.Exists(saturnjson) && system == "saturn")
+            {
+                try
+                {
+                    var saturnControllers = MegadriveController.LoadControllersFromJson(saturnjson);
+                    if (saturnControllers != null)
+                    {
+                        saturnGamepad = MegadriveController.GetMDController("bizhawk", guid, saturnControllers);
+
+                        if (saturnGamepad != null)
+                        {
+                            if (mdGamepad.ControllerInfo != null)
+                            {
+                                if (mdGamepad.ControllerInfo.ContainsKey("needActivationSwitch"))
+                                    needSATActivationSwitch = mdGamepad.ControllerInfo["needActivationSwitch"] == "yes";
+
+                                if (needSATActivationSwitch && !sat_pad)
+                                {
+                                    SimpleLogger.Instance.Info("[Controller] Specific Saturn mapping needs to be activated for this controller.");
+                                    goto BypassSATControllers;
+                                }
+                            }
+
+                            SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + saturnGamepad.Name);
+
+                            bool useDInput = false;
+
+                            if (saturnGamepad.ControllerInfo != null)
+                            {
+                                if (saturnGamepad.ControllerInfo.ContainsKey("dinput"))
+                                    useDInput = saturnGamepad.ControllerInfo["dinput"] == "true";
+                            }
+
+                            if (saturnGamepad.Mapping != null)
+                            {
+                                foreach (var x in saturnGamepad.Mapping)
+                                {
+                                    string key = x.Key;
+                                    string value = x.Value;
+                                    controllerConfig["P" + playerIndex + " " + key] = useDInput ? "J" + index + " " + value : "X" + index + " " + value;
+                                }
+                                saturnControllerFound = true;
+                            }
+
+                            SimpleLogger.Instance.Info("[INFO] Assigned controller " + controller.DevicePath + " to player : " + controller.PlayerIndex.ToString());
+                            return;
+                        }
+                        else
+                            SimpleLogger.Instance.Info("[Controller] No specific mapping found for Saturn controller.");
+                    }
+                    else
+                        SimpleLogger.Instance.Info("[Controller] Error loading JSON file.");
+                }
+                catch { }
+            }
+
+            BypassSATControllers:
+            #endregion
+
+            if (!n64ControllerFound && !mdControllerFound && !saturnControllerFound)
             {
                 mapping = ConfigureMappingPerSystem(mapping, system, core);
                 foreach (var x in mapping)
@@ -219,8 +390,13 @@ namespace EmulatorLauncher
             // Specifics
             if (system == "atari2600" || system == "atari7800")
             {
-                controllerConfig["Reset"] = "";
                 controllerConfig["Power"] = "";
+                
+                if (isDInput)
+                    controllerConfig["Reset"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.select);
+                else
+                    controllerConfig["Reset"] = "X" + index + " " + GetXInputKeyName(controller, InputKey.select);
+                
                 if (isDInput)
                     controllerConfig["Select"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.start);
                 else
@@ -232,11 +408,7 @@ namespace EmulatorLauncher
                 if (system == "atari7800")
                 {
                     controllerConfig["BW"] = "";
-                    
-                    if (isDInput)
-                        controllerConfig["Pause"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.select);
-                    else
-                        controllerConfig["Pause"] = "X" + index + " " + GetXInputKeyName(controller, InputKey.select);
+                    controllerConfig["Pause"] = "";
                 }
             }
 
@@ -302,7 +474,9 @@ namespace EmulatorLauncher
             string deadzone = "0.15";
 
             if (SystemConfig.isOptSet("bizhawk_deadzone") && !string.IsNullOrEmpty(SystemConfig["bizhawk_deadzone"]))
-                deadzone = SystemConfig["bizhawk_deadzone"];
+            {
+                deadzone = SystemConfig["bizhawk_deadzone"].TrimEnd('0');
+            }
 
             if (system == "n64")
             {
@@ -329,6 +503,141 @@ namespace EmulatorLauncher
                 yAxis["Value"] = useDInput ? "J" + index + " Y Axis" : "X" + index + " LeftThumbY Axis";
                 yAxis.SetObject("Mult", revertYAxis ? -1.0 : 1.0);
                 yAxis.SetObject("Deadzone", deadzone);
+            }
+
+            if (system == "3ds")
+            {
+                var cPadX = analogConfig.GetOrCreateContainer("Circle Pad X");
+                var cPadY = analogConfig.GetOrCreateContainer("Circle Pad Y");
+                var cStickX = analogConfig.GetOrCreateContainer("C-Stick X");
+                var cStickY = analogConfig.GetOrCreateContainer("C-Stick Y");
+                var touchX = analogConfig.GetOrCreateContainer("Touch X");
+                var touchY = analogConfig.GetOrCreateContainer("Touch Y");
+                var tiltX = analogConfig.GetOrCreateContainer("Tilt X");
+                var tiltY = analogConfig.GetOrCreateContainer("Tilt Y");
+
+                cPadX["Value"] = "X" + index + " LeftThumbX Axis"; ;
+                cPadX.SetObject("Mult", 1.0);
+                cPadX.SetObject("Deadzone", deadzone);
+
+                cPadY["Value"] = "X" + index + " LeftThumbY Axis";
+                cPadY.SetObject("Mult", 1.0);
+                cPadY.SetObject("Deadzone", deadzone);
+
+                if (Program.SystemConfig.isOptSet("bizhawk3ds_analog_function"))
+                {
+                    string layout = Program.SystemConfig["bizhawk3ds_analog_function"];
+                    switch (layout)
+                    {
+                        case "C-Stick and Touchscreen Pointer":
+                            if (isDInput)
+                                controllerConfig["Touch"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.l3);
+                            else
+                                controllerConfig["Touch"] = "X" + index + " " + GetXInputKeyName(controller, InputKey.l3);
+
+                            cStickX["Value"] = "X" + index + " RightThumbX Axis";
+                            cStickX.SetObject("Mult", 1.0);
+                            cStickX.SetObject("Deadzone", deadzone);
+
+                            cStickY["Value"] = "X" + index + " RightThumbY Axis";
+                            cStickY.SetObject("Mult", 1.0);
+                            cStickY.SetObject("Deadzone", deadzone);
+
+                            touchX["Value"] = "X" + index + " RightThumbX Axis";
+                            touchX.SetObject("Mult", 1.0);
+                            touchX.SetObject("Deadzone", deadzone);
+
+                            touchY["Value"] = "X" + index + " RightThumbX Axis";
+                            touchY.SetObject("Mult", 1.0);
+                            touchY.SetObject("Deadzone", deadzone);
+                            break;
+                        
+                        case "Touchscreen Pointer":
+                            if (isDInput)
+                                controllerConfig["Touch"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.l3);
+                            else
+                                controllerConfig["Touch"] = "X" + index + " " + GetXInputKeyName(controller, InputKey.l3);
+
+                            cStickX["Value"] = "";
+                            cStickX.SetObject("Mult", 1.0);
+                            cStickX.SetObject("Deadzone", 0.0);
+
+                            cStickY["Value"] = "";
+                            cStickY.SetObject("Mult", 1.0);
+                            cStickY.SetObject("Deadzone", 0.0);
+
+                            touchX["Value"] = "X" + index + " RightThumbX Axis";
+                            touchX.SetObject("Mult", 1.0);
+                            touchX.SetObject("Deadzone", deadzone);
+
+                            touchY["Value"] = "X" + index + " RightThumbX Axis";
+                            touchY.SetObject("Mult", 1.0);
+                            touchY.SetObject("Deadzone", deadzone);
+                            break;
+
+                        case "C-Stick":
+                            if (isDInput)
+                                controllerConfig["Touch"] = "J" + index + " " + GetDInputKeyName(controller, InputKey.l3);
+                            else
+                                controllerConfig["Touch"] = "X" + index + " " + GetXInputKeyName(controller, InputKey.l3);
+
+                            cStickX["Value"] = "X" + index + " RightThumbX Axis";
+                            cStickX.SetObject("Mult", 1.0);
+                            cStickX.SetObject("Deadzone", deadzone);
+
+                            cStickY["Value"] = "X" + index + " RightThumbY Axis";
+                            cStickY.SetObject("Mult", 1.0);
+                            cStickY.SetObject("Deadzone", deadzone);
+
+                            touchX["Value"] = "WMouse X";
+                            touchX.SetObject("Mult", 1.0);
+                            touchX.SetObject("Deadzone", 0.0);
+
+                            touchY["Value"] = "WMouse Y";
+                            touchY.SetObject("Mult", 1.0);
+                            touchY.SetObject("Deadzone", 0.0);
+                            break;
+                    }
+                }
+                else
+                {
+                    cPadX["Value"] = "X" + index + " LeftThumbX Axis"; ;
+                    cPadX.SetObject("Mult", 1.0);
+                    cPadX.SetObject("Deadzone", deadzone);
+
+                    cPadY["Value"] = "X" + index + " LeftThumbY Axis";
+                    cPadY.SetObject("Mult", 1.0);
+                    cPadY.SetObject("Deadzone", deadzone);
+
+                    cStickX["Value"] = "X" + index + " RightThumbX Axis";
+                    cStickX.SetObject("Mult", 1.0);
+                    cStickX.SetObject("Deadzone", deadzone);
+
+                    cStickY["Value"] = "X" + index + " RightThumbY Axis";
+                    cStickY.SetObject("Mult", 1.0);
+                    cStickY.SetObject("Deadzone", deadzone);
+
+                    touchX["Value"] = "WMouse X";
+                    touchX.SetObject("Mult", 1.0);
+                    touchX.SetObject("Deadzone", 0.0);
+
+                    touchY["Value"] = "WMouse Y";
+                    touchY.SetObject("Mult", 1.0);
+                    touchY.SetObject("Deadzone", 0.0);
+
+                    controllerConfig["Touch"] = "WMouse L";
+                    controllerConfig["Tilt"] = "WMouse R";
+                }
+                
+                tiltX["Value"] = "WMouse X";
+                tiltX.SetObject("Mult", 1.0);
+                tiltX.SetObject("Deadzone", 0.0);
+
+                tiltY["Value"] = "WMouse Y";
+                tiltY.SetObject("Mult", 1.0);
+                tiltY.SetObject("Deadzone", 0.0);
+
+                controllerConfig["Tilt"] = "WMouse R";
             }
 
             if (system == "nds")
@@ -534,6 +843,53 @@ namespace EmulatorLauncher
                 controllerConfig["P2 Pound"] = "";
             }
 
+            if (system == "3ds")
+            {
+                var cPadX = analogConfig.GetOrCreateContainer("Circle Pad X");
+                var cPadY = analogConfig.GetOrCreateContainer("Circle Pad Y");
+                var cX = analogConfig.GetOrCreateContainer("C-Stick X");
+                var cY = analogConfig.GetOrCreateContainer("C-Stick Y");
+                var touchX = analogConfig.GetOrCreateContainer("Touch X");
+                var touchY = analogConfig.GetOrCreateContainer("Touch Y");
+                var tiltX = analogConfig.GetOrCreateContainer("Tilt X");
+                var tiltY = analogConfig.GetOrCreateContainer("Tilt Y");
+
+                cPadX["Value"] = "";
+                cPadX.SetObject("Mult", 1.0);
+                cPadX.SetObject("Deadzone", 0.0);
+
+                cPadY["Value"] = "";
+                cPadY.SetObject("Mult", 1.0);
+                cPadY.SetObject("Deadzone", 0.0);
+
+                cX["Value"] = "";
+                cX.SetObject("Mult", 1.0);
+                cX.SetObject("Deadzone", 0.0);
+
+                cY["Value"] = "";
+                cY.SetObject("Mult", 1.0);
+                cY.SetObject("Deadzone", 0.0);
+
+                touchX["Value"] = "WMouse X";
+                touchX.SetObject("Mult", 1.0);
+                touchX.SetObject("Deadzone", 0.0);
+
+                touchY["Value"] = "WMouse Y";
+                touchY.SetObject("Mult", 1.0);
+                touchY.SetObject("Deadzone", 0.0);
+
+                tiltX["Value"] = "WMouse X";
+                tiltX.SetObject("Mult", 1.0);
+                tiltX.SetObject("Deadzone", 0.0);
+
+                tiltY["Value"] = "WMouse Y";
+                tiltY.SetObject("Mult", 1.0);
+                tiltY.SetObject("Deadzone", 0.0);
+
+                controllerConfig["Touch"] = "WMouse L";
+                controllerConfig["Tilt"] = "WMouse R";
+            }
+
             if (system == "nds")
             {
                 var xAxis = analogConfig.GetOrCreateContainer("Touch X");
@@ -579,6 +935,24 @@ namespace EmulatorLauncher
                 controllerConfig["P2 Start"] = SdlToKeyCode(keyboard[InputKey.start].Id);
             }
         }
+
+        private static readonly InputKeyMapping n3dsMapping = new InputKeyMapping()
+        {
+            { InputKey.b,                   "A" },
+            { InputKey.a,                   "B" },
+            { InputKey.x,                   "X" },
+            { InputKey.y,                   "Y" },
+            { InputKey.up,                  "Up"},
+            { InputKey.down,                "Down"},
+            { InputKey.left,                "Left" },
+            { InputKey.right,               "Right"},
+            { InputKey.pageup,              "L" },
+            { InputKey.pagedown,            "R" },
+            { InputKey.l2,                  "ZL" },
+            { InputKey.r2,                  "ZR" },
+            { InputKey.select,              "Select" },
+            { InputKey.start,               "Start" }
+        };
 
         private static readonly InputKeyMapping atariMapping = new InputKeyMapping()
         {
@@ -1307,6 +1681,18 @@ namespace EmulatorLauncher
         private static InputKeyMapping ConfigureMappingPerSystem(InputKeyMapping mapping, string system, string core)
         {
             InputKeyMapping newMapping = mapping;
+
+            if (system == "3ds")
+            {
+                if (Program.SystemConfig.getOptBoolean("gamepadbuttons"))
+                {
+                    newMapping[InputKey.y] = "X";
+                    newMapping[InputKey.a] = "A";
+                    newMapping[InputKey.b] = "B";
+                    newMapping[InputKey.x] = "Y";
+                }
+            }
+
             if (system == "nes" && Program.SystemConfig.getOptBoolean("rotate_buttons"))
                 return nesMapping_rotate;
 
@@ -1424,6 +1810,7 @@ namespace EmulatorLauncher
 
         private static readonly Dictionary<string, string> systemController = new Dictionary<string, string>()
         {
+            { "3ds", "3DS Controller" },
             { "apple2", "Apple IIe Keyboard" },
             { "atari2600", "Atari 2600 Basic Controller" },
             { "atari7800", "Atari 7800 Basic Controller" },
@@ -1463,6 +1850,7 @@ namespace EmulatorLauncher
 
         private static readonly Dictionary<string, InputKeyMapping> mappingToUse = new Dictionary<string, InputKeyMapping>()
         {
+            { "3ds", n3dsMapping },
             { "atari2600", atariMapping },
             { "atari7800", atariMapping },
             { "colecovision", colecoMapping },

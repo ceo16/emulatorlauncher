@@ -1,9 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
+using EmulatorLauncher.Common.Joysticks;
 
 namespace EmulatorLauncher
 {
@@ -16,7 +18,7 @@ namespace EmulatorLauncher
 
             SimpleLogger.Instance.Info("[INFO] Creating controller configuration for JGenesis");
 
-            if (jgenSystem == "sega_cd")
+            if (jgenSystem == "sega_cd" || jgenSystem == "sega_32x")
                 jgenSystem = "genesis";
 
             int maxPad = 1;
@@ -63,6 +65,103 @@ namespace EmulatorLauncher
             string name = ctrl.SdlController != null ? ctrl.SdlController.Name : ctrl.Name;
             bool isXInput = ctrl.IsXInputDevice;
             bool revertButtons = SystemConfig.isOptSet("jgen_revertbuttons") && SystemConfig.getOptBoolean("jgen_revertbuttons");
+            string guid = ctrl.Guid.ToString();
+
+            // Manage specific megadrive controllers from json file
+            bool needMDActivationSwitch = false;
+            bool md_pad = Program.SystemConfig.getOptBoolean("md_pad");
+            if (_mdSystems.Contains(jgenSystem))
+            {
+                string mdjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+                try
+                {
+                    var mdControllers = MegadriveController.LoadControllersFromJson(mdjson);
+
+                    if (mdControllers != null)
+                    {
+                        MegadriveController mdGamepad = MegadriveController.GetMDController("jgenesis", guid, mdControllers);
+
+                        if (mdGamepad != null)
+                        {
+                            if (mdGamepad.ControllerInfo != null)
+                            {
+                                if (mdGamepad.ControllerInfo.ContainsKey("needActivationSwitch"))
+                                    needMDActivationSwitch = mdGamepad.ControllerInfo["needActivationSwitch"] == "yes";
+
+                                if (needMDActivationSwitch && !md_pad)
+                                {
+                                    SimpleLogger.Instance.Info("[Controller] Specific MD mapping needs to be activated for this controller.");
+                                    goto BypassMDControllers;
+                                }
+                            }
+
+                            SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + mdGamepad.Name);
+
+                            if (mdGamepad.Mapping != null)
+                            {
+                                if (mdGamepad.Driver == "dinput")
+                                    name = joy.DeviceName;
+                                
+                                foreach (var button in mdGamepad.Mapping)
+                                {
+                                    string iniSection = "inputs." + jgenSystem + "_joystick.p" + playerIndex + "." + button.Key;
+
+                                    string info_type = null;
+                                    string info_id = null;
+                                    string info_direction = null;
+                                    string[] info = button.Value.Split('_');
+                                    if (info.Length > 0)
+                                        info_type = info[0];
+                                    if (info.Length > 1)
+                                        info_id = info[1];
+                                    if (info.Length > 2)
+                                        info_direction = info[2];
+
+                                    switch (info_type)
+                                    {
+                                        case "Button":
+                                            ini.WriteValue(iniSection, "name", "\"" + name + "\"");
+                                            ini.WriteValue(iniSection, "idx", index.ToString());
+                                            ini.WriteValue(iniSection, "type", "\"" + info_type + "\"");
+                                            ini.WriteValue(iniSection, "button_idx", info_id);
+                                            break;
+                                        case "Axis":
+                                            ini.WriteValue(iniSection, "name", "\"" + name + "\"");
+                                            ini.WriteValue(iniSection, "idx", index.ToString());
+                                            ini.WriteValue(iniSection, "type", "\"" + info_type + "\"");
+                                            ini.WriteValue(iniSection, "axis_idx", info_id);
+                                            ini.WriteValue(iniSection, "direction", "\"" + info_direction + "\"");
+                                            break;
+                                        case "Hat":
+                                            ini.WriteValue(iniSection, "name", "\"" + name + "\"");
+                                            ini.WriteValue(iniSection, "idx", index.ToString());
+                                            ini.WriteValue(iniSection, "type", "\"" + info_type + "\"");
+                                            ini.WriteValue(iniSection, "hat_idx", info_id);
+                                            ini.WriteValue(iniSection, "direction", "\"" + info_direction + "\"");
+                                            break;
+                                    }
+                                }
+                                
+                                if (playerIndex == 1)
+                                    ConfigureDefaultKeyboard(ini, jgenSystem);
+
+                                SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
+
+                                return;
+                            }
+                            else
+                                SimpleLogger.Instance.Info("[INFO] Missing mapping for Megadrive Gamepad, falling back to standard mapping.");
+                        }
+                        else
+                            SimpleLogger.Instance.Info("[Controller] No specific mapping found for megadrive controller.");
+                    }
+                    else
+                        SimpleLogger.Instance.Info("[Controller] Error loading JSON file.");
+                }
+                catch { }
+            }
+
+            BypassMDControllers:
 
             Dictionary<string, InputKey> mapping = null;
 
@@ -363,6 +462,8 @@ namespace EmulatorLauncher
         {
             { "smsgg", "inputs.smsgg_keyboard." },
             { "genesis", "inputs.genesis_keyboard." },
+            { "sega_cd", "inputs.genesis_keyboard." },
+            { "sega_32x", "inputs.genesis_keyboard." },
             { "game_boy", "inputs.gb_keyboard" },
             { "nes", "inputs.nes_keyboard." },
             { "snes", "inputs.snes_keyboard." }

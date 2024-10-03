@@ -123,6 +123,7 @@ namespace EmulatorLauncher
             { "sonicretro", () => new PortsLauncherGenerator() },
             { "sonicretrocd", () => new PortsLauncherGenerator() },
             { "opengoal", () => new PortsLauncherGenerator() },
+            { "cgenius", () => new PortsLauncherGenerator() },
             { "devilutionx", () => new DevilutionXGenerator() },
             { "jgenesis", () => new JgenesisGenerator() },
             { "singe2", () => new Singe2Generator() },
@@ -311,10 +312,6 @@ namespace EmulatorLauncher
             /* for later wheels
             if (!SystemConfig.isOptSet("use_wheel") && args.Any(a => a == "-wheel"))
                 SystemConfig["use_wheel"] = "true";*/
-
-            // Change disable automatic controller configuration from "on" to "1"
-            if (SystemConfig.isOptSet("disableautocontrollers") && SystemConfig["disableautocontrollers"] == "on")
-                SystemConfig["disableautocontrollers"] = "1";
 
             ImportShaderOverrides();
             

@@ -13,9 +13,12 @@ namespace EmulatorLauncher
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
         private string _path;
+        private SaveStatesWatcher _saveStatesWatcher;
+        private int _saveStateSlot;
 
         private static readonly List<string> preferredRomExtensions = new List<string>() { ".bin", ".cue", ".img", ".iso", ".rom" };
-        private static readonly List<string> zipSystems = new List<string>() { "psx", "saturn", "n64", "n64dd", "pcenginecd", "jaguarcd", "vectrex", "odyssey2", "uzebox" };
+        private static readonly List<string> zipSystems = new List<string>() { "3ds", "psx", "saturn", "n64", "n64dd", "pcenginecd", "jaguarcd", "vectrex", "odyssey2", "uzebox" };
+        private static List<string> _mdSystems = new List<string>() { "genesis", "mega32x", "megacd", "megadrive", "sega32x", "segacd" };
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -46,6 +49,23 @@ namespace EmulatorLauncher
 
             if (Path.GetExtension(rom) == ".chd")
                 throw new ApplicationException("Extension CHD not compatible with Bizhawk");
+            
+            if (Path.GetExtension(rom) == ".m3u")
+            {
+                rom = File.ReadAllText(rom);
+            }
+
+            if (Program.HasEsSaveStates && Program.EsSaveStates.IsEmulatorSupported(emulator))
+            {
+                string localPath = Program.EsSaveStates.GetSavePath(system, emulator, core);
+                string emulatorPath = Path.Combine(_path, "sstates", system );
+
+                _saveStatesWatcher = new BigPemuSaveStatesMonitor(rom, emulatorPath, localPath);
+                _saveStatesWatcher.PrepareEmulatorRepository();
+                _saveStateSlot = _saveStatesWatcher.Slot != -1 ? _saveStatesWatcher.Slot : 1;
+            }
+            else
+                _saveStatesWatcher = null;
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
@@ -134,16 +154,23 @@ namespace EmulatorLauncher
 
         private static readonly Dictionary<string, string> bizhawkPreferredCore = new Dictionary<string, string>()
         {
+            { "atari2600", "A26" },
+            { "gg", "GG" },
+            { "gamegear", "GG" },
             { "gb", "GB" },
             { "gbc", "GBC" },
             { "gb2players", "GBL" },
             { "mastersystem", "SMS" },
+            { "megadrive", "GEN" },
+            { "genesis", "GEN" },
             { "n64", "N64" },
             { "nds", "NDS" },
             { "nes", "NES" },
             { "pcengine", "PCE" },
             { "pcenginecd", "PCECD" },
             { "psx", "PSX" },
+            { "satellaview", "BSX" },
+            { "sg1000", "SG" },
             { "sgb", "SGB" },
             { "snes", "SNES" },
             { "supergrafx", "SGX" },
@@ -181,6 +208,18 @@ namespace EmulatorLauncher
             else
                 json["StartFullscreen"] = "false";
 
+            // Savestates
+            if (_saveStateSlot != -1)
+            {
+                if (_saveStateSlot == 0)
+                    json["SaveSlot"] = "10";
+                else
+                    json["SaveSlot"] = _saveStateSlot.ToString();
+            }
+                
+            if (_saveStatesWatcher != null && !string.IsNullOrEmpty(SystemConfig["state_file"]) && File.Exists(SystemConfig["state_file"]))
+                json["AutoLoadLastSaveSlot"] = "true";
+
             // Set Paths
             var pathEntries = json.GetOrCreateContainer("PathEntries");
             pathEntries.Remove("Paths");
@@ -210,7 +249,7 @@ namespace EmulatorLauncher
                 paths.Add(romPath);
             }
 
-            string saveStateFolder = Path.Combine(AppConfig.GetFullPath("saves"), system, emulator, "sstates");
+            string saveStateFolder = Path.Combine(_path, "sstates", system);
             if (!Directory.Exists(saveStateFolder))
                 try { Directory.CreateDirectory(saveStateFolder); }
                 catch { }
@@ -238,7 +277,7 @@ namespace EmulatorLauncher
                 paths.Add(saveRAMPath);
             }
 
-            string screenshotsFolder = Path.Combine(AppConfig.GetFullPath("screenshots"), emulator);
+            string screenshotsFolder = Path.Combine(AppConfig.GetFullPath("screenshots"), emulator, system);
             if (!Directory.Exists(screenshotsFolder))
                 try { Directory.CreateDirectory(screenshotsFolder); }
                 catch { }
@@ -266,6 +305,19 @@ namespace EmulatorLauncher
                 paths.Add(cheatsPath);
             }
 
+            if (system == "3ds")
+            {
+                string userFolder = Path.Combine(AppConfig.GetFullPath("saves"), system, emulator, "user");
+                if (!Directory.Exists(userFolder))
+                    try { Directory.CreateDirectory(userFolder); }
+                    catch { }
+                var userFolderPath = new DynamicJson();
+                userFolderPath["Type"] = "User";
+                userFolderPath["Path"] = userFolder;
+                userFolderPath["System"] = "3DS";
+                paths.Add(userFolderPath);
+            }
+
             pathEntries.SetObject("Paths", paths);
 
             // Display options
@@ -275,6 +327,15 @@ namespace EmulatorLauncher
             BindBoolFeature(json, "DispFixScaleInteger", "integerscale", "true", "false");
             BindFeature(json, "TargetDisplayFilter", "bizhawk_filter", "0");
             BindFeature(json, "DispFinalFilter", "bizhawk_finalfilter", "0");
+
+            if (SystemConfig.isOptSet("bizhawk_scanlines_intensity") && !string.IsNullOrEmpty(SystemConfig["bizhawk_scanlines_intensity"]))
+            {
+                int intensity = SystemConfig["bizhawk_scanlines_intensity"].ToIntegerString().ToInteger();
+                float value = (int)Math.Round((float)intensity / 100 * 256);
+                json["TargetScanlineFilterIntensity"] = value.ToString();
+            }
+            else
+                json["TargetScanlineFilterIntensity"] = "128";
 
             // Display driver
             if (SystemConfig.isOptSet("bizhawk_renderer") && !string.IsNullOrEmpty(SystemConfig["bizhawk_renderer"]))
@@ -315,6 +376,17 @@ namespace EmulatorLauncher
         private void SetupFirmwares(DynamicJson json, string system)
         {
             var firmware = json.GetOrCreateContainer("FirmwareUserSpecifications");
+
+            if (system == "3ds")
+            {
+                // 3ds files
+                string aesKeys = Path.Combine(AppConfig.GetFullPath("bios"), "aes_keys.txt");
+                if (File.Exists(aesKeys))
+                    firmware["3DS+aes_keys"] = aesKeys;
+                string seeddb = Path.Combine(AppConfig.GetFullPath("bios"), "seeddb.bin");
+                if (File.Exists(seeddb))
+                    firmware["3DS+seeddb"] = seeddb;
+            }
 
             if (system == "apple2")
             {
@@ -551,8 +623,11 @@ namespace EmulatorLauncher
             {
                 // Vectrex BIOS
                 string vectrexBios = Path.Combine(AppConfig.GetFullPath("bios"), "Vectrex_Bios.bin");
+                string mineStorm = Path.Combine(AppConfig.GetFullPath("bios"), "VEC_Minestorm.vec");
                 if (File.Exists(vectrexBios))
                     firmware["VEC+Bios"] = vectrexBios;
+                if (File.Exists(mineStorm))
+                    firmware["VEC+Minestorm"] = mineStorm;
             }
         }
 
@@ -610,6 +685,7 @@ namespace EmulatorLauncher
 
         private static readonly Dictionary<string, string> bizHawkSystems = new Dictionary<string, string>()
         {
+            { "3ds", "3DS" },
             { "amstradcpc", "AmstradCPC" },
             { "apple2", "AppleII" },
             { "atari2600", "A26" },
@@ -623,6 +699,7 @@ namespace EmulatorLauncher
             { "gba", "GBA" },
             { "gbc", "GB_GBC_SGB" },
             { "gbc2players", "GBL" },
+            { "genesis", "GEN" },
             { "intellivision", "INTV" },
             { "jaguar", "Jaguar" },
             { "jaguarcd", "Jaguar" },
@@ -659,6 +736,7 @@ namespace EmulatorLauncher
 
         private static readonly Dictionary<string, string> bizHawkShortSystems = new Dictionary<string, string>()
         {
+            { "3ds", "3DS" },
             { "atari2600", "A26" },
             { "atari7800", "A78" },
             { "jaguar", "Jaguar" },

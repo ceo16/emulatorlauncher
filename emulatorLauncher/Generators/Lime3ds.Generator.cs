@@ -31,7 +31,7 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 exe = Path.Combine(path, "lime3ds-gui.exe");    // old executable name
             if (!File.Exists(exe))
-                exe = Path.Combine(path, "lime-qt.exe");    // old executable name
+                exe = Path.Combine(path, "lime-qt.exe");    // even older executable name
 
             if (!File.Exists(exe))
                 return null;
@@ -196,8 +196,8 @@ namespace EmulatorLauncher
                 {
                     if (SystemConfig.isOptSet("lime_resolution_factor"))
                     {
-                        ini.WriteValue("Renderer", "resolution_factor\\default", SystemConfig["lime_resolution_factor"] == "1" ? "true" : "false");
-                        ini.WriteValue("Renderer", "resolution_factor", SystemConfig["lime_resolution_factor"]);
+                        ini.WriteValue("Renderer", "resolution_factor\\default", SystemConfig["lime_resolution_factor"].ToIntegerString() == "1" ? "true" : "false");
+                        ini.WriteValue("Renderer", "resolution_factor", SystemConfig["lime_resolution_factor"].ToIntegerString());
                     }
                     else
                     {

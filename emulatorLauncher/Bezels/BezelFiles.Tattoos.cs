@@ -143,6 +143,7 @@ namespace EmulatorLauncher
         }
 
         static List<string> gbSystems = new List<string>() { "gb", "gbc" };
+        static List<string> ngpSystems = new List<string>() { "ngp", "ngpc" };
         static List<string> jaguarSystems = new List<string>() { "jaguar", "jaguarcd" };
         static List<string> megadriveSystems = new List<string>() { "megadrive", "megadrive-msu", "sega32x", "segacd" };
         static List<string> n64Systems = new List<string>() { "n64", "n64dd" };
@@ -166,6 +167,8 @@ namespace EmulatorLauncher
                 system = "pcengine";
             else if (jaguarSystems.Contains(system))
                 system = "jaguar";
+            else if (ngpSystems.Contains(system))
+                system = "ngp";
 
             string ret = system;
 
@@ -190,6 +193,14 @@ namespace EmulatorLauncher
                         if (Program.SystemConfig["n3ds_motion"] == "sdl")
                             ret = revert ? "3ds_stylus_cstick_revert" : "3ds_stylus_cstick";
                         else
+                            ret = revert ? "3ds_revert" : "3ds";
+                        break;
+                    case "bizhawk":
+                        if (Program.SystemConfig["bizhawk3ds_analog_function"] == "C-Stick and Touchscreen Pointer" || !Program.SystemConfig.isOptSet("bizhawk3ds_analog_function"))
+                            ret = revert ? "3ds_stylus_cstick_revert" : "3ds_stylus_cstick";
+                        else if (Program.SystemConfig["bizhawk3ds_analog_function"] == "Touchscreen Pointer")
+                            ret = revert ? "3ds_stylus_revert" : "3ds_stylus";
+                        else if (Program.SystemConfig["bizhawk3ds_analog_function"] == "C-Stick")
                             ret = revert ? "3ds_revert" : "3ds";
                         break;
                 }
@@ -276,6 +287,23 @@ namespace EmulatorLauncher
                         break;
                     case "bigpemu":
                         ret = "jaguar_bigpemu";
+                        break;
+                }
+            }
+            else if (system == "lynx")
+            {
+                switch (emulator)
+                {
+                    case "libretro":
+                        switch (core)
+                        {
+                            case "handy":
+                                ret = "lynx_lr_handy";
+                                break;
+                        }
+                        break;
+                    case "mednafen":
+                        ret = "lynx_mednafen";
                         break;
                 }
             }
@@ -572,6 +600,15 @@ namespace EmulatorLauncher
                     case "jgenesis":
                         if (Program.SystemConfig.getOptBoolean("rotate_buttons"))
                             ret = "nes_rotate";
+                        break;
+                }
+            }
+            else if (system == "ngp")
+            {
+                switch (emulator)
+                {
+                    case "mednafen":
+                        ret = "ngp_turbo";
                         break;
                 }
             }

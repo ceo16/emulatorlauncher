@@ -192,8 +192,8 @@ namespace EmulatorLauncher
                 {
                     if (SystemConfig.isOptSet("citra_resolution_factor"))
                     {
-                        ini.WriteValue("Renderer", "resolution_factor\\default", SystemConfig["citra_resolution_factor"] == "1" ? "true" : "false");
-                        ini.WriteValue("Renderer", "resolution_factor", SystemConfig["citra_resolution_factor"]);
+                        ini.WriteValue("Renderer", "resolution_factor\\default", SystemConfig["citra_resolution_factor"].Substring(0, 1) == "1" ? "true" : "false");
+                        ini.WriteValue("Renderer", "resolution_factor", SystemConfig["citra_resolution_factor"].Substring(0, 1));
                     }
                     else
                     {
@@ -222,7 +222,7 @@ namespace EmulatorLauncher
                     {
                         ini.WriteValue("Layout", "layout_option\\default", "false");
                         ini.WriteValue("Layout", "layout_option", SystemConfig["citraqt_layout_option"]);
-                        SimpleLogger.Instance.Info("[INFO] Setting layout option to : " + SystemConfig["lime_layout_option"]);
+                        SimpleLogger.Instance.Info("[INFO] Setting layout option to : " + SystemConfig["citraqt_layout_option"]);
                     }
                     else
                     {

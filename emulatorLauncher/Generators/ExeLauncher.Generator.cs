@@ -22,7 +22,9 @@ namespace EmulatorLauncher
         private string _systemName;
         private string _exename = null;
         private bool _isGameExePath;
+        private bool _steamRun = false;
         private bool _exeFile;
+        private bool _nonSteam = false;
 
         private GameLauncher _gameLauncher;
 
@@ -135,18 +137,70 @@ namespace EmulatorLauncher
             // Define if shortcut is an EpicGame or Steam shortcut
             else if (extension == ".url")
             {
-                try
-                {
-                    var uri = new Uri(IniFile.FromFile(rom).GetValue("InternetShortcut", "URL"));
+                // executable process to monitor might be different from the target - user can specify true process executable in a .gameexe file
+                _exeFile = GetProcessFromFile(rom);
 
-                    if (launchers.TryGetValue(uri.Scheme, out Func<Uri, GameLauncher> gameLauncherInstanceBuilder))
-                        _gameLauncher = gameLauncherInstanceBuilder(uri);
-                }
-                catch (Exception ex)
+                if (!_exeFile)
                 {
-                    SetCustomError(ex.Message);
-                    SimpleLogger.Instance.Error("[ExeLauncherGenerator] " + ex.Message, ex);
-                    return null;
+                    try
+                    {
+                        var uri = new Uri(IniFile.FromFile(rom).GetValue("InternetShortcut", "URL"));
+
+                        if (launchers.TryGetValue(uri.Scheme, out Func<Uri, GameLauncher> gameLauncherInstanceBuilder))
+                            _gameLauncher = gameLauncherInstanceBuilder(uri);
+                    }
+                    catch (Exception ex)
+                    {
+                        SetCustomError(ex.Message);
+                        SimpleLogger.Instance.Error("[ExeLauncherGenerator] " + ex.Message, ex);
+                        return null;
+                    }
+                }
+
+                // Run Steam games via their shortcuts and not just run the .url file
+                var urlLines = File.ReadAllLines(rom);
+
+                if (urlLines.Length > 0)
+                {
+                    // Get URL to run and add -silent argument
+                    if (urlLines.Any(l => l.StartsWith("URL=steam://rungameid")))
+                    {
+                        string urlline = urlLines.FirstOrDefault(l => l.StartsWith("URL=steam"));
+                        if (!string.IsNullOrEmpty(urlline) && !urlline.Contains("-silent"))
+                        {
+                            for (int i = 0; i < urlLines.Length; i++)
+                            {
+                                if (urlLines[i].StartsWith("URL="))
+                                {
+                                    string temp = urlLines[i];
+                                    urlLines[i] = urlLines[i] + "\"" + " -silent";
+                                }
+                            }
+                            try
+                            {
+                                File.WriteAllLines(rom, urlLines);
+                            }
+                            catch { }
+
+                            _steamRun = true;
+                        }
+                    }
+
+                    // Get executable name from icon path
+                    if (string.IsNullOrEmpty(_exename) && urlLines.Any(l => l.StartsWith("IconFile")))
+                    {
+                        string iconline = urlLines.FirstOrDefault(l => l.StartsWith("IconFile"));
+                        if (iconline.EndsWith(".exe"))
+                        {
+                            string iconPath = iconline.Substring(9, iconline.Length - 9);
+                            _exename = Path.GetFileNameWithoutExtension(iconPath);
+                            if (!string.IsNullOrEmpty(_exename))
+                            {
+                                _nonSteam = true;
+                                SimpleLogger.Instance.Info("[STEAM] Found name of executable from icon info: " + _exename);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -226,7 +280,7 @@ namespace EmulatorLauncher
                 }
             }
 
-            if (!File.Exists(rom))
+            if (!File.Exists(rom) && !_steamRun)
                 return null;
 
             if (Path.GetExtension(rom).ToLower() == ".m3u")
@@ -245,6 +299,7 @@ namespace EmulatorLauncher
             var ret = new ProcessStartInfo()
             {
                 FileName = rom,
+                Arguments = "-silent",
                 WorkingDirectory = path
             };
 
@@ -328,7 +383,8 @@ namespace EmulatorLauncher
 
                 //ini.WriteValue("Video", "Width", resolution.Width.ToString());
                 //ini.WriteValue("Video", "Height", resolution.Height.ToString());
-                ini.WriteValue("Video", "VRetrace", SystemConfig["VRetrace"] != "false" ? "1" : "0");
+
+                BindBoolIniFeatureOn(ini, "Video", "VRetrace", "VRetrace", "1", "0");
                 ini.WriteValue("Video", "FullScreen", fullscreen ? "1" : "0");
 
             }
@@ -380,7 +436,7 @@ namespace EmulatorLauncher
                 json["GameHeight"] = resolution.Height.ToString();
             }
 
-            BindFeature(json, "VRetrace", "VRetrace", "1");
+            BindBoolFeatureOn(json, "VRetrace", "VRetrace", "1", "0");
 
             json.Save();
         }
@@ -427,7 +483,7 @@ namespace EmulatorLauncher
 
         public override int RunAndWait(ProcessStartInfo path)
         {
-            if (_isGameExePath || _exeFile)
+            if (_isGameExePath || _exeFile || _nonSteam)
             {
                 Dictionary<string, bool> launcherProcessStatusBefore = new Dictionary<string, bool>();
                 Dictionary<string, bool> launcherProcessStatusAfter = new Dictionary<string, bool>();

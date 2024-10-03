@@ -81,9 +81,71 @@ namespace EmulatorLauncher
                 return;
 
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
-            string guid = (ctrl.Guid.ToString()).Substring(0, 24) + "00000000";
+            string guid = ctrl.Guid.ToString();
             SdlToDirectInput controller = null;
+            List<string> buttonMapping = new List<string>();
+            string joy = joyIndex[ctrl.PlayerIndex.ToString()];
+            int index = ctrl.DirectInput != null ? ctrl.DirectInput.DeviceIndex : ctrl.DeviceIndex;
+            bool needMDActivationSwitch = false;
+            bool md_pad = Program.SystemConfig.getOptBoolean("md_pad");
 
+            if (_mdSystems.Contains(system))
+            {
+                string mdjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+                if (File.Exists(mdjson))
+                {
+                    try
+                    {
+                        var mdControllers = MegadriveController.LoadControllersFromJson(mdjson);
+
+                        if (mdControllers != null)
+                        {
+                            MegadriveController mdGamepad = MegadriveController.GetMDController("kega-fusion", guid, mdControllers);
+
+                            if (mdGamepad != null)
+                            {
+                                if (mdGamepad.ControllerInfo != null)
+                                {
+                                    if (mdGamepad.ControllerInfo.ContainsKey("needActivationSwitch"))
+                                        needMDActivationSwitch = mdGamepad.ControllerInfo["needActivationSwitch"] == "yes";
+
+                                    if (needMDActivationSwitch && !md_pad)
+                                    {
+                                        SimpleLogger.Instance.Info("[Controller] Specific MD mapping needs to be activated for this controller.");
+                                        goto BypassMDControllers;
+                                    }
+                                }
+
+                                SimpleLogger.Instance.Info("[Controller] Performing specific mapping for " + mdGamepad.Name);
+
+                                if (mdGamepad.Mapping != null)
+                                {
+                                    string input = mdGamepad.Mapping["buttons"];
+                                
+                                    ini.WriteValue("", "Joystick" + joy + "Using", (index + 2).ToString());
+                                    ini.WriteValue("", "Joystick" + joy + "Type", "2");
+                                    ini.WriteValue("", "Player" + joy + "Buttons", input);
+
+                                    SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
+
+                                    return;
+                                }
+                                else
+                                    SimpleLogger.Instance.Info("[INFO] Missing mapping for Megadrive Gamepad, falling back to standard mapping.");
+                            }
+                            else
+                                SimpleLogger.Instance.Info("[Controller] No specific mapping found for megadrive controller.");
+                        }
+                        else
+                            SimpleLogger.Instance.Info("[Controller] Error loading JSON file.");
+                    }
+                    catch { }
+                }
+            }
+
+            BypassMDControllers:
+
+            guid = (ctrl.Guid.ToString()).Substring(0, 24) + "00000000";
             SimpleLogger.Instance.Info("[INFO] Player " + ctrl.PlayerIndex + ". Fetching gamecontrollerdb.txt file with guid : " + guid);
 
             try { controller = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid); }
@@ -94,11 +156,6 @@ namespace EmulatorLauncher
                 SimpleLogger.Instance.Info("[WARNING] gamecontrollerdb.txt does not contain mapping for the controller " + guid + ". Controller mapping will not be available for player " + ctrl.PlayerIndex.ToString());
                 return;
             }
-
-            int index = ctrl.DirectInput != null ? ctrl.DirectInput.DeviceIndex : ctrl.DeviceIndex;
-            string joy = joyIndex[ctrl.PlayerIndex.ToString()];
-
-            List<string> buttonMapping = new List<string>();
 
             if (system != "mastersystem")
             {
