@@ -91,7 +91,7 @@ namespace EmulatorLauncher
 
             if (_mdSystems.Contains(system))
             {
-                string mdjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+                string mdjson = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "mdControllers.json");
                 if (File.Exists(mdjson))
                 {
                     try
