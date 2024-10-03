@@ -114,7 +114,7 @@ namespace EmulatorLauncher
                 padId = padId + index + vendorID + prodID + "/";
 
             // Special treatment for N64 controllers
-            string n64json = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
+            string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
 
             if (File.Exists(n64json))
             {
