@@ -20,7 +20,7 @@ namespace EmulatorLauncher.Libretro
 
     partial class LibRetroGenerator : Generator
     {
-        const string RetroArchNetPlayPatchedName = "LUMACA";
+        const string RetroArchNetPlayPatchedName = "RETROBAT";
 
         public string RetroarchPath { get; set; }
         public string RetroarchCorePath { get; set; }
