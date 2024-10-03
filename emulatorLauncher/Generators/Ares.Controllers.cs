@@ -116,7 +116,7 @@ namespace EmulatorLauncher
 
             #region specialControllers
             // Special treatment for N64 controllers
-            string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+            string n64json = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
             bool needn64ActivationSwitch = false;
             bool n64_pad = Program.SystemConfig.getOptBoolean("n64_pad");
 
