@@ -393,7 +393,7 @@ namespace EmulatorLauncher.Libretro
                     .Replace("{systempath}", "system")
                     .Replace("{userpath}", "inputmapping");
 
-                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                 if (File.Exists(coreMapping))
                     break;
