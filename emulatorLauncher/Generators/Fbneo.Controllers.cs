@@ -28,7 +28,7 @@ namespace EmulatorLauncher
             // Get game mapping yml database
             YmlContainer game = null;
             Dictionary<string, Dictionary<string, string>> gameMapping = new Dictionary<string, Dictionary<string, string>>();
-            string fbneoMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "fbneo.yml");
+            string fbneoMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "fbneo.yml");
 
             if (File.Exists(fbneoMapping))
             {
