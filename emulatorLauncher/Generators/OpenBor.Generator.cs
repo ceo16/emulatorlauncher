@@ -61,7 +61,7 @@ namespace EmulatorLauncher
                 try
                 {
                     var versionInfo = FileVersionInfo.GetVersionInfo(exe);
-                    _isCustomRetrobatOpenBor = (versionInfo.FilePrivatePart == 5242); // 5242 stands for RB ( 'R' x52, 'B' x42 ) -> RetroBat !
+                    _isCustomLumacaOpenBor = (versionInfo.FilePrivatePart == 5242); // 5242 stands for RB ( 'R' x52, 'B' x42 ) -> Lumaca !
                 }
                 catch { }
 
