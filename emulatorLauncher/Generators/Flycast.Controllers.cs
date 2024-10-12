@@ -377,7 +377,7 @@ namespace EmulatorLauncher
                             .Replace("{systempath}", "system")
                             .Replace("{userpath}", "inputmapping");
 
-                        flycastMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                        flycastMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                         if (File.Exists(flycastMapping))
                             break;
