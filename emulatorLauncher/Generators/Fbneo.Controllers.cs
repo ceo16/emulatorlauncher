@@ -36,7 +36,7 @@ namespace EmulatorLauncher
                     .Replace("{systempath}", "system")
                     .Replace("{userpath}", "inputmapping");
 
-                fbneoMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                fbneoMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                 if (File.Exists(fbneoMapping))
                     break;
