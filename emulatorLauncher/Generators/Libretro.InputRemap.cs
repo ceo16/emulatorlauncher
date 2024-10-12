@@ -384,7 +384,7 @@ namespace EmulatorLauncher.Libretro
             YmlContainer game = null;
 
             Dictionary<string, Dictionary<string, string>> gameMapping = new Dictionary<string, Dictionary<string, string>>();
-            string coreMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "libretro_" + core + "_" + system + ".yml");
+            string coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "libretro_" + core + "_" + system + ".yml");
 
             if (!File.Exists(coreMapping))
                 coreMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "libretro_" + core + ".yml");
