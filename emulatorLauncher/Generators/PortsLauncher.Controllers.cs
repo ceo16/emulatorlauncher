@@ -232,7 +232,7 @@ namespace EmulatorLauncher
 
             // Special mapping for n64 style controllers
             string n64guid = ctrl.Guid.ToLowerInvariant();
-            string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+            string n64json = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
             bool needActivationSwitch = false;
             bool n64_pad = Program.SystemConfig.getOptBoolean("n64_pad");
             
