@@ -60,7 +60,7 @@ namespace EmulatorLauncher
                 string localPath = Program.EsSaveStates.GetSavePath(system, emulator, core);
                 string emulatorPath = Path.Combine(path, "states", savesSystem);
 
-                _saveStatesWatcher = new JGenesisSaveStatesMonitor(rom, emulatorPath, localPath, Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "savestateicon.png"));
+                _saveStatesWatcher = new JGenesisSaveStatesMonitor(rom, emulatorPath, localPath, Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "savestateicon.png"));
                 _saveStatesWatcher.PrepareEmulatorRepository();
                 _saveStateSlot = _saveStatesWatcher.Slot;
             }

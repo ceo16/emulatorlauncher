@@ -449,7 +449,7 @@ namespace EmulatorLauncher.Libretro
             "{userpath}\\libretro_{core}.yml",
             "{userpath}\\libretro.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\libretro_{core}_{system}.yml",
             "{systempath}\\resources\\inputmapping\\libretro_{core}.yml",
             "{systempath}\\resources\\inputmapping\\libretro.yml"

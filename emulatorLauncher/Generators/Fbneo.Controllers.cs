@@ -525,7 +525,7 @@ namespace EmulatorLauncher
             // User specific
             "{userpath}\\fbneo.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\fbneo.yml",
         };
     }

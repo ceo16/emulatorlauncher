@@ -35,7 +35,7 @@ namespace EmulatorLauncher
                 {
                     steamGame.WaitForExit();
 
-                    // Kill steam if it was not running previously or if option is set in RetroBat
+                    // Kill steam if it was not running previously or if option is set in Lumaca
                     if (!uiExists || (Program.SystemConfig.isOptSet("killsteam") && Program.SystemConfig.getOptBoolean("killsteam")))
                     {
                         foreach (var ui in Process.GetProcessesByName("steam"))

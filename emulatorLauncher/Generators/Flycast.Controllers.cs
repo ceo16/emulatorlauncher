@@ -951,7 +951,7 @@ namespace EmulatorLauncher
             // User specific
             "{userpath}\\flycast_Arcade.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\flycast_Arcade.yml",
         };
     }
