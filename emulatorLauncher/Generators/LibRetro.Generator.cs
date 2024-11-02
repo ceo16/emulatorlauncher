@@ -402,12 +402,12 @@ namespace EmulatorLauncher.Libretro
                         if (upsFiles.Count > 0)
                         {
                             patchArgs.Add("--ups");
-                            patchArgs.Add("\"" + ipsFiles.FirstOrDefault() + "\"");
+                            patchArgs.Add("\"" + upsFiles.FirstOrDefault() + "\"");
                         }
                         if (bpsFiles.Count > 0)
                         {
                             patchArgs.Add("--bps");
-                            patchArgs.Add("\"" + ipsFiles.FirstOrDefault() + "\"");
+                            patchArgs.Add("\"" + bpsFiles.FirstOrDefault() + "\"");
                         }
                         break;
                 }
@@ -539,7 +539,7 @@ namespace EmulatorLauncher.Libretro
                 {
                     int monitorId;
                     if (int.TryParse(SystemConfig["MonitorIndex"], out monitorId) && monitorId < Screen.AllScreens.Length)
-                        retroarchConfig["video_monitor_index"] = (monitorId + 1).ToString();
+                        retroarchConfig["video_monitor_index"] = (monitorId).ToString();
                 }
                 else
                 {
@@ -589,6 +589,14 @@ namespace EmulatorLauncher.Libretro
                 retroarchConfig["video_fullscreen_y"] = resolution.Height.ToString();
                 retroarchConfig["video_refresh_rate"] = resolution.DisplayFrequency.ToString("N6", System.Globalization.CultureInfo.InvariantCulture);
                 retroarchConfig["video_windowed_fullscreen"] = "false";
+            }
+
+            else
+            {
+                retroarchConfig["video_fullscreen_x"] = resolution.Width.ToString();
+                retroarchConfig["video_fullscreen_y"] = resolution.Height.ToString();
+                retroarchConfig["video_refresh_rate"] = resolution.DisplayFrequency.ToString("N6", System.Globalization.CultureInfo.InvariantCulture);
+                retroarchConfig["video_windowed_fullscreen"] = "true";
             }
 
             if (resolution == null && retroarchConfig["video_monitor_index"] != "0")

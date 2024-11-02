@@ -144,17 +144,36 @@ namespace EmulatorLauncher
             for (int i = 0; i < 4; i++)
                 deck["Slot_" + i] = "Disconnected";
 
+            int slotindex = 0;
             foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex).Take(4))
-                ConfigureSOHInput(controllers, deck, controller);
+            {
+                // Do not configure controllers that do not have analog stick
+                if (controller.Config[InputKey.rightanalogup] == null)
+                {
+                    SimpleLogger.Instance.Info("[CONTROLS] Ignoring controller " + controller.Guid.ToString() + " : no analog sticks.");
+                    continue;
+                }
+
+                ConfigureSOHInput(controllers, deck, controller, slotindex);
+                slotindex++;
+            }
         }
 
-        private void ConfigureSOHInput(JObject controllers, JObject deck, Controller ctrl)
+        private void ConfigureSOHInput(JObject controllers, JObject deck, Controller ctrl, int slotindex)
         {
             if (ctrl == null || ctrl.Config == null)
                 return;
 
             if (ctrl.IsKeyboard)
                 return;
+
+            if (ctrl.SdlController == null)
+            {
+                SimpleLogger.Instance.Info("[CONTROLS] Controller not known in SDL database, no configuration possible.");
+                return;
+            }
+
+            SimpleLogger.Instance.Info("[CONTROLS] Configuring controller " + ctrl.Guid == null ? ctrl.DevicePath.ToString() : ctrl.Guid.ToString());
 
             JObject jsonCtrl;
             JObject ctrlSlot;
@@ -163,10 +182,11 @@ namespace EmulatorLauncher
             JObject rumble;
 
             InputConfig joy = ctrl.Config;
-            int slotIndex = ctrl.PlayerIndex - 1;
             string guid = ctrl.GetSdlGuid(Common.Joysticks.SdlVersion.SDL2_30, true).ToLowerInvariant();
 
-            deck["Slot_" + slotIndex] = guid;
+            SimpleLogger.Instance.Info("[CONTROLS] Configuring slot : " + slotindex.ToString());
+
+            deck["Slot_" + slotindex] = guid;
 
             if (controllers[guid] == null)
             {
@@ -176,13 +196,13 @@ namespace EmulatorLauncher
             else
                 jsonCtrl = (JObject)controllers[guid];
 
-            if (jsonCtrl["Slot_" + slotIndex] == null)
+            if (jsonCtrl["Slot_" + slotindex] == null)
             {
                 ctrlSlot = new JObject();
-                jsonCtrl["Slot_" + slotIndex] = ctrlSlot;
+                jsonCtrl["Slot_" + slotindex] = ctrlSlot;
             }
             else
-                ctrlSlot = (JObject)jsonCtrl["Slot_" + slotIndex];
+                ctrlSlot = (JObject)jsonCtrl["Slot_" + slotindex];
 
             double deadzone = 15.0;
             if (SystemConfig.isOptSet("soh_deadzone") && !string.IsNullOrEmpty(SystemConfig["soh_deadzone"]))
@@ -220,6 +240,7 @@ namespace EmulatorLauncher
             ctrlSlot["GyroData"] = JArray.FromObject(gyrodata);
 
             // Mappings
+            SimpleLogger.Instance.Info("[CONTROLS] Re-creating mapping section for " + ctrl.Guid.ToString() + " and slot " + slotindex.ToString());
             ctrlSlot.Remove("Mappings");
             
             if (ctrlSlot["Mappings"] == null)
@@ -273,16 +294,26 @@ namespace EmulatorLauncher
             }
 
             BypassSPecialControllers:
+
+            SimpleLogger.Instance.Info("[CONTROLS] Configuring mapping section");
             foreach (var button in sohMapping)
             {
                 bool forceAxisPlus = false;
                 InputKey key = button.Value;
                 var input = ctrl.Config[key];
+
+                if (input == null)
+                    continue;
+
                 if (input != null && input.Type == "axis" && input.Value > 0)
                     forceAxisPlus = true;
+                
                 string sdlID = GetSDLInputName(ctrl, key, "soh", forceAxisPlus);
-                if (!string.IsNullOrEmpty(sdlID))
-                    mappings[sdlID] = button.Key;
+
+                if (sdlID == null || sdlID == "")
+                    continue;
+
+                mappings[sdlID] = button.Key;
             }
 
 
