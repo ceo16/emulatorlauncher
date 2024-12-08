@@ -159,7 +159,7 @@ namespace EmulatorLauncher
         /// </summary>
         private int GetXboxLangFromEnvironment()
         {
-            SimpleLogger.Instance.Info("[Generator] Getting Language from Lumaca language.");
+            SimpleLogger.Instance.Info("[Generator] Getting Language from Retrobat language.");
 
             var availableLanguages = new Dictionary<string, int>()
             {
