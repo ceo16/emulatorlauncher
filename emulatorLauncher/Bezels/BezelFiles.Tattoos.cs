@@ -145,7 +145,7 @@ namespace EmulatorLauncher
         static List<string> gbSystems = new List<string>() { "gb", "gbc" };
         static List<string> ngpSystems = new List<string>() { "ngp", "ngpc" };
         static List<string> jaguarSystems = new List<string>() { "jaguar", "jaguarcd" };
-        static List<string> megadriveSystems = new List<string>() { "megadrive", "megadrive-msu", "sega32x", "segacd" };
+        static List<string> megadriveSystems = new List<string>() { "genesis", "megadrive", "megadrive-msu", "sega32x", "segacd" };
         static List<string> n64Systems = new List<string>() { "n64", "n64dd" };
         static List<string> nesSystems = new List<string>() { "fds", "nes" };
         static List<string> pceSystems = new List<string>() { "pcengine", "pcenginecd" };
@@ -267,6 +267,9 @@ namespace EmulatorLauncher
                                 break;
                             case "mednafen_gba":
                                 ret = "gba_solar";
+                                break;
+                            case "gpsp":
+                                ret = "gba_gpsp";
                                 break;
                         }
                         break;
@@ -458,6 +461,9 @@ namespace EmulatorLauncher
                                 break;
                             case "melonds":
                                 ret = "nds_melonds";
+                                break;
+                            case "noods":
+                                ret = "nds_noods";
                                 break;
                         }
                         break;

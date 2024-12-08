@@ -108,6 +108,7 @@ namespace EmulatorLauncher.Libretro
                 { "hbmame", "HBMAME (Git)" },
                 { "higan_sfc_balanced", "nSide (Super Famicom Balanced)" },
                 { "higan_sfc", "nSide (Super Famicom Accuracy)" },
+                { "holani", "Holani" },
                 { "imageviewer", "image display" },
                 { "ishiiruka", "Ishiiruka" },
                 { "jaxe", "JAXE" },
@@ -115,6 +116,7 @@ namespace EmulatorLauncher.Libretro
                 { "kronos", "Kronos" },
                 { "lowresnx", "LowRes NX" },
                 { "lutro", "Lutro" },
+                { "m2000", "M2000" },
                 { "mame2000", "MAME 2000" },
                 { "mame2003", "MAME 2003 (0.78)" },
                 { "mame2003_midway", "MAME 2003 Midway" },
@@ -159,6 +161,7 @@ namespace EmulatorLauncher.Libretro
                 { "nekop2", "Neko Project II" },
                 { "neocd", "NeoCD" },
                 { "nestopia", "Nestopia" },
+                { "noods", "Noods" },
                 { "np2kai", "Neko Project II Kai" },
                 { "nxengine", "NXEngine" },
                 { "o2em", "O2EM" },
@@ -172,7 +175,7 @@ namespace EmulatorLauncher.Libretro
                 { "pascal_pong", "PascalPong" },
                 { "pcem", "PCem" },
                 { "pcsx1", "PCSX1" },
-                { "pcsx2", "LRPS2 (alpha)" },
+                { "pcsx2", "LRPS2" },
                 { "pcsx_rearmed_interpreter", "PCSX ReARMed [Interpreter]" },
                 { "pcsx_rearmed", "PCSX-ReARMed" },
                 { "pcsx_rearmed_neon", "PCSX ReARMed [NEON]" },
@@ -333,10 +336,13 @@ namespace EmulatorLauncher.Libretro
             ConfigureGenesisPlusGXWide(retroarchConfig, coreSettings, system, core);
             ConfigureGeolith(retroarchConfig, coreSettings, system, core);
             ConfigureGong(retroarchConfig, coreSettings, system, core);
+            Configuregpsp(retroarchConfig, coreSettings, system, core);
             ConfigureHandy(retroarchConfig, coreSettings, system, core);
             ConfigureHatari(retroarchConfig, coreSettings, system, core);
             ConfigureHatariB(retroarchConfig, coreSettings, system, core);
             ConfigureKronos(retroarchConfig, coreSettings, system, core);
+            ConfigureLRPS2(retroarchConfig, coreSettings, system, core);
+            ConfigureM2000(retroarchConfig, coreSettings, system, core);
             ConfigureMame(retroarchConfig, coreSettings, system, core);
             ConfigureMame2000(retroarchConfig, coreSettings, system, core);
             ConfigureMame2003(retroarchConfig, coreSettings, system, core);
@@ -360,12 +366,12 @@ namespace EmulatorLauncher.Libretro
             ConfigureMrBoom(retroarchConfig, coreSettings, system, core);
             ConfigureNeocd(retroarchConfig, coreSettings, system, core);
             ConfigureNestopia(retroarchConfig, coreSettings, system, core);
+            ConfigureNoods(retroarchConfig, coreSettings, system, core);
             ConfigureNp2kai(retroarchConfig, coreSettings, system, core);
             ConfigureO2em(retroarchConfig, coreSettings, system, core);
             ConfigureOpenLara(retroarchConfig, coreSettings, system, core);
             ConfigureOpera(retroarchConfig, coreSettings, system, core);
             ConfigureParallelN64(retroarchConfig, coreSettings, system, core);
-            ConfigurePcsx2(retroarchConfig, coreSettings, system, core);
             ConfigurePcsxRearmed(retroarchConfig, coreSettings, system, core);
             ConfigurePicodrive(retroarchConfig, coreSettings, system, core);
             ConfigurePocketCDG(retroarchConfig, coreSettings, system, core);
@@ -396,6 +402,8 @@ namespace EmulatorLauncher.Libretro
             ConfigureVirtualJaguar(retroarchConfig, coreSettings, system, core);
             ConfigureVitaquake2 (retroarchConfig, coreSettings, system, core);
             Configurex1(retroarchConfig, coreSettings, system, core);
+            ConfigureYabause(retroarchConfig, coreSettings, system, core);
+            ConfigureYabasanshiro(retroarchConfig, coreSettings, system, core);
 
             if (coreSettings.IsDirty)
                 coreSettings.Save(Path.Combine(RetroarchPath, "retroarch-core-options.cfg"), true);
@@ -1442,9 +1450,7 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "fbneo-diagnostic-input", "fbneo_diagkey", "Start + L + R");
 
             if (SystemConfig.isOptSet("fbneo_cpu_overclock") && !string.IsNullOrEmpty(SystemConfig["fbneo_cpu_overclock"]))
-            {
                 coreSettings["fbneo-cpu-speed-adjust"] = SystemConfig["fbneo_cpu_overclock"].ToIntegerString() + "%";
-            }
             else
                 coreSettings["fbneo-cpu-speed-adjust"] = "100%";
 
@@ -1708,11 +1714,22 @@ namespace EmulatorLauncher.Libretro
             coreSettings["gambatte_gbc_color_correction"] = "GBC only";
             coreSettings["gambatte_up_down_allowed"] = "disabled";
 
+            if (system == "gb")
+                coreSettings["gambatte_gb_hwmode"] = "GB";
+            else if (system == "gbc")
+                coreSettings["gambatte_gb_hwmode"] = "GBC";
+            else if (system == "sgb")
+                coreSettings["gambatte_gb_hwmode"] = "Auto";
+
+            if (SystemConfig.isOptSet("gambatte_gb_hwmode") && !string.IsNullOrEmpty(SystemConfig["gambatte_gb_hwmode"]))
+                coreSettings["gambatte_gb_hwmode"] = SystemConfig["gambatte_gb_hwmode"];
+
             BindBoolFeatureOn(coreSettings, "gambatte_gb_bootloader", "gambatte_gb_bootloader", "enabled", "disabled");
-            BindFeature(coreSettings, "gambatte_gb_hwmode", "gambatte_gb_hwmode", "Auto");
             BindFeature(coreSettings, "gambatte_mix_frames", "gambatte_mix_frames", "lcd_ghosting");
             BindFeature(coreSettings, "gambatte_gb_internal_palette", "gambatte_gb_internal_palette", "GB - DMG");
             BindFeature(coreSettings, "gambatte_gb_colorization", "gambatte_gb_colorization", "disabled");
+            if (SystemConfig["gambatte_gb_colorization"] == "automatic")
+                coreSettings["gambatte_gb_colorization"] = "auto";
         }
 
         private void ConfigureGearColeco(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -1920,6 +1937,19 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "gong_player2", "gong_player2", "CPU");
         }
 
+        private void Configuregpsp(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "gpsp")
+                return;
+
+            BindFeature(coreSettings, "gpsp_bios", "gpsp_bios", "auto");    // builtin, official
+            BindBoolFeature(coreSettings, "gpsp_boot_mode", "gpsp_boot_mode", "bios", "game");
+            BindBoolFeature(coreSettings, "gpsp_color_correction", "gpsp_color_correction", "enabled", "disabled");
+            BindBoolFeatureOn(coreSettings, "gpsp_drc", "gpsp_drc", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "gpsp_frame_mixing", "gpsp_frame_mixing", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "gpsp_sprlim", "gpsp_sprlim", "enabled", "disabled");
+        }
+
         private void ConfigureHandy(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
         {
             if (core != "handy")
@@ -2085,6 +2115,62 @@ namespace EmulatorLauncher.Libretro
                 coreSettings["kronos_multitap_port1"] = "disabled";
                 coreSettings["kronos_multitap_port2"] = "disabled";
             }
+        }
+
+        private void ConfigureLRPS2(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "pcsx2")
+                return;
+
+            // BIOS
+            string pcsx2Bios = "ps2-0230a-20080220.bin";
+
+            if (SystemConfig.isOptSet("lrps2_bios") && !string.IsNullOrEmpty(SystemConfig["lrps2_bios"]))
+                pcsx2Bios = SystemConfig["lrps2_bios"];
+
+            if (!File.Exists(Path.Combine(AppConfig.GetFullPath("bios"), "pcsx2", "bios", pcsx2Bios)))
+                throw new ApplicationException("BIOS file " + pcsx2Bios + " does not exist in 'bios/pcsx2/bios' folder.");
+
+            coreSettings["pcsx2_bios"] = pcsx2Bios;
+
+            BindBoolFeatureOn(coreSettings, "pcsx2_fastboot", "lrps2_fastboot", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "pcsx2_fastcdvd", "lrps2_fastcdvd", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "pcsx2_enable_cheats", "lrps2_enable_cheats", "enabled", "disabled");
+            // pcsx2_hint_language_unlock
+            BindFeature(coreSettings, "pcsx2_renderer", "lrps2_renderer", "Auto");
+            BindFeatureSlider(coreSettings, "pcsx2_upscale_multiplier", "lrps2_upscale_multiplier", "1");
+            BindFeature(coreSettings, "pcsx2_deinterlace_mode", "lrps2_deinterlace_mode", "Automatic");
+            BindBoolFeatureOn(coreSettings, "pcsx2_nointerlacing_hint", "lrps2_nointerlacing_hint", "enabled", "disabled");
+            BindFeature(coreSettings, "pcsx2_texture_filtering", "lrps2_texture_filtering", "Bilinear (PS2)");
+            BindFeature(coreSettings, "pcsx2_trilinear_filtering", "lrps2_trilinear_filtering", "Automatic");
+            BindFeature(coreSettings, "pcsx2_anisotropic_filtering", "lrps2_anisotropic_filtering", "disabled");
+            BindFeature(coreSettings, "pcsx2_dithering", "lrps2_dithering", "Unscaled");
+            BindFeature(coreSettings, "pcsx2_blending_accuracy", "lrps2_blending_accuracy", "Basic");
+            BindFeature(coreSettings, "pcsx2_widescreen_hint", "lrps2_widescreen_hint", "disabled");
+            BindBoolFeatureOn(coreSettings, "pcsx2_pcrtc_antiblur", "lrps2_pcrtc_antiblur", "enabled", "disabled");
+            BindBoolFeatureOn(coreSettings, "pcsx2_game_enhancements_hint", "lrps2_game_enhancements_hint", "enabled", "disabled");
+            BindFeature(coreSettings, "pcsx2_uncapped_framerate_hint", "lrps2_uncapped_framerate_hint", "disabled");
+
+            // CONTROLS
+            if (SystemConfig.isOptSet("lrps2_axis_scale") && !string.IsNullOrEmpty(SystemConfig["lrps2_axis_scale"]))
+            {
+                string sensitivity = SystemConfig["lrps2_axis_scale"].ToIntegerString();
+                coreSettings["pcsx2_axis_scale1"] = sensitivity + "%";
+                coreSettings["pcsx2_axis_scale2"] = sensitivity + "%";
+            }
+            else
+            {
+                coreSettings["pcsx2_axis_scale1"] = "133%";
+                coreSettings["pcsx2_axis_scale2"] = "133%";
+            }
+        }
+
+        private void ConfigureM2000(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "m2000")
+                return;
+
+            BindFeature(coreSettings, "m2000_keyboard_mapping", "m2000_keyboard_mapping", "symbolic");
         }
 
         private void ConfigureMame(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3244,6 +3330,27 @@ namespace EmulatorLauncher.Libretro
             SetupLightGuns(retroarchConfig, "262", core, 2);
         }
 
+        private void ConfigureNoods(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "noods")
+                return;
+
+            BindFeature(coreSettings, "noods_screenArrangement", "noods_screenArrangement", "Automatic");
+            BindFeature(coreSettings, "noods_screenSizing", "noods_screenSizing", "Even");
+            BindFeature(coreSettings, "noods_screenRotation", "noods_screenRotation", "Normal");
+            BindFeature(coreSettings, "noods_screenGap", "noods_screenGap", "None");
+            BindBoolFeature(coreSettings, "noods_fpsLimiter", "noods_fpsLimiter", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "noods_highRes3D", "noods_highRes3D", "enabled", "disabled");
+            BindFeature(coreSettings, "noods_screenFilter", "noods_screenFilter", "Nearest");
+            BindFeature(coreSettings, "noods_dsiMode", "noods_dsiMode", "disabled");
+            BindBoolFeature(coreSettings, "noods_directBoot", "noods_directBoot", "disabled", "enabled");
+            BindBoolFeatureOn(coreSettings, "noods_touchCursor", "noods_touchCursor", "enabled", "disabled");
+            BindFeature(coreSettings, "noods_touchMode", "noods_touchMode", "Auto");
+            BindFeature(coreSettings, "noods_micInputMode", "noods_micInputMode", "Silence");
+            BindFeature(coreSettings, "noods_micButtonMode", "noods_micButtonMode", "Toggle");
+            BindFeature(coreSettings, "noods_swapScreenMode", "noods_swapScreenMode", "Toggle");
+        }
+
         private void ConfigureNp2kai(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
         {
             if (core != "np2kai")
@@ -3431,44 +3538,6 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "parallel-n64-pak2", "parallel_pak2", "none");
             BindFeature(coreSettings, "parallel-n64-pak3", "parallel_pak3", "none");
             BindFeature(coreSettings, "parallel-n64-pak4", "parallel_pak4", "none");
-        }
-
-        private void ConfigurePcsx2(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
-        {
-            if (core != "pcsx2")
-                return;
-
-            coreSettings["pcsx2_memcard_slot_1"] = "shared32";
-            coreSettings["pcsx2_memcard_slot_2"] = "shared32";
-
-            BindFeatureSlider(coreSettings, "pcsx2_upscale_multiplier", "lrps2_upscale_multiplier", "1");
-            BindFeature(coreSettings, "pcsx2_aspect_ratio", "lrps2_aspect_ratio", "0");
-            BindBoolFeature(coreSettings, "pcsx2_enable_widescreen_patches", "lrps2_enable_widescreen_patches", "enabled", "disabled");
-            BindFeature(coreSettings, "pcsx2_renderer", "lrps2_renderer", "Auto");
-            BindBoolFeature(coreSettings, "pcsx2_fxaa", "lrps2_fxaa", "1", "0");
-            BindFeature(coreSettings, "pcsx2_anisotropic_filter", "lrps2_anisotropic_filter", "0");
-            BindFeature(coreSettings, "pcsx2_dithering", "lrps2_dithering", "2");
-            BindFeature(coreSettings, "pcsx2_texture_filtering", "lrps2_texture_filtering", "2");
-            BindFeature(coreSettings, "pcsx2_deinterlace_mode", "lrps2_deinterlace_mode", "7");
-            BindFeature(coreSettings, "pcsx2_system_language", "lrps2_system_language", "English");
-            BindBoolFeatureOn(coreSettings, "pcsx2_fastboot", "lrps2_fastboot", "enabled", "disabled");
-            BindBoolFeature(coreSettings, "pcsx2_boot_bios", "lrps2_boot_bios", "enabled", "disabled");
-            BindBoolFeature(coreSettings, "pcsx2_enable_60fps_patches", "lrps2_enable_60fps_patches", "enabled", "disabled");
-            BindBoolFeature(coreSettings, "pcsx2_enable_cheats", "lrps2_enable_cheats", "enabled", "disabled");
-            BindFeature(coreSettings, "pcsx2_speedhacks_presets", "lrps2_speedhacks_presets", "1");
-            BindBoolFeatureOn(coreSettings, "pcsx2_rumble_enable", "lrps2_rumble_enable", "enabled", "disabled");
-            BindFeatureSlider(coreSettings, "pcsx2_gamepad_l_deadzone", "lrps2_deadzone", "5");
-            BindFeatureSlider(coreSettings, "pcsx2_gamepad_r_deadzone", "lrps2_deadzone", "5");
-
-            string pcsx2Bios = "ps2-0230a-20080220.bin";
-
-            if (SystemConfig.isOptSet("lrps2_forcebios") && !string.IsNullOrEmpty(SystemConfig["lrps2_forcebios"]))
-                pcsx2Bios = SystemConfig["lrps2_forcebios"];
-
-            if (!File.Exists(Path.Combine(AppConfig.GetFullPath("bios"), "pcsx2", "bios", pcsx2Bios)))
-                throw new ApplicationException("BIOS file " + pcsx2Bios + " does not exist in 'bios/pcsx2/bios' folder.");
-
-            coreSettings["pcsx2_bios"] = pcsx2Bios;
         }
 
         private void ConfigurePcsxRearmed(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3960,6 +4029,18 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             BindFeature(coreSettings, "sameboy_rtc", "sameboy_rtc", "sync to system clock");
+
+            if (system == "gb")
+                coreSettings["sameboy_model"] = "Game Boy";
+            else if (system == "gbc")
+                coreSettings["sameboy_model"] = "Game Boy Color";
+            else if (system == "gb2players")
+                coreSettings["sameboy_model"] = "Game Boy";
+            else if (system == "gbc2players")
+                coreSettings["sameboy_model"] = "Game Boy Color";
+
+            if (SystemConfig.isOptSet("sameboy_model") && !string.IsNullOrEmpty(SystemConfig["sameboy_model"]))
+                coreSettings["sameboy_model"] = SystemConfig["sameboy_model"];
 
             bool multiplayer = (system == "gb2players" || system == "gbc2players");
 
@@ -4589,6 +4670,63 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             BindFeature(coreSettings, "X1_RESOLUTE", "x1_resolute", "LOW");
+        }
+
+        private void ConfigureYabause(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "yabause")
+                return;
+        }
+
+        private void ConfigureYabasanshiro(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "yabasanshiro")
+                return;
+
+            BindFeature(coreSettings, "yabasanshiro_resolution_mode", "yabasanshiro_resolution_mode", "original");
+            BindFeature(coreSettings, "yabasanshiro_addon_cart", "yabasanshiro_addon_cart", "4M_extended_ram");
+            BindFeature(coreSettings, "yabasanshiro_system_language", "yabasanshiro_system_language", "english");
+            BindBoolFeature(coreSettings, "yabasanshiro_force_hle_bios", "yabasanshiro_force_hle_bios", "enabled", "disabled");
+            BindBoolFeature(coreSettings, "yabasanshiro_frameskip", "yabasanshiro_frameskip", "enabled", "disabled");
+
+            if (SystemConfig.isOptSet("yabasanshiro_multitap") && !string.IsNullOrEmpty(SystemConfig["yabasanshiro_multitap"]))
+            {
+                switch (SystemConfig["yabasanshiro_multitap"])
+                {
+                    case "disabled":
+                        coreSettings["yabasanshiro_multitap_port1"] = "disabled";
+                        coreSettings["yabasanshiro_multitap_port2"] = "disabled";
+                        break;
+                    case "port1":
+                        coreSettings["yabasanshiro_multitap_port1"] = "enabled";
+                        coreSettings["yabasanshiro_multitap_port2"] = "disabled";
+                        break;
+                    case "port2":
+                        coreSettings["yabasanshiro_multitap_port1"] = "disabled";
+                        coreSettings["yabasanshiro_multitap_port2"] = "enabled";
+                        break;
+                    case "ports":
+                        coreSettings["yabasanshiro_multitap_port1"] = "enabled";
+                        coreSettings["yabasanshiro_multitap_port2"] = "enabled";
+                        break;
+                }
+            }
+
+            // Controls
+            if (SystemConfig.isOptSet("yabasanshiro_controller") && !string.IsNullOrEmpty(SystemConfig["yabasanshiro_controller"]))
+            {
+                for (int i = 1; i < 9; i++)
+                {
+                    retroarchConfig["input_libretro_device_p" + i] = SystemConfig["yabasanshiro_controller"];
+                }
+            }
+            else
+            {
+                for (int i = 1; i < 9; i++)
+                {
+                    retroarchConfig["input_libretro_device_p" + i] = "1";
+                }
+            }
         }
         #endregion
 
