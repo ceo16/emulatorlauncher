@@ -23,6 +23,7 @@ namespace EmulatorLauncher.Libretro
                 { "advanced_tests", "Advanced Test" },
                 { "arduous", "Arduous" },
                 { "atari800", "Atari800" },
+                { "b2", "B2" },
                 { "bk", "bk" },
                 { "blastem", "BlastEm" },
                 { "bluemsx", "blueMSX" },
@@ -303,6 +304,7 @@ namespace EmulatorLauncher.Libretro
             Configure81(retroarchConfig, coreSettings, system, core);
             Configurea5200(retroarchConfig, coreSettings, system, core);
             ConfigureAtari800(retroarchConfig, coreSettings, system, core);
+            ConfigureB2(retroarchConfig, coreSettings, system, core);
             ConfigureBoom3(retroarchConfig, coreSettings, system, core);
             ConfigureBlueMsx(retroarchConfig, coreSettings, system, core);
             Configurebsnes(retroarchConfig, coreSettings, system, core);
@@ -655,6 +657,14 @@ namespace EmulatorLauncher.Libretro
             }
 
             atariCfg.Save(Path.Combine(RetroarchPath, ".atari800.cfg"), false);
+        }
+
+        private void ConfigureB2(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
+        {
+            if (core != "b2")
+                return;
+
+            BindFeature(coreSettings, "b2_model", "b2_model", "B/Acorn 1770");
         }
 
         private void ConfigureBoom3(ConfigFile retroarchConfig, ConfigFile coreSettings, string system, string core)
@@ -3760,8 +3770,25 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             coreSettings["ppsspp_auto_frameskip"] = "disabled";
-            coreSettings["ppsspp_frameskip"] = "disabled";
-            coreSettings["ppsspp_frameskiptype"] = "Number of frames";
+            if (SystemConfig.isOptSet("ppsspp_frameskip") && !string.IsNullOrEmpty(SystemConfig["ppsspp_frameskip"]) && SystemConfig["ppsspp_frameskip"].ToIntegerString() != "0")
+                coreSettings["ppsspp_frameskip"] = SystemConfig["ppsspp_frameskip"].ToIntegerString();
+            else
+                coreSettings["ppsspp_frameskip"] = "disabled";
+
+            if (SystemConfig.isOptSet("ppsspp_frameskiptype") && !string.IsNullOrEmpty(SystemConfig["ppsspp_frameskiptype"]))
+            {
+                if (SystemConfig["ppsspp_frameskiptype"] == "auto")
+                {
+                    coreSettings["ppsspp_frameskip"] = "1";
+                    coreSettings["ppsspp_frameskiptype"] = "Number of frames";
+                    coreSettings["ppsspp_auto_frameskip"] = "enabled";
+                }
+                else
+                    coreSettings["ppsspp_frameskiptype"] = SystemConfig["ppsspp_frameskiptype"];
+            }
+            else
+                coreSettings["ppsspp_frameskiptype"] = "Number of frames";
+
             coreSettings["ppsspp_locked_cpu_speed"] = "disabled";
 
             if ((Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements") && SystemConfig.getOptBoolean("retroachievements.hardcore")) || !SystemConfig.getOptBoolean("ppsspp_cheats"))
