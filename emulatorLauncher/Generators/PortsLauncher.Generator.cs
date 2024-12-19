@@ -68,7 +68,7 @@ namespace EmulatorLauncher
 
             _resolution = resolution;
 
-            // Copy existing saves from lumaca\saves to the emulator folder
+            // Copy existing saves from retrobat\saves to the emulator folder
             CopySavesToEmulator();
 
             // Initiate command array to pass it to the configuration part, do not add command line arguments here, add them in the port configuration part
