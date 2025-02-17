@@ -79,7 +79,7 @@ namespace EmulatorLauncher
             if (fullscreen)
                 commandArray.Add("-f");
             
-            commandArray.Add("-g");
+            //commandArray.Add("-g");
             commandArray.Add("\"" + rom + "\"");
 
             string args = string.Join(" ", commandArray);
@@ -309,7 +309,10 @@ namespace EmulatorLauncher
 
             var toSet = new byte[] { (byte)langId };
             for (int i = 0; i < toSet.Length; i++)
+            {
                 bytes[128] = toSet[i];
+                bytes[272] = toSet[i];
+            }
 
             File.WriteAllBytes(path, bytes);
         }

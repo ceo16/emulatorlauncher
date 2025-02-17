@@ -5,11 +5,13 @@ using System.Linq;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.Joysticks;
 using System.Collections.Generic;
+using EmulatorLauncher.Common.Lightguns;
 
 namespace EmulatorLauncher
 {
     partial class Snes9xGenerator : Generator
     {
+        private bool _sindenSoft = false;
         private void CreateControllerConfiguration(IniFile ini)
         {
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
@@ -27,6 +29,13 @@ namespace EmulatorLauncher
 
             if (SystemConfig.getOptBoolean("use_guns"))
             {
+                var guns = RawLightgun.GetRawLightguns();
+                if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+                {
+                    Guns.StartSindenSoftware();
+                    _sindenSoft = true;
+                }
+
                 if (SystemConfig.isOptSet("snes9x_guntype"))
                 {
                     string gunType = SystemConfig["snes9x_guntype"];
@@ -75,6 +84,24 @@ namespace EmulatorLauncher
             // Some other stuff for background input
             ini.WriteValue("Controls\\Win", "Input:Background", "OFF");
             ini.WriteValue("Controls\\Win", "Input:BackgroundKeyHotkeys", "ON");
+
+            // Hotkeys
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:SlotSave", "F5");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:SlotSave", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:SlotLoad", "F6");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:SlotLoad", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:SlotPlus", "F4");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:SlotPlus", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:SlotMinus", "F3");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:SlotMinus", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:SaveScreenShot", "F12");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:SaveScreenShot", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:Rewind", "F7");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:Rewind", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:FastForward", "F8");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:FastForward", "none");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Key:Pause", "F9");
+            ini.WriteValue("Controls\\Win\\Hotkeys", "Mods:Pause", "none");
         }
 
         private void ConfigureInput(IniFile ini, Controller controller)

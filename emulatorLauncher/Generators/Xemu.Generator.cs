@@ -38,6 +38,8 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
+
             //Applying bezels
             if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
                 _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
@@ -106,16 +108,13 @@ namespace EmulatorLauncher
                         bootRom = Path.Combine(AppConfig.GetFullPath("bios"), "mcpx_1.0.bin");
                 }
 
-                // Save to new TOML format
+                // Settings
                 SetupTOMLConfiguration(path, system, eepromPath, hddPath, bootRom);
-                
             }
             catch { }
 
             // Command line arguments
             List<string> commandArray = new List<string>();
-
-            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
             if (IsEmulationStationWindowed(out Rectangle emulationStationBounds, true) && !SystemConfig.getOptBoolean("forcefullscreen"))
             {
@@ -144,45 +143,6 @@ namespace EmulatorLauncher
                 Arguments = args,
                 WorkingDirectory = path,
             };
-        }
-
-        /// <summary>
-        /// Add KILL XEMU to padtokey (hotkey + START).
-        /// </summary> 
-        public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
-        {
-            return PadToKey.AddOrUpdateKeyMapping(mapping, "xemu", InputKey.hotkey | InputKey.start, "(%{CLOSE})");
-        }
-
-        /// <summary>
-        /// Get XBOX language to write to eeprom, value from features or default language of ES.
-        /// </summary>
-        private int GetXboxLangFromEnvironment()
-        {
-            SimpleLogger.Instance.Info("[Generator] Getting Language from Lumaca language.");
-
-            var availableLanguages = new Dictionary<string, int>()
-            {
-                { "en", 1 },
-                { "jp", 2 },
-                { "ja", 2 },
-                { "de", 3 },
-                { "fr", 4 },
-                { "es", 5 },
-                { "it", 6 },
-                { "ko", 7 },
-                { "zh", 8 },
-                { "pt", 9 }
-            };
-
-            var lang = GetCurrentLanguage();
-            if (!string.IsNullOrEmpty(lang))
-            {
-                if (availableLanguages.TryGetValue(lang, out int ret))
-                    return ret;
-            }
-
-            return 1;
         }
 
         /// <summary>
@@ -224,6 +184,12 @@ namespace EmulatorLauncher
                     }
                 }
 
+                // Renderer
+                if (SystemConfig.isOptSet("xemu_renderer") && !string.IsNullOrEmpty(SystemConfig["xemu_renderer"]))
+                    ini.WriteValue("display", "renderer", "'" + SystemConfig["xemu_renderer"] + "'");
+                else if (Features.IsSupported("xemu_renderer"))
+                    ini.Remove("display", "renderer");
+
                 // Resolution
                 BindIniFeatureSlider(ini, "display.quality", "surface_scale", "render_scale", "1");
 
@@ -245,11 +211,16 @@ namespace EmulatorLauncher
                     ini.WriteValue("display.ui", "show_menubar", "false");
 
 
-                // Memory (64 or 128)
+                // sys options
                 if (SystemConfig.isOptSet("system_memory") && !string.IsNullOrEmpty(SystemConfig["system_memory"]))
                     ini.WriteValue("sys", "mem_limit", "'" + SystemConfig["system_memory"] + "'");
                 else
                     ini.WriteValue("sys", "mem_limit", "'128'");
+
+                if (SystemConfig.isOptSet("xemu_avpack") && !string.IsNullOrEmpty(SystemConfig["xemu_avpack"]))
+                    ini.WriteValue("sys", "avpack", "'" + SystemConfig["xemu_avpack"] + "'");
+                else
+                    ini.WriteValue("sys", "avpack", "'HDTV'");
 
                 // Vsync
                 BindBoolIniFeatureOn(ini, "display.window", "vsync", "vsync", "true", "false");
@@ -276,10 +247,44 @@ namespace EmulatorLauncher
 
                 // dvd_path by command line is enough and in newer versions, if put in toml, it brakes the loading
                 //ini.WriteValue("sys.files", "dvd_path", "'" + rom + "'");
+
+                //audio
+                BindBoolIniFeature(ini, "audio", "use_dsp", "xemu_dsp", "true", "false");
             }
 
             // Write xbox bios settings in eeprom.bin file
             WriteXboxEEPROM(eepromPath);
+        }
+
+        /// <summary>
+        /// Get XBOX language to write to eeprom, value from features or default language of ES.
+        /// </summary>
+        private int GetXboxLangFromEnvironment()
+        {
+            SimpleLogger.Instance.Info("[Generator] Getting Language from RetroBat language.");
+
+            var availableLanguages = new Dictionary<string, int>()
+            {
+                { "en", 1 },
+                { "jp", 2 },
+                { "ja", 2 },
+                { "de", 3 },
+                { "fr", 4 },
+                { "es", 5 },
+                { "it", 6 },
+                { "ko", 7 },
+                { "zh", 8 },
+                { "pt", 9 }
+            };
+
+            var lang = GetCurrentLanguage();
+            if (!string.IsNullOrEmpty(lang))
+            {
+                if (availableLanguages.TryGetValue(lang, out int ret))
+                    return ret;
+            }
+
+            return 1;
         }
 
         /// <summary>
@@ -347,6 +352,14 @@ namespace EmulatorLauncher
             }
 
             return high + low;
+        }
+
+        /// <summary>
+        /// Add KILL XEMU to padtokey (hotkey + START).
+        /// </summary> 
+        public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
+        {
+            return PadToKey.AddOrUpdateKeyMapping(mapping, "xemu", InputKey.hotkey | InputKey.start, "(%{CLOSE})");
         }
 
         public override int RunAndWait(ProcessStartInfo path)

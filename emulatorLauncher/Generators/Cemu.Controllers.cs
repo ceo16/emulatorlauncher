@@ -55,9 +55,7 @@ namespace EmulatorLauncher
 
             UpdateSdlControllersWithHints();
 
-            string folder = Path.Combine(path, "controllerProfiles");
-            if (_cemu21)
-                folder = Path.Combine(path, "portable", "controllerProfiles");
+            string folder = Path.Combine(path, "portable", "controllerProfiles");
 
             if (!Directory.Exists(folder))
                 Directory.CreateDirectory(folder);
@@ -243,7 +241,12 @@ namespace EmulatorLauncher
 
             //set rumble if option is set
             if (Program.SystemConfig.isOptSet("cemu_enable_rumble") && !string.IsNullOrEmpty(Program.SystemConfig["cemu_enable_rumble"]))
-                writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"].Substring(0, 4));
+            {
+                if (Program.SystemConfig["cemu_enable_rumble"].Length > 4)
+                    writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"].Substring(0, 4));
+                else
+                    writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"]);
+            }
 
             //Default deadzones and ranges for axis, rotation and trigger
             writer.WriteStartElement("axis");
@@ -421,7 +424,12 @@ namespace EmulatorLauncher
 
             //set rumble if option is set
             if (Program.SystemConfig.isOptSet("cemu_enable_rumble") && !string.IsNullOrEmpty(Program.SystemConfig["cemu_enable_rumble"]))
-                writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"].Substring(0, 4));
+            {
+                if (Program.SystemConfig["cemu_enable_rumble"].Length > 4)
+                    writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"].Substring(0, 4));
+                else
+                    writer.WriteElementString("rumble", Program.SystemConfig["cemu_enable_rumble"]);
+            }
 
             //set motion if option is set in features
             if (xbox != "yes" && enableMotion)

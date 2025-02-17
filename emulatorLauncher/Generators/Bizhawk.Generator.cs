@@ -10,15 +10,25 @@ namespace EmulatorLauncher
 {
     partial class BizhawkGenerator : Generator
     {
+        /* To add new Bizhawk core/system:
+         * - Fill bizHawkSystems dictionary (check config.ini)
+         * - Fill bizHawkShortSystems dictionary (check config.ini)
+         * - if a firmware is required add in SetupFirmwares
+         * - if bizhawk has multiple cores for a system, fill bizhawkPreferredCore dictionary (check config.ini)
+         * - Add setup of core options if any options exists
+         * - Check Controllers.cs for the controller part
+        */
+
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
         private string _path;
         private SaveStatesWatcher _saveStatesWatcher;
         private int _saveStateSlot;
+        private bool _sindenSoft;
 
         private static readonly List<string> preferredRomExtensions = new List<string>() { ".bin", ".cue", ".img", ".iso", ".rom" };
         private static readonly List<string> zipSystems = new List<string>() { "3ds", "psx", "saturn", "n64", "n64dd", "pcenginecd", "jaguarcd", "vectrex", "odyssey2", "uzebox" };
-        private static List<string> _mdSystems = new List<string>() { "genesis", "mega32x", "megacd", "megadrive", "sega32x", "segacd" };
+        private static readonly List<string> _mdSystems = new List<string>() { "genesis", "mega32x", "megacd", "megadrive", "sega32x", "segacd" };
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -413,6 +423,20 @@ namespace EmulatorLauncher
                     firmware["A78+Bios_NTSC"] = ntscBios;
             }
 
+            if (system == "channelf")
+            {
+                // ChannelF firmware
+                string sl131253 = Path.Combine(AppConfig.GetFullPath("bios"), "sl131253.bin");
+                if (File.Exists(sl131253))
+                    firmware["ChannelF+ChannelF_sl131253"] = sl131253;
+                string sl131254 = Path.Combine(AppConfig.GetFullPath("bios"), "sl131254.bin");
+                if (File.Exists(sl131254))
+                    firmware["ChannelF+ChannelF_sl131254"] = sl131254;
+                string sl90025 = Path.Combine(AppConfig.GetFullPath("bios"), "sl90025.bin");
+                if (File.Exists(sl90025))
+                    firmware["ChannelF+ChannelF_sl90025"] = sl90025;
+            }
+
             if (system == "colecovision")
             {
                 // Colecovision firmware
@@ -449,6 +473,17 @@ namespace EmulatorLauncher
                 string gbcBiosPath = Path.Combine(AppConfig.GetFullPath("bios"), "gbc_bios.bin");
                 if (File.Exists(gbcBiosPath))
                     firmware["GBC+World"] = gbcBiosPath;
+            }
+
+            if (system == "intellivision")
+            {
+                // Intellivision firmware
+                string eromBiosPath = Path.Combine(AppConfig.GetFullPath("bios"), "exec.bin");
+                if (File.Exists(eromBiosPath))
+                    firmware["INTV+EROM"] = eromBiosPath;
+                string gromBiosPath = Path.Combine(AppConfig.GetFullPath("bios"), "grom.bin");
+                if (File.Exists(gromBiosPath))
+                    firmware["INTV+GROM"] = gromBiosPath;
             }
 
             if (system == "lynx")
@@ -637,8 +672,16 @@ namespace EmulatorLauncher
             if (Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements"))
             {
                 json["SkipRATelemetryWarning"] = "true";
+                
                 json["RAUsername"] = SystemConfig["retroachievements.username"];
-                json["RAToken"] = SystemConfig["retroachievements.token"];
+
+                string unencryptedToken = SystemConfig["retroachievements.token"];
+                if (!string.IsNullOrEmpty(unencryptedToken))
+                {
+                    string encryptedToken = EncryptStrings.EncryptString(unencryptedToken);
+                    json["RAToken"] = encryptedToken;
+                }
+
                 json["RACheevosActive"] = "true";
                 json["RALBoardsActive"] = SystemConfig.getOptBoolean("retroachievements.leaderboards") ? "true" : "false";
                 json["RARichPresenceActive"] = SystemConfig.getOptBoolean("retroachievements.richpresence") ? "true" : "false";
@@ -690,6 +733,9 @@ namespace EmulatorLauncher
                 _saveStatesWatcher.Dispose();
                 _saveStatesWatcher = null;
             }
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }

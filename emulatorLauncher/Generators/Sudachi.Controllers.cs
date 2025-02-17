@@ -11,6 +11,8 @@ namespace EmulatorLauncher
 {
     partial class SudachiGenerator : Generator
     {
+        private Dictionary<string, int> _samePad = new Dictionary<string, int>();
+
         /// <summary>
         /// Cf. https://github.com/sudachi-emu/sudachi/blob/main/src/input_common/drivers/sdl_driver.cpp
         /// </summary>
@@ -95,8 +97,19 @@ namespace EmulatorLauncher
             }
 
             var sudachiGuid = guid.ToString().ToLowerInvariant();
+
+            if (!_samePad.ContainsKey(sudachiGuid))
+                _samePad.Add(sudachiGuid, 0);
+            else
+                _samePad[sudachiGuid] += 1;
+
             string newGuidPath = Path.Combine(AppConfig.GetFullPath("tools"), "controllerinfo.yml");
             string newGuid = SdlJoystickGuid.GetGuidFromFile(newGuidPath, controller.Guid, "sudachi");
+            bool multi = SdlJoystickGuid.multiGuid(newGuidPath, controller.Guid);
+
+            if (multi && _samePad[sudachiGuid] > 0)
+                newGuid = SdlJoystickGuid.GetGuidFromFile(newGuidPath, controller.Guid, "sudachi", _samePad[sudachiGuid] + 1);
+
             if (newGuid != null)
                 sudachiGuid = newGuid;
 
@@ -107,6 +120,9 @@ namespace EmulatorLauncher
                     .OrderBy(c => c.GetSdlControllerIndex())
                     .ToList()
                     .IndexOf(controller);
+
+            if (multi)
+                index = 0;
 
             string player = "player_" + (controller.PlayerIndex - 1) + "_";
 

@@ -199,6 +199,31 @@ namespace TeknoParrotUi.Common
         P4RelativeDown,
         P4RelativeLeft,
         P4RelativeRight,
+        FnfGearChange1,
+        FnfGearChange2,
+        FnfGearChange3,
+        FnfGearChange4,
+        FnfGearChangeUp,
+        FnfGearChangeDown,
+        P1Trackball,
+        Analog2Positive,
+        Analog2Negative,
+        Analog0Positive,
+        Analog0Negative,
+        Analog6Positive,
+        Analog6Negative,
+        Analog4Positive,
+        Analog4Negative,
+        Analog22,
+        IDZGearChangeUp,
+        IDZGearChangeDown,
+        IDZGearChange1,
+        IDZGearChange2,
+        IDZGearChange3,
+        IDZGearChange4,
+        IDZGearChange5,
+        IDZGearChange6,
+        Wmmt3InsertCard
     }
 
     public enum AnalogType
@@ -213,7 +238,8 @@ namespace TeknoParrotUi.Common
         AnalogJoystickReverse,
         KeyboardWheelHalfValue, //Not needed anymore but removing this will delete user profile for everyone!!
         Minimum,
-        Maximum
+        Maximum,
+        AnalogJoystickY
     }
 
     public enum RawMouseButton
@@ -278,6 +304,9 @@ namespace TeknoParrotUi.Common
         public bool HideWithoutUseAnalogAxisToAimGUN1 { get; set; }
         public bool HideWithUseAnalogAxisToAimGUN2 { get; set; }
         public bool HideWithoutUseAnalogAxisToAimGUN2 { get; set; }
+        public bool HideWithoutProMode { get; set; }
+        public bool HideWithProMode { get; set; }
+
     }
 
     [Serializable]

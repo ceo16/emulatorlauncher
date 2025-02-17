@@ -10,6 +10,8 @@ namespace EmulatorLauncher
 {
     partial class Mame64Generator
     {
+        private bool _sindenSoft = false;
+
         private void UpdateSdlControllersWithHints()
         {
             var hints = new List<string>
@@ -30,6 +32,11 @@ namespace EmulatorLauncher
 
             int gunCount = RawLightgun.GetUsableLightGunCount();
             var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
 
             if (Controllers.Count == 0 && gunCount == 0)
                 return false;
@@ -199,6 +206,11 @@ namespace EmulatorLauncher
                     joy = "JOYCODE_" + hIndex + "_";
                 }
 
+                // Override index through option
+                string indexOption = "mame_p" + controller.PlayerIndex + "_forceindex";
+                if (SystemConfig.isOptSet(indexOption) && !string.IsNullOrEmpty(SystemConfig[indexOption]))
+                    joy = "JOYCODE_" + SystemConfig[indexOption] + "_";
+
                 // Get dinput mapping information
                 if (!isXinput)
                 {
@@ -253,6 +265,16 @@ namespace EmulatorLauncher
 
                 // define mapping for xInput case
                 var mapping = hbmame? hbxInputMapping : xInputMapping;
+
+                // Invert player 1 & 2 with feature
+                bool invert = SystemConfig.getOptBoolean("mame_indexswitch") && mameControllers.Count > 1;
+                if (invert)
+                {
+                    if (i == 1)
+                        i = 2;
+                    else if (i == 2)
+                        i = 1;
+                }
 
                 // PLAYER 1
                 // Add UI mapping for player 1 to control MAME UI + Service menu

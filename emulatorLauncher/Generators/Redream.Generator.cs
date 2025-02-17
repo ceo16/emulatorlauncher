@@ -24,7 +24,9 @@ namespace EmulatorLauncher
             if (wideScreen)
                 SystemConfig["forceNoBezel"] = "1";
 
-            //Applying bezels
+            //Applying bezels & shaders
+            if (!fullscreen)
+                SystemConfig["forceNoBezel"] = "true";
             if (!ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator))
                 _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
 
@@ -56,6 +58,7 @@ namespace EmulatorLauncher
                 BindIniFeature(ini, "", "language", "redream_language", "english");
                 BindIniFeature(ini, "", "region", "redream_region", "japan");
                 BindBoolIniFeatureOn(ini, "", "vsync", "redream_vsync", "1", "0");
+                BindIniFeature(ini, "", "autosort", "redream_alpha_sorting", "0");
                 BindBoolIniFeature(ini, "", "frameskip", "redream_frameskip", "1", "0");
                 BindIniFeature(ini, "", "aspect", "redream_aspect", "4:3");
 

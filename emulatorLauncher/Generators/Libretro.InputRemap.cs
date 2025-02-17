@@ -1,4 +1,5 @@
 ﻿using EmulatorLauncher.Common.FileFormats;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,15 +8,21 @@ namespace EmulatorLauncher.Libretro
 {
     partial class LibRetroGenerator : Generator
     {
+        // Used to get user specific remap files from inputmapping yml file
+        // Used to managed Retroarch remaps and align controls between several cores (Retrobat default remaps)
+        // Used for options to invert buttons, etc.
+
+
         static readonly List<string> systemButtonInvert = new List<string>() { "snes", "snes-msu", "sattelaview", "sufami", "sgb", "gb-msu" };
         static readonly List<string> systemButtonRotate = new List<string>() { "nes", "fds", "mastersystem" };
-        static readonly List<string> systemMegadrive = new List<string>() { "megadrive", "megadrive-msu", "sega32x", "segacd" };
+        static readonly List<string> systemMegadrive = new List<string>() { "genesis", "megadrive", "megadrive-msu", "sega32x", "segacd" };
         static readonly List<string> systemNES = new List<string>() { "nes", "fds" };
         static readonly List<string> systemN64 = new List<string>() { "n64", "n64dd" };
         static readonly List<string> megadrive3ButtonsList = new List<string>() { "2", "257", "1025", "1537", "773" };
         static readonly List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
 
         private static int _playerCount = 1;
+        private static int _maxCount = 2;
 
         public static void GenerateCoreInputRemap(string system, string core, Dictionary<string, string> inputremap)
         {
@@ -23,6 +30,21 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             _playerCount = Program.Controllers.Count;
+            _maxCount = _playerCount + 2;
+
+            if (Program.SystemConfig.getOptBoolean("force1pOnly"))
+            {
+                if (coreToP2Device.ContainsKey(core))
+                {
+                    for (int i = 3; i < _maxCount + 1; i++)
+                        inputremap["input_libretro_device_p" + i] = "0";
+                }
+                else
+                {
+                    for (int i = 2; i < _maxCount + 1; i++)
+                        inputremap["input_libretro_device_p" + i] = "0";
+                }
+            }
 
             if (_playerCount == 0)
                 return;
@@ -314,59 +336,133 @@ namespace EmulatorLauncher.Libretro
                     bool switchTriggers = Program.SystemConfig.getOptBoolean("saturn_invert_triggers");
                     if (Program.SystemConfig.isOptSet("saturn_padlayout") && !string.IsNullOrEmpty(Program.SystemConfig["saturn_padlayout"]))
                     {
-                        switch (Program.SystemConfig["saturn_padlayout"])
+                        if (core == "yabasanshiro")
                         {
-                            case "lr_yz":
-                                if (switchTriggers)
-                                {
-                                    inputremap["input_player" + i + "_btn_a"] = "11";
-                                    inputremap["input_player" + i + "_btn_b"] = "8";
-                                    inputremap["input_player" + i + "_btn_l"] = "12";
-                                    inputremap["input_player" + i + "_btn_r"] = "13";
-                                    inputremap["input_player" + i + "_btn_x"] = "1";
-                                    inputremap["input_player" + i + "_btn_y"] = "0";
-                                    inputremap["input_player" + i + "_btn_l2"] = "9";
-                                    inputremap["input_player" + i + "_btn_r2"] = "10";
-                                }
-                                else
-                                {
-                                    inputremap["input_player" + i + "_btn_a"] = "11";
-                                    inputremap["input_player" + i + "_btn_b"] = "8";
-                                    inputremap["input_player" + i + "_btn_l"] = "9";
-                                    inputremap["input_player" + i + "_btn_r"] = "10";
-                                    inputremap["input_player" + i + "_btn_x"] = "1";
-                                    inputremap["input_player" + i + "_btn_y"] = "0";
-                                }
-                                break;
-                            case "lr_xz":
-                                if (switchTriggers)
-                                {
-                                    inputremap["input_player" + i + "_btn_a"] = "11";
-                                    inputremap["input_player" + i + "_btn_b"] = "8";
-                                    inputremap["input_player" + i + "_btn_l"] = "12";
-                                    inputremap["input_player" + i + "_btn_l2"] = "1";
-                                    inputremap["input_player" + i + "_btn_r"] = "13";
-                                    inputremap["input_player" + i + "_btn_r2"] = "10";
-                                    inputremap["input_player" + i + "_btn_y"] = "0";
-                                }
-                                else
-                                {
-                                    inputremap["input_player" + i + "_btn_a"] = "11";
-                                    inputremap["input_player" + i + "_btn_b"] = "8";
-                                    inputremap["input_player" + i + "_btn_l"] = "1";
-                                    inputremap["input_player" + i + "_btn_r"] = "10";
-                                    inputremap["input_player" + i + "_btn_y"] = "0";
-                                }
-                                break;
-                            case "lr_zc":
-                                if (switchTriggers)
-                                {
-                                    inputremap["input_player" + i + "_btn_l"] = "12";
-                                    inputremap["input_player" + i + "_btn_l2"] = "10";
-                                    inputremap["input_player" + i + "_btn_r"] = "13";
-                                    inputremap["input_player" + i + "_btn_r2"] = "11";
-                                }
-                                break;
+                            switch (Program.SystemConfig["saturn_padlayout"])
+                            {
+                                case "lr_yz":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "10";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_x"] = "1";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                        inputremap["input_player" + i + "_btn_l2"] = "9";
+                                        inputremap["input_player" + i + "_btn_r2"] = "11";
+                                    }
+                                    else
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "10";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "9";
+                                        inputremap["input_player" + i + "_btn_x"] = "1";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    break;
+                                case "lr_xz":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "10";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_l2"] = "1";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_r2"] = "11";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    else
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "10";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "1";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    break;
+                                case "lr_zc":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_l2"] = "11";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_r2"] = "10";
+                                    }
+                                    break;
+                            }
+                        }
+
+                        else
+                        {
+                            switch (Program.SystemConfig["saturn_padlayout"])
+                            {
+                                case "lr_yz":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "11";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_x"] = "1";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                        inputremap["input_player" + i + "_btn_l2"] = "9";
+                                        inputremap["input_player" + i + "_btn_r2"] = "10";
+                                    }
+                                    else
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "11";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "9";
+                                        inputremap["input_player" + i + "_btn_r"] = "10";
+                                        inputremap["input_player" + i + "_btn_x"] = "1";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    break;
+                                case "lr_xz":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "11";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_l2"] = "1";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_r2"] = "10";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    else
+                                    {
+                                        inputremap["input_player" + i + "_btn_a"] = "11";
+                                        inputremap["input_player" + i + "_btn_b"] = "8";
+                                        inputremap["input_player" + i + "_btn_l"] = "1";
+                                        inputremap["input_player" + i + "_btn_r"] = "10";
+                                        inputremap["input_player" + i + "_btn_y"] = "0";
+                                    }
+                                    break;
+                                case "lr_zc":
+                                    if (switchTriggers)
+                                    {
+                                        inputremap["input_player" + i + "_btn_l"] = "12";
+                                        inputremap["input_player" + i + "_btn_l2"] = "10";
+                                        inputremap["input_player" + i + "_btn_r"] = "13";
+                                        inputremap["input_player" + i + "_btn_r2"] = "11";
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                    else if (core == "yabasanshiro")
+                    {
+                        if (switchTriggers)
+                        {
+                            inputremap["input_player" + i + "_btn_l"] = "12";
+                            inputremap["input_player" + i + "_btn_l2"] = "11";
+                            inputremap["input_player" + i + "_btn_r"] = "13";
+                            inputremap["input_player" + i + "_btn_r2"] = "10";
+                        }
+                        else
+                        {
+                            inputremap["input_player" + i + "_btn_l"] = "11";
+                            inputremap["input_player" + i + "_btn_r"] = "10";
                         }
                     }
                 }
@@ -440,6 +536,49 @@ namespace EmulatorLauncher.Libretro
                     inputremap["input_player" + i + "_" + button.Key] = button.Value;
             }
             return true;
+        }
+
+        private Dictionary<string, string> InputRemap = new Dictionary<string, string>();
+
+        private void CreateInputRemap(string cleanSystemName, Action<ConfigFile> createRemap)
+        {
+            if (string.IsNullOrEmpty(cleanSystemName))
+                return;
+
+            //DeleteInputRemap(cleanSystemName);
+            if (createRemap == null)
+                return;
+
+            string dir = Path.Combine(RetroarchPath, "config", "remaps", cleanSystemName);
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            string path = Path.Combine(dir, cleanSystemName + ".rmp");
+
+            //this.AddFileForRestoration(path);
+
+            var cfg = ConfigFile.FromFile(path, new ConfigFileOptions() { CaseSensitive = true });
+            createRemap(cfg);
+            cfg.Save(path, true);
+        }
+
+        private void DeleteInputRemap(string cleanSystemName)
+        {
+            if (string.IsNullOrEmpty(cleanSystemName))
+                return;
+
+            string dir = Path.Combine(RetroarchPath, "config", "remaps", cleanSystemName);
+            string path = Path.Combine(dir, cleanSystemName + ".rmp");
+
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+
+                if (Directory.Exists(dir) && Directory.GetFiles(dir).Length == 0)
+                    Directory.Delete(dir);
+            }
+            catch { }
         }
 
         static string[] mappingPaths =

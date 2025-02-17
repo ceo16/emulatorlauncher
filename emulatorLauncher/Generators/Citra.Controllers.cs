@@ -34,9 +34,6 @@ namespace EmulatorLauncher
             if (cfg == null)
                 return;
 
-            if (_sdlVersion == SdlVersion.SDL2_26 && sdlControllerNameMap.ContainsKey(controller.Name))
-                controller.Name = sdlControllerNameMap[controller.Name];
-
             var guid = controller.GetSdlGuid(_sdlVersion, true);
             var citraGuid = guid.ToString().ToLowerInvariant();
             string newGuidPath = Path.Combine(AppConfig.GetFullPath("tools"), "controllerinfo.yml");
@@ -51,6 +48,14 @@ namespace EmulatorLauncher
             ini.WriteValue("Controls", "profiles\\1\\name", "default");
 
             string profile = "profiles\\1\\";
+
+            if (Program.SystemConfig.isOptSet("gamepadbuttons") && Program.SystemConfig.getOptBoolean("gamepadbuttons"))
+            {
+                Mapping[InputKey.b] = "button_b";
+                Mapping[InputKey.a] = "button_a";
+                Mapping[InputKey.x] = "button_y";
+                Mapping[InputKey.y] = "button_x";
+            }
 
             //manage buttons and directions
             foreach (var map in Mapping)
@@ -166,24 +171,7 @@ namespace EmulatorLauncher
             string value = "";
 
             if (input.Type == "button")
-            { 
-                if (controller.IsXInputDevice && Program.SystemConfig.isOptSet("gamepadbuttons") && Program.SystemConfig.getOptBoolean("gamepadbuttons"))
-                {
-                    long newID = input.Id;
-                    if (input.Id == 0)
-                        newID = 1;
-                    else if (input.Id == 1)
-                        newID = 0;
-                    else if (input.Id == 2)
-                        newID = 3;
-                    else if (input.Id == 3)
-                        newID = 2;
-
-                    value = "button:" + newID + ",engine:sdl,guid:" + guid + ",port:0";
-                }
-                else
-                    value = "button:" + input.Id + ",engine:sdl,guid:" + guid + ",port:0";
-            }
+                value = "button:" + input.Id + ",engine:sdl,guid:" + guid + ",port:0";
             
             else if (input.Type == "hat")
                 value = "direction:" + input.Name.ToString() + ",engine:sdl,guid:" + guid + ",hat:0,port:0";
@@ -315,7 +303,7 @@ namespace EmulatorLauncher
             { "c_stick","down:code$075$1engine$0keyboard,engine:analog_from_button,left:code$074$1engine$0keyboard,modifier:code$068$1engine$0keyboard,modifier_scale:0.500000,right:code$076$1engine$0keyboard,up:code$073$1engine$0keyboard" }, 
         };*/
 
-        static readonly InputKeyMapping Mapping = new InputKeyMapping()
+        static InputKeyMapping Mapping = new InputKeyMapping()
         {
             { InputKey.b,               "button_a" },
             { InputKey.a,               "button_b" },
@@ -335,11 +323,6 @@ namespace EmulatorLauncher
         {
             { InputKey.l2,               "button_zl" },
             { InputKey.r2,               "button_zr" },
-        };
-
-        static readonly Dictionary<string, string> sdlControllerNameMap = new Dictionary<string, string>()
-        {
-            { "DualSense Wireless Controller", "PS5 Controller" },
         };
     }
 }

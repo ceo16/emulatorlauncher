@@ -1,4 +1,6 @@
 ﻿using EmulatorLauncher.Common.FileFormats;
+using EmulatorLauncher.Common.Lightguns;
+using System.Linq;
 
 namespace EmulatorLauncher
 {
@@ -15,6 +17,13 @@ namespace EmulatorLauncher
         {
             if (!SystemConfig.getOptBoolean("use_guns"))
                 return;
+
+            var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
 
             var trollers = json.GetOrCreateContainer("AllTrollers");
             var analogtrollers = json.GetOrCreateContainer("AllTrollersAnalog");
@@ -88,8 +97,8 @@ namespace EmulatorLauncher
                 saturnTroller["P" + playerIndex + " Start"] = "WMouse M";
 
                 var saturnAnalog = analogtrollers.GetOrCreateContainer(systemController[system]);
-                var p1X = saturnAnalog.GetOrCreateContainer("P2 X Axis");
-                var p1Y = saturnAnalog.GetOrCreateContainer("P2 Y Axis");
+                var p1X = saturnAnalog.GetOrCreateContainer("P1 X Axis");
+                var p1Y = saturnAnalog.GetOrCreateContainer("P1 Y Axis");
 
                 p1X["Value"] = "WMouse X";
                 p1X.SetObject("Mult", 1.0);

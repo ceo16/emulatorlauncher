@@ -26,6 +26,9 @@ namespace EmulatorLauncher
                 _saveStatesWatcher = null;
             }
 
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
+
             base.Cleanup();
         }
 
@@ -34,6 +37,7 @@ namespace EmulatorLauncher
         private bool _triforce = false;
         private Rectangle _windowRect = Rectangle.Empty;
         private bool _runWiiMenu = false;
+        private bool _sindenSoft = false;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -85,7 +89,7 @@ namespace EmulatorLauncher
             SetupStateSlotConfig(path);
             SetupCheevos(path);
 
-            DolphinControllers.WriteControllersConfig(path, system, _triforce);
+            DolphinControllers.WriteControllersConfig(path, system, _triforce, out _sindenSoft);
 
             if (Path.GetExtension(rom).ToLowerInvariant() == ".m3u")
                 rom = rom.Replace("\\", "/");
@@ -103,6 +107,10 @@ namespace EmulatorLauncher
             }
 
             string saveState = "";
+            string runBatch = "-b ";
+            if (SystemConfig.getOptBoolean("dolphin_gui"))
+                runBatch = "";
+
             if (File.Exists(SystemConfig["state_file"]))
                 saveState = " --save_state=\"" + Path.GetFullPath(SystemConfig["state_file"]) + "\"";
 
@@ -110,14 +118,14 @@ namespace EmulatorLauncher
                 return new ProcessStartInfo()
                 {
                     FileName = exe,
-                    Arguments = "-b -n 0000000100000002",
+                    Arguments = runBatch + "-n 0000000100000002",
                     WorkingDirectory = path,
                 };
 
             return new ProcessStartInfo()
             {
                 FileName = exe,
-                Arguments = "-b -e \"" + rom + "\"" + saveState,
+                Arguments = runBatch + "-e \"" + rom + "\"" + saveState,
                 WorkingDirectory = path,
                 WindowStyle = (_bezelFileInfo == null ? ProcessWindowStyle.Normal : ProcessWindowStyle.Maximized)
             };
@@ -238,6 +246,8 @@ namespace EmulatorLauncher
                         }
                     }
 
+                    BindBoolIniFeatureOn(ini, "Hacks", "XFBToTextureEnable", "dolphin_xfbtotexture", "True", "False");
+
                     // Store EFB Copies
                     if (Features.IsSupported("EFBCopies"))
                     {
@@ -278,9 +288,9 @@ namespace EmulatorLauncher
                     BindBoolIniFeature(ini, "Hacks", "FastTextureSampling", "manual_texture_sampling", "False", "True");
                     BindBoolIniFeature(ini, "Settings", "WaitForShadersBeforeStarting", "WaitForShadersBeforeStarting", "True", "False");
                     BindIniFeature(ini, "Settings", "ShaderCompilationMode", "ShaderCompilationMode", "2");
-                    BindIniFeature(ini, "Hacks", "EFBAccessEnable", "EFBAccessEnable", "False");
+                    BindBoolIniFeature(ini, "Hacks", "EFBAccessEnable", "EFBAccessEnable", "False", "True");
                     BindBoolIniFeatureOn(ini, "Hacks", "EFBScaledCopy", "EFBScaledCopy", "True", "False");
-                    BindBoolIniFeatureOn(ini, "Hacks", "EFBEmulateFormatChanges", "EFBEmulateFormatChanges", "True", "False");
+                    BindBoolIniFeature(ini, "Hacks", "EFBEmulateFormatChanges", "EFBEmulateFormatChanges", "True", "False");
                     BindIniFeature(ini, "Enhancements", "MaxAnisotropy", "anisotropic_filtering", "0");
                     BindBoolIniFeature(ini, "Settings", "SSAA", "ssaa", "True", "False");
                     BindBoolIniFeature(ini, "Settings", "Crop", "dolphin_crop", "True", "False");
@@ -620,11 +630,11 @@ namespace EmulatorLauncher
                                 ini.WriteValue("Core", "SIDevice" + i, "0");
                         }
                     }
-                    
+
                     // Disable auto updates
                     string updateTrack = ini.GetValue("AutoUpdate", "UpdateTrack");
                     if (updateTrack != "")
-                        ini.WriteValue("AutoUpdate", "UpdateTrack", "\" \"");
+                        ini.WriteValue("AutoUpdate", "UpdateTrack", "''");
 
                     // Set defaultISO when running the Wii Menu
                     if (_runWiiMenu)

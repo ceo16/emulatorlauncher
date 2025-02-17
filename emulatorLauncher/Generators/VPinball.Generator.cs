@@ -5,6 +5,7 @@ using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.VPinballLauncher;
 using System.Xml;
+using System.Xml.Linq;
 using System.Drawing;
 using Microsoft.Win32;
 using System.Windows.Forms;
@@ -13,6 +14,7 @@ using EmulatorLauncher.PadToKeyboard;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
 using System.Drawing.Imaging;
+using EmulatorLauncher.Common.Joysticks;
 
 namespace EmulatorLauncher
 {
@@ -63,33 +65,48 @@ namespace EmulatorLauncher
             EnsureUltraDMDRegistered(path);
             EnsureBackglassServerRegistered(path);
             EnsureVPinMameRegistered(path);
+            EnsurePinupPlayerRegistered(path);
+            EnsurePinupDOFRegistered(path);
+            EnsurePupServerRegistered(path);
+            EnsurePupDMDControlRegistered(path);
+            //WritePinUPPopperOptions(path);
 
             string romPath = Path.Combine(Path.GetDirectoryName(rom), "roms");
             if (!Directory.Exists(romPath))
                 romPath = Path.Combine(Path.GetDirectoryName(rom), ".roms");
             if (!Directory.Exists(romPath))
-                romPath = null;
+                romPath = Path.Combine(AppConfig.GetFullPath("roms"), "vpinball", "roms");
+            if (!Directory.Exists(romPath))
+                romPath = Path.Combine(AppConfig.GetFullPath("roms"), "vpinball", ".roms");
+            if (!Directory.Exists(romPath))
+                romPath = Path.Combine(AppConfig.GetFullPath("vpinball"), "VPinMAME", "roms");
+            if (!Directory.Exists(romPath))
+            {
+                romPath = Path.Combine(AppConfig.GetFullPath("roms"), "vpinball", "roms");
+                try { Directory.CreateDirectory(romPath); } catch { SimpleLogger.Instance.Error("[ERROR] Missing roms subfolder in roms\vpinball folder."); }
+            }
+
+            SimpleLogger.Instance.Info("[INFO] using rompath: " + romPath);
 
             ScreenRes sr = ScreenRes.Load(Path.GetDirectoryName(rom));
             if (sr != null)
             {
-                if (Screen.AllScreens.Length == 1 || SystemInformation.TerminalServerSession)
-                    sr.Delete();
-                else
-                {
-                    sr.ScreenResX = resolution == null ? Screen.PrimaryScreen.Bounds.Width : resolution.Width;
-                    sr.ScreenResY = resolution == null ? Screen.PrimaryScreen.Bounds.Height : resolution.Height;
+                sr.ScreenResX = resolution == null ? Screen.PrimaryScreen.Bounds.Width : resolution.Width;
+                sr.ScreenResY = resolution == null ? Screen.PrimaryScreen.Bounds.Height : resolution.Height;
 
-                    Screen secondary = Screen.AllScreens.FirstOrDefault(s => !s.Primary);
+                Screen secondary = Screen.AllScreens.FirstOrDefault(s => !s.Primary);
+                if (secondary != null)
+                {
                     sr.Screen2ResX = secondary.Bounds.Width;
                     sr.Screen2ResY = secondary.Bounds.Height;
-                    sr.Monitor = 2;
-
-                    sr.Save();
                 }
+                sr.Monitor = Screen.AllScreens.Length == 1 ? 1 : 2;
+
+                sr.Save();
             }
 
             SetupOptions(path, romPath, resolution);
+            SetupB2STableSettings(path);
 
             var commands = new List<string>();
 
@@ -149,6 +166,14 @@ namespace EmulatorLauncher
                     Process[] ultraDMDs = Process.GetProcessesByName("UltraDMD");
                     foreach (Process ultraDMD in ultraDMDs)
                         ultraDMD.Kill();
+
+                    Process[] pupDisplays = Process.GetProcessesByName("PinUpDisplay");
+                    foreach (Process pupDisplay in pupDisplays)
+                        pupDisplay.Kill();
+
+                    Process[] pupPlayers = Process.GetProcessesByName("PinUpPlayer");
+                    foreach (Process pupPlayer in pupPlayers)
+                        pupPlayer.Kill();
                 }
                 catch { }
 
@@ -207,138 +232,6 @@ namespace EmulatorLauncher
             catch { }
         }
 
-
-        class DirectB2sData
-        {
-            public static DirectB2sData FromFile(string file)
-            {
-                if (!File.Exists(file))
-                    return null;
-
-
-                XmlDocument document = new XmlDocument();
-                document.Load(file);
-
-                XmlElement element = (XmlElement)document.SelectSingleNode("DirectB2SData");
-                if (element == null)
-                    return null;
-
-                var bulbs = new List<Bulb>();
-
-                foreach (XmlElement bulb in element.SelectNodes("Illumination/Bulb"))
-                {
-                    if (!bulb.HasAttribute("Parent") || bulb.GetAttribute("Parent") != "Backglass")
-                        continue;
-
-                    try
-                    {
-                        Bulb item = new Bulb
-                        {
-                            ID = bulb.GetAttribute("ID").ToInteger(),
-                            LightColor = bulb.GetAttribute("LightColor"),
-                            LocX = bulb.GetAttribute("LocX").ToInteger(),
-                            LocY = bulb.GetAttribute("LocY").ToInteger(),
-                            Width = bulb.GetAttribute("Width").ToInteger(),
-                            Height = bulb.GetAttribute("Height").ToInteger(),
-                            Visible = bulb.GetAttribute("Visible") == "1",
-                            IsImageSnippit = bulb.GetAttribute("IsImageSnippit") == "1",
-                            Image = Misc.Base64ToImage(bulb.GetAttribute("Image"))
-                        };
-
-                        if (item.Visible && item.Image != null)
-                            bulbs.Add(item);
-                    }
-                    catch { }
-                }
-
-
-                XmlElement element13 = (XmlElement)element.SelectSingleNode("Images/BackglassImage");
-                if (element13 != null)
-                {
-                    try
-                    {
-                        var image = Misc.Base64ToImage(element13.Attributes["Value"].InnerText);
-                        if (image != null)
-                        {
-                            return new DirectB2sData()
-                            {
-                                Bulbs = bulbs.ToArray(),
-                                Image = image,
-                            };
-                        }
-                    }
-                    catch { }
-                }
-
-                return null;                
-            }
-
-            public Image RenderBackglass(int index = 0)
-            {
-                var bitmap = new Bitmap(Image);
-
-                using (Graphics g = Graphics.FromImage(bitmap))
-                {
-                    foreach (var bulb in Bulbs)
-                    {
-                        if (bulb.IsImageSnippit)
-                            continue;
-
-                        if (index == 0 && (bulb.ID & 1) == 0)
-                            continue;
-
-                        if (index == 1 && (bulb.ID & 1) == 1)
-                            continue;
-
-                        if (index == 3)
-                            continue;
-
-                        Color lightColor = Color.White;
-                        var split = bulb.LightColor.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (split.Length == 3)
-                            lightColor = Color.FromArgb(split[0].ToInteger(), split[1].ToInteger(), split[2].ToInteger());
-
-                        using (ImageAttributes imageAttrs = new ImageAttributes())
-                        {
-                            var colorMatrix = new ColorMatrix(new float[][]
-                                    {
-                                        new float[] { lightColor.R / 255f, 0, 0, 0, 0 },
-                                        new float[] { 0, lightColor.G / 255f, 0, 0, 0 },
-                                        new float[] { 0, 0, lightColor.B / 255f, 0, 0 },
-                                        new float[] { 0, 0, 0, 1, 0 },
-                                        new float[] { 0, 0, 0, 0, 1 }
-                                    });
-
-                            imageAttrs.SetColorMatrix(colorMatrix);
-
-                            Rectangle dest = new Rectangle(bulb.LocX, bulb.LocY, bulb.Width, bulb.Height);
-                            g.DrawImage(bulb.Image, dest, 0, 0, bulb.Image.Width, bulb.Image.Height, GraphicsUnit.Pixel, imageAttrs, null, IntPtr.Zero);
-                        }
-                    }
-                }
-
-                return bitmap;
-            }
-
-            public Bulb[] Bulbs { get; private set; }
-            public Image Image { get; private set; }
-
-            public class Bulb
-            {
-                public int ID { get; set; }
-
-                public string LightColor { get; set; }
-                public int LocX { get; set; }
-                public int LocY { get; set; }
-                public int Width { get; set; }
-                public int Height { get; set; }
-                public bool Visible { get; set; }
-                public bool IsImageSnippit { get; set; }
-
-                public Image Image { get; set; }                
-            }
-        }
-
         private static LoadingForm ShowSplash(string rom)
         {
             if (rom == null)
@@ -378,8 +271,6 @@ namespace EmulatorLauncher
 
             return null;
         }
-
-      
 
         private static bool FileUrlValueExists(object value)
         {
@@ -533,6 +424,284 @@ namespace EmulatorLauncher
             catch { }
         }
 
+        private void EnsurePinupPlayerRegistered(string path)
+        {
+            string keyPath = @"TypeLib\{D50F2477-84E8-4CED-9409-3735CA67FDE3}\1.0\0\win32";
+            string PinupPlayerPath = Path.Combine(path, "PinUPSystem", "PinUpPlayer.exe");
+
+            try
+            {
+                using (RegistryKey key = Registry.ClassesRoot.OpenSubKey(keyPath))
+                {
+                    if (key != null)
+                    {
+                        string value = key.GetValue(null) as string;
+                        if (value != null)
+                        {
+                            if (value != PinupPlayerPath)
+                                RegisterPinupPlayer(PinupPlayerPath);
+                            else
+                                return;
+                        }
+                        else
+                            RegisterPinupPlayer(PinupPlayerPath);
+                    }
+                    else
+                        RegisterPinupPlayer(PinupPlayerPath);
+                }
+            }
+            catch
+            { }
+        }
+
+        private void RegisterPinupPlayer(string path)
+        {
+            if (!File.Exists(path))
+            {
+                SimpleLogger.Instance.Warning("[WARNING] PinUpPlayer.exe not found.");
+                return;
+            }
+
+            try
+            {
+                SimpleLogger.Instance.Info("[Generator] Ensuring PinupPlayer is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
+                px.StartInfo.Verb = "RunAs";
+                px.StartInfo.FileName = path;
+                px.StartInfo.Arguments = "/regserver";
+                px.StartInfo.UseShellExecute = true;
+                px.StartInfo.CreateNoWindow = true;
+                px.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                px.Start();
+                px.WaitForExit();
+            }
+            catch { }
+        }
+
+        private void EnsurePinupDOFRegistered(string path)
+        {
+            string keyPath = @"TypeLib\{02B4C318-12D3-48C6-AA69-CEE342FF9D15}\1.0\0\win32";
+            string PinupDOFPath = Path.Combine(path, "PinUPSystem", "PinUpDOF.exe");
+
+            try
+            {
+                using (RegistryKey key = Registry.ClassesRoot.OpenSubKey(keyPath))
+                {
+                    if (key != null)
+                    {
+                        string value = key.GetValue(null) as string;
+                        if (value != null)
+                        {
+                            if (value != PinupDOFPath)
+                                RegisterPinupDOF(PinupDOFPath);
+                            else
+                                return;
+                        }
+                        else
+                            RegisterPinupDOF(PinupDOFPath);
+                    }
+                    else
+                        RegisterPinupDOF(PinupDOFPath);
+                }
+            }
+            catch
+            { }
+        }
+
+        private void RegisterPinupDOF(string path)
+        {
+            if (!File.Exists(path))
+            {
+                SimpleLogger.Instance.Warning("[WARNING] PinUpDOF.exe not found.");
+                return;
+            }
+
+            try
+            {
+                SimpleLogger.Instance.Info("[Generator] Ensuring PinUpDOF is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
+                px.StartInfo.Verb = "RunAs";
+                px.StartInfo.FileName = path;
+                px.StartInfo.Arguments = "/regserver";
+                px.StartInfo.UseShellExecute = true;
+                px.StartInfo.CreateNoWindow = true;
+                px.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                px.Start();
+                px.WaitForExit();
+            }
+            catch { }
+        }
+
+        private void EnsurePupServerRegistered(string path)
+        {
+            string keyPath = @"TypeLib\{5EC048E8-EF55-40B8-902D-D6ECD1C8FF4E}\1.0\0\win32";
+            string PinupDOFPath = Path.Combine(path, "PinUPSystem", "PuPServer.exe");
+
+            try
+            {
+                using (RegistryKey key = Registry.ClassesRoot.OpenSubKey(keyPath))
+                {
+                    if (key != null)
+                    {
+                        string value = key.GetValue(null) as string;
+                        if (value != null)
+                        {
+                            if (value != PinupDOFPath)
+                                RegisterPupServer(PinupDOFPath);
+                            else
+                                return;
+                        }
+                        else
+                            RegisterPupServer(PinupDOFPath);
+                    }
+                    else
+                        RegisterPupServer(PinupDOFPath);
+                }
+            }
+            catch
+            { }
+        }
+
+        private void RegisterPupServer(string path)
+        {
+            if (!File.Exists(path))
+            {
+                SimpleLogger.Instance.Warning("[WARNING] PuPServer.exe not found.");
+                return;
+            }
+
+            try
+            {
+                SimpleLogger.Instance.Info("[Generator] Ensuring PuPServer is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
+                px.StartInfo.Verb = "RunAs";
+                px.StartInfo.FileName = path;
+                px.StartInfo.Arguments = "/regserver";
+                px.StartInfo.UseShellExecute = true;
+                px.StartInfo.CreateNoWindow = true;
+                px.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                px.Start();
+                px.WaitForExit();
+            }
+            catch { }
+        }
+
+        private void EnsurePupDMDControlRegistered(string path)
+        {
+            string keyPath = @"TypeLib\{5049E487-2802-46B0-A511-8B198B274E1B}\1.0\0\win32";
+            string PUPDMDControl = Path.Combine(path, "VPinMAME", "PUPDMDControl.exe");
+
+            try
+            {
+                using (RegistryKey key = Registry.ClassesRoot.OpenSubKey(keyPath))
+                {
+                    if (key != null)
+                    {
+                        string value = key.GetValue(null) as string;
+                        if (value != null)
+                        {
+                            if (value != PUPDMDControl)
+                                RegisterPupDMDControl(PUPDMDControl);
+                            else
+                                return;
+                        }
+                        else
+                            RegisterPupDMDControl(PUPDMDControl);
+                    }
+                    else
+                        RegisterPupDMDControl(PUPDMDControl);
+                }
+            }
+            catch
+            { }
+        }
+
+        private void RegisterPupDMDControl(string path)
+        {
+            if (!File.Exists(path))
+            {
+                SimpleLogger.Instance.Warning("[WARNING] PUPDMDControl.exe not found.");
+                return;
+            }
+
+            try
+            {
+                SimpleLogger.Instance.Info("[Generator] Ensuring PUPDMDControl is registered.");
+
+                Process px = new Process
+                {
+                    EnableRaisingEvents = true
+                };
+                px.StartInfo.Verb = "RunAs";
+                px.StartInfo.FileName = path;
+                px.StartInfo.Arguments = "/regserver";
+                px.StartInfo.UseShellExecute = true;
+                px.StartInfo.CreateNoWindow = true;
+                px.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                px.Start();
+                px.WaitForExit();
+            }
+            catch { }
+        }
+
+        /*private void WritePinUPPopperOptions(string path)
+        {
+            string PopperPath = "PopperPath";
+            string VPINMamePath = "VPINMamePath";
+            string VPXPath = "VPXPath";
+
+            string targetPopperPath = Path.Combine(path, "PinUPSystem");
+            string targetVPINMamePath = Path.Combine(path, "VPinMAME");
+            string targetVPXPath = path;
+
+            try
+            {
+                var softwareKey = Registry.CurrentUser.OpenSubKey(@"Software\PinUPPopper\Settings", true);
+                {
+                    if (softwareKey != null)
+                    {
+                        string PopperPathvalue = softwareKey.GetValue(PopperPath) as string;
+
+                        if (PopperPathvalue != null)
+                        {
+                            if (PopperPathvalue != targetPopperPath)
+                                SetOption(softwareKey, "PopperPath", targetPopperPath);
+                        }
+
+                        string VPINMamePathvalue = softwareKey.GetValue(VPINMamePath) as string;
+
+                        if (VPINMamePathvalue != null)
+                        {
+                            if (VPINMamePathvalue != targetVPINMamePath)
+                                SetOption(softwareKey, "VPINMamePath", targetVPINMamePath);
+                        }
+
+                        string VPXPathvalue = softwareKey.GetValue(VPXPath) as string;
+
+                        if (VPXPathvalue != null)
+                        {
+                            if (VPXPathvalue != targetVPINMamePath)
+                                SetOption(softwareKey, "VPXPath", targetVPINMamePath);
+                        }
+                    }  
+                }
+            }
+            catch
+            { }
+        }*/
+
         private static string GetRegAsmPath(RegistryViewEx view = RegistryViewEx.Registry32)
         {
             string installRoot = string.Empty;
@@ -648,12 +817,10 @@ namespace EmulatorLauncher
             {
                 SimpleLogger.Instance.Info("[Generator] Writing config to VPinballX.ini file.");
 
-                if (Screen.AllScreens.Length > 1 && (!SystemConfig.isOptSet("enableb2s") || SystemConfig.getOptBoolean("enableb2s")) && !SystemInformation.TerminalServerSession)
-                    ini.WriteValue("Controller", "ForceDisableB2S", "0");
-                else if (SystemConfig.getOptBoolean("enableb2s"))
-                    ini.WriteValue("Controller", "ForceDisableB2S", "0");
-                else
+                if (SystemConfig.isOptSet("enableb2s") && !SystemConfig.getOptBoolean("enableb2s"))
                     ini.WriteValue("Controller", "ForceDisableB2S", "1");
+                else
+                    ini.WriteValue("Controller", "ForceDisableB2S", "0");
 
                 if (string.IsNullOrEmpty(ini.GetValue("Controller", "DOFContactors")))
                 {
@@ -687,10 +854,8 @@ namespace EmulatorLauncher
                 ini.WriteValue("Player", "Display", monitorIndex.ToString());
 
                 // Vertical sync
-                if (SystemConfig.isOptSet("video_vsync") && SystemConfig["video_vsync"] == "adaptative")
-                    ini.WriteValue("Player", "SyncMode", "2");
-                else if (SystemConfig.isOptSet("video_vsync") && SystemConfig["video_vsync"] == "false")
-                    ini.WriteValue("Player", "SyncMode", "0");
+                if (SystemConfig.isOptSet("vp_vsync") && !string.IsNullOrEmpty(SystemConfig["vp_vsync"]))
+                    ini.WriteValue("Player", "SyncMode", SystemConfig["vp_vsync"]);
                 else
                     ini.WriteValue("Player", "SyncMode", "3");
 
@@ -717,16 +882,59 @@ namespace EmulatorLauncher
                 ini.WriteValue("Player", "UseNVidiaAPI", SystemConfig.getOptBoolean("vp_nvidia") ? "1" : "0");
                 ini.WriteValue("Player", "SoftwareVertexProcessing", SystemConfig.getOptBoolean("vp_vertex") ? "1" : "0");
 
+                // level of details
+                if (SystemConfig.isOptSet("vp_details") && !string.IsNullOrEmpty(SystemConfig["vp_details"]))
+                    ini.WriteValue("Player", "AlphaRampAccuracy", SystemConfig["vp_details"].ToIntegerString());
+                else
+                    ini.WriteValue("Player", "AlphaRampAccuracy", "10");
+
                 // Audio
                 ini.WriteValue("Player", "PlayMusic", SystemConfig.getOptBoolean("vp_music_off") ? "0" : "1");
 
                 // Controls
+                Controller controller = null;
+                bool isXinput = false;
+                string LRAxis = "1";
+                string UDAxis = "2";
+                string PlungerAxis = "4";
+
+                if (Controllers != null && Controllers.Count > 0)
+                {
+                    controller = Controllers.FirstOrDefault(c => c.PlayerIndex == 1);
+                    if (controller != null && controller.IsXInputDevice)
+                        isXinput = true;
+                    else if (controller != null)
+                    {
+                        SdlToDirectInput dinputController = getDInputController(controller);
+                        if (dinputController != null)
+                        {
+                            if (dinputController.ButtonMappings.ContainsKey("leftx"))
+                                LRAxis = getDinputID(dinputController.ButtonMappings, "leftx");
+                            if (dinputController.ButtonMappings.ContainsKey("lefty"))
+                                UDAxis = getDinputID(dinputController.ButtonMappings, "lefty");
+                            if (dinputController.ButtonMappings.ContainsKey("righty"))
+                                PlungerAxis = getDinputID(dinputController.ButtonMappings, "righty");
+                        }
+                        if (LRAxis == null)
+                            LRAxis = "1";
+                        if (UDAxis == null)
+                            UDAxis = "2";
+                        if (PlungerAxis == null)
+                            PlungerAxis = "4";
+                    }
+                }
+
+                if (SystemConfig.isOptSet("vp_inputdriver") && !string.IsNullOrEmpty(SystemConfig["vp_inputdriver"]))
+                    ini.WriteValue("Player", "InputApi", SystemConfig["vp_inputdriver"]);
+                else
+                    ini.WriteValue("Player", "InputApi", isXinput ? "1" : "0");
 
                 if (!SystemConfig.getOptBoolean("disableautocontrollers"))
                 {
-                    ini.WriteValue("Player", "LRAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : "1");
-                    ini.WriteValue("Player", "UDAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : "2");
-                    ini.WriteValue("Player", "PlungerAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : "3");
+                    ini.WriteValue("Player", "LRAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : LRAxis);
+                    ini.WriteValue("Player", "UDAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : UDAxis);
+                    ini.WriteValue("Player", "PlungerAxis", SystemConfig.getOptBoolean("nouse_joyaxis") ? "0" : PlungerAxis);
+                    ini.WriteValue("Player", "ReversePlungerAxis", "1");
                     BindIniFeatureSlider(ini, "Player", "DeadZone", "joy_deadzone", "15");
                 }
 
@@ -737,9 +945,46 @@ namespace EmulatorLauncher
                 ini.WriteValue("Editor", "WindowMaximized", "0");
                 ini.WriteValue("Editor", "SelectTableOnStart", "");
                 ini.WriteValue("Editor", "SelectTableOnPlayerClose", "");
+
+                WriteKBconfig(ini);
+                
+                ini.Save();
             }
         }
 
+        private void WriteKBconfig(IniFile ini)
+        {
+            if (SystemConfig.getOptBoolean("disableautocontrollers"))
+                return;
+
+            ini.WriteValue("Player", "LFlipKey", "42");
+            ini.WriteValue("Player", "RFlipKey", "54");
+            ini.WriteValue("Player", "StagedLFlipKey", "219");
+            ini.WriteValue("Player", "StagedRFlipKey", "184");
+            ini.WriteValue("Player", "LTiltKey", "44");
+            ini.WriteValue("Player", "RTiltKey", "53");
+            ini.WriteValue("Player", "CTiltKey", "57");
+            ini.WriteValue("Player", "PlungerKey", "28");
+            ini.WriteValue("Player", "FrameCount", "87");
+            ini.WriteValue("Player", "DebugBalls", "24");
+            ini.WriteValue("Player", "Debugger", "32");
+            ini.WriteValue("Player", "AddCreditKey", "6");
+            ini.WriteValue("Player", "AddCreditKey2", "5");
+            ini.WriteValue("Player", "StartGameKey", "2");
+            ini.WriteValue("Player", "MechTilt", "20");
+            ini.WriteValue("Player", "RMagnaSave", "157");
+            ini.WriteValue("Player", "LMagnaSave", "29");
+            ini.WriteValue("Player", "ExitGameKey", "16");
+            ini.WriteValue("Player", "VolumeUp", "13");
+            ini.WriteValue("Player", "VolumeDown", "12");
+            ini.WriteValue("Player", "LockbarKey", "56");
+            ini.WriteValue("Player", "PauseKey", "25");
+            ini.WriteValue("Player", "TweakKey", "88");
+            ini.WriteValue("Player", "JoyCustom1Key", "200");
+            ini.WriteValue("Player", "JoyCustom2Key", "208");
+            ini.WriteValue("Player", "JoyCustom3Key", "203");
+            ini.WriteValue("Player", "JoyCustom4Key", "205");
+        }
         private void SetupOptionsRegistry(ScreenResolution resolution)
         {
             //HKEY_CURRENT_USER\Software\Visual Pinball\VP10\Player
@@ -890,9 +1135,9 @@ namespace EmulatorLauncher
 
                 DisableVPinMameLicenceDialogs(romPath, visualPinMame);
 
-                visualPinMame.CreateSubKey("default");
-                
                 var globalKey = visualPinMame.CreateSubKey("globals");
+                var defaultKey = visualPinMame.CreateSubKey("default");
+
                 if (globalKey != null)
                 {
                     string vPinMamePath = Path.Combine(path, "VPinMAME");
@@ -922,6 +1167,47 @@ namespace EmulatorLauncher
                     SetOption(globalKey, "window", 1);
 
                     globalKey.Close();
+                }
+
+                if (defaultKey != null)
+                {
+                    if (Program.SystemConfig.getOptBoolean("vpmame_dmd"))
+                    {
+                        SetOption(defaultKey, "showpindmd", 1);
+                        SetOption(defaultKey, "showwindmd", 0);
+                    }
+                    else
+                    {
+                        SetOption(defaultKey, "showpindmd", 0);
+                        SetOption(defaultKey, "showwindmd", 1);
+                    }
+
+                    defaultKey.Close();
+                }
+
+                if (romPath != null)
+                {
+                    string[] romList = Directory.GetFiles(romPath, "*.zip").Select(r => Path.GetFileNameWithoutExtension(r)).Distinct().ToArray();
+                    foreach (var rom in romList)
+                    {
+                        var romKey = visualPinMame.OpenSubKey(rom, true);
+
+                        if (romKey == null)
+                            romKey = visualPinMame.CreateSubKey(rom);
+
+                        if (Program.SystemConfig.getOptBoolean("vpmame_dmd"))
+                        {
+                            SetOption(romKey, "showpindmd", 1);
+                            SetOption(romKey, "showwindmd", 0);
+                        }
+                        else
+                        {
+                            SetOption(romKey, "showpindmd", 0);
+                            SetOption(romKey, "showwindmd", 1);
+                        }
+
+                        romKey.Close();
+                    }
                 }
             }
 
@@ -972,6 +1258,232 @@ namespace EmulatorLauncher
                 return;
 
             regKeyc.SetValue(name, value);
+        }
+
+        private void SetupB2STableSettings(string path)
+        {
+            string b2STableSettingsPath = Path.Combine(path, "BackglassServer", "B2STableSettings.xml");
+
+            if (!File.Exists(b2STableSettingsPath))
+            {
+                try
+                {
+                    XDocument xmlDoc = new XDocument(
+                    new XElement("B2STableSettings",
+                    new XElement("ArePluginsOn", 1),
+                    new XElement("DefaultStartMode", 2),
+                    new XElement("DisableFuzzyMatching", 1),
+                    new XElement("LogPath", ""),  // Empty value
+                    new XElement("IsLampsStateLogOn", 0),
+                    new XElement("IsSolenoidsStateLogOn", 0),
+                    new XElement("IsGIStringsStateLogOn", 0),
+                    new XElement("IsLEDsStateLogOn", 0),
+                    new XElement("IsPaintingLogOn", 0),
+                    new XElement("IsStatisticsBackglassOn", 0),
+                    new XElement("FormToFront", 1),
+                    new XElement("ShowStartupError", 0),
+                    new XElement("ScreenshotPath", ""),  // Empty value
+                    new XElement("ScreenshotFileType", 0)
+                    ));
+
+                    xmlDoc.Save(b2STableSettingsPath);
+                }
+                catch { }
+            }
+            else
+            {
+                try
+                {
+                    XDocument xmlDoc = XDocument.Load(b2STableSettingsPath);
+                    XElement root = xmlDoc.Element("B2STableSettings");
+
+                    if (root != null)
+                    {
+                        XElement element = root.Element("ArePluginsOn");
+
+                        if (element != null)
+                            element.Value = "1";
+                        else
+                            root.Add(new XElement("ArePluginsOn", "1"));
+
+                        xmlDoc.Save(b2STableSettingsPath);
+                    }
+                    else
+                        SimpleLogger.Instance.Warning("[WARNING] File B2STableSettings.xml is corrupted.");
+                }
+                catch {}
+            }
+        }
+
+        private SdlToDirectInput getDInputController(Controller ctrl)
+        {
+            string gamecontrollerDB = Path.Combine(Program.AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
+            if (!File.Exists(gamecontrollerDB))
+                return null;
+
+            string guid = (ctrl.Guid.ToString()).ToLowerInvariant();
+            if (string.IsNullOrEmpty(guid))
+                return null;
+
+            SdlToDirectInput dinputController = GameControllerDBParser.ParseByGuid(gamecontrollerDB, guid);
+            if (dinputController == null)
+                return null;
+            else
+                return dinputController;
+        }
+
+        private string getDinputID(Dictionary<string, string> mapping, string key)
+        {
+            if (!mapping.ContainsKey(key))
+                return null;
+
+            string button = mapping[key];
+
+            if (button.StartsWith("-a") || button.StartsWith("+a"))
+            {
+                int axisID = button.Substring(2).ToInteger();
+                axisID++;
+                return axisID.ToString();
+            }
+            else if (button.StartsWith("a"))
+            {
+                int axisID = button.Substring(1).ToInteger();
+                axisID++;
+                return axisID.ToString();
+            }
+
+            return null;
+        }
+
+        class DirectB2sData
+        {
+            public static DirectB2sData FromFile(string file)
+            {
+                if (!File.Exists(file))
+                    return null;
+
+
+                XmlDocument document = new XmlDocument();
+                document.Load(file);
+
+                XmlElement element = (XmlElement)document.SelectSingleNode("DirectB2SData");
+                if (element == null)
+                    return null;
+
+                var bulbs = new List<Bulb>();
+
+                foreach (XmlElement bulb in element.SelectNodes("Illumination/Bulb"))
+                {
+                    if (!bulb.HasAttribute("Parent") || bulb.GetAttribute("Parent") != "Backglass")
+                        continue;
+
+                    try
+                    {
+                        Bulb item = new Bulb
+                        {
+                            ID = bulb.GetAttribute("ID").ToInteger(),
+                            LightColor = bulb.GetAttribute("LightColor"),
+                            LocX = bulb.GetAttribute("LocX").ToInteger(),
+                            LocY = bulb.GetAttribute("LocY").ToInteger(),
+                            Width = bulb.GetAttribute("Width").ToInteger(),
+                            Height = bulb.GetAttribute("Height").ToInteger(),
+                            Visible = bulb.GetAttribute("Visible") == "1",
+                            IsImageSnippit = bulb.GetAttribute("IsImageSnippit") == "1",
+                            Image = Misc.Base64ToImage(bulb.GetAttribute("Image"))
+                        };
+
+                        if (item.Visible && item.Image != null)
+                            bulbs.Add(item);
+                    }
+                    catch { }
+                }
+
+
+                XmlElement element13 = (XmlElement)element.SelectSingleNode("Images/BackglassImage");
+                if (element13 != null)
+                {
+                    try
+                    {
+                        var image = Misc.Base64ToImage(element13.Attributes["Value"].InnerText);
+                        if (image != null)
+                        {
+                            return new DirectB2sData()
+                            {
+                                Bulbs = bulbs.ToArray(),
+                                Image = image,
+                            };
+                        }
+                    }
+                    catch { }
+                }
+
+                return null;
+            }
+
+            public Image RenderBackglass(int index = 0)
+            {
+                var bitmap = new Bitmap(Image);
+
+                using (Graphics g = Graphics.FromImage(bitmap))
+                {
+                    foreach (var bulb in Bulbs)
+                    {
+                        if (bulb.IsImageSnippit)
+                            continue;
+
+                        if (index == 0 && (bulb.ID & 1) == 0)
+                            continue;
+
+                        if (index == 1 && (bulb.ID & 1) == 1)
+                            continue;
+
+                        if (index == 3)
+                            continue;
+
+                        Color lightColor = Color.White;
+                        var split = bulb.LightColor.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (split.Length == 3)
+                            lightColor = Color.FromArgb(split[0].ToInteger(), split[1].ToInteger(), split[2].ToInteger());
+
+                        using (ImageAttributes imageAttrs = new ImageAttributes())
+                        {
+                            var colorMatrix = new ColorMatrix(new float[][]
+                                    {
+                                        new float[] { lightColor.R / 255f, 0, 0, 0, 0 },
+                                        new float[] { 0, lightColor.G / 255f, 0, 0, 0 },
+                                        new float[] { 0, 0, lightColor.B / 255f, 0, 0 },
+                                        new float[] { 0, 0, 0, 1, 0 },
+                                        new float[] { 0, 0, 0, 0, 1 }
+                                    });
+
+                            imageAttrs.SetColorMatrix(colorMatrix);
+
+                            Rectangle dest = new Rectangle(bulb.LocX, bulb.LocY, bulb.Width, bulb.Height);
+                            g.DrawImage(bulb.Image, dest, 0, 0, bulb.Image.Width, bulb.Image.Height, GraphicsUnit.Pixel, imageAttrs, null, IntPtr.Zero);
+                        }
+                    }
+                }
+
+                return bitmap;
+            }
+
+            public Bulb[] Bulbs { get; private set; }
+            public Image Image { get; private set; }
+
+            public class Bulb
+            {
+                public int ID { get; set; }
+
+                public string LightColor { get; set; }
+                public int LocX { get; set; }
+                public int LocY { get; set; }
+                public int Width { get; set; }
+                public int Height { get; set; }
+                public bool Visible { get; set; }
+                public bool IsImageSnippit { get; set; }
+
+                public Image Image { get; set; }
+            }
         }
     }
 }
