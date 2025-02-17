@@ -32,7 +32,7 @@ namespace EmulatorLauncher
                 Directory.CreateDirectory(folder);
 
             // Check if config file already exists or not and create it if not
-            string controllerSettings = Path.Combine(folder, "Retrobat.yml");
+            string controllerSettings = Path.Combine(folder, "Lumaca.yml");
             
 
             var yml = YmlFile.Load(controllerSettings);
@@ -942,7 +942,7 @@ namespace EmulatorLauncher
             var yml = YmlFile.Load(activeConfigFile);
             var activeConfig = yml.GetOrCreateContainer("Active Configurations");
             
-            activeConfig["global"] = "Retrobat";
+            activeConfig["global"] = "Lumaca";
 
             yml.Save(activeConfigFile);
         }

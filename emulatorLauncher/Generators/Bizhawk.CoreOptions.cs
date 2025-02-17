@@ -119,7 +119,7 @@ namespace EmulatorLauncher
             BindBoolFeatureOn(encoreSyncSettings, "IsNew3ds", "bizhawk_3ds_new3ds", "true", "false");
             BindFeature(encoreSyncSettings, "RegionValue", "bizhawk_3ds_region", "-1");
             BindFeature(encoreSyncSettings, "CFGSystemLanguage", "bizhawk_3ds_language", "1");
-            encoreSyncSettings["CFGUsername"] = "RETROBAT";
+            encoreSyncSettings["CFGUsername"] = "LUMACA";
         }
 
         private void ConfigureAtari2600(DynamicJson coreSyncSettings, string core)

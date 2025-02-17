@@ -9,7 +9,7 @@ namespace EmulatorLauncher.Libretro
     partial class LibRetroGenerator : Generator
     {
         // Used to get user specific remap files from inputmapping yml file
-        // Used to managed Retroarch remaps and align controls between several cores (Retrobat default remaps)
+        // Used to managed Retroarch remaps and align controls between several cores (Lumaca default remaps)
         // Used for options to invert buttons, etc.
 
 

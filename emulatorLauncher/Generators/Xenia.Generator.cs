@@ -74,7 +74,7 @@ namespace EmulatorLauncher
 
             if (_xeniaManagerConfig)
             {
-                SimpleLogger.Instance.Info("[INFO] Using Xenia Manager Configuration file, RetroBat will not append configuration.");
+                SimpleLogger.Instance.Info("[INFO] Using Xenia Manager Configuration file, Lumaca will not append configuration.");
                 commandArray.Add("--config");
                 commandArray.Add("\"" + _xeniaManagerConfigFile + "\"");
             }

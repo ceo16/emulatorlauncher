@@ -575,7 +575,7 @@ namespace EmulatorLauncher
             // User specific
             "{userpath}\\teknoparrot.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\teknoparrot.yml",
         };
 
