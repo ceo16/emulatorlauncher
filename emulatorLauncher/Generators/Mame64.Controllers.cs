@@ -10,6 +10,8 @@ namespace EmulatorLauncher
 {
     partial class Mame64Generator
     {
+        private bool _sindenSoft = false;
+
         private void UpdateSdlControllersWithHints()
         {
             var hints = new List<string>
@@ -30,6 +32,11 @@ namespace EmulatorLauncher
 
             int gunCount = RawLightgun.GetUsableLightGunCount();
             var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
 
             if (Controllers.Count == 0 && gunCount == 0)
                 return false;
@@ -198,6 +205,11 @@ namespace EmulatorLauncher
                     var hIndex = hybridController[controller];
                     joy = "JOYCODE_" + hIndex + "_";
                 }
+
+                // Override index through option
+                string indexOption = "mame_p" + controller.PlayerIndex + "_forceindex";
+                if (SystemConfig.isOptSet(indexOption) && !string.IsNullOrEmpty(SystemConfig[indexOption]))
+                    joy = "JOYCODE_" + SystemConfig[indexOption] + "_";
 
                 // Get dinput mapping information
                 if (!isXinput)

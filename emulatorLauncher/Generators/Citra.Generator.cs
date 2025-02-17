@@ -157,9 +157,6 @@ namespace EmulatorLauncher
                 ini.WriteValue("UI", "Paths\\screenshotPath\\default", "false");
                 ini.WriteValue("UI", "Paths\\screenshotPath", screenshotPath.Replace("\\", "/"));
 
-                ini.WriteValue("UI", "Updater\\check_for_update_on_start\\default", "false");
-                ini.WriteValue("UI", "Updater\\check_for_update_on_start", "false");
-
                 ini.WriteValue("UI", "fullscreen\\default", fullscreen ? "false" : "true");
                 ini.WriteValue("UI", "fullscreen", fullscreen ? "true" : "false");
 
@@ -213,6 +210,20 @@ namespace EmulatorLauncher
                     {
                         ini.WriteValue("Renderer", "texture_filter\\default", "true");
                         ini.WriteValue("Renderer", "texture_filter", "0");
+                    }
+                }
+
+                if (Features.IsSupported("citra_vsync"))
+                {
+                    if (SystemConfig.isOptSet("citra_vsync") && !SystemConfig.getOptBoolean("citra_vsync"))
+                    {
+                        ini.WriteValue("Renderer", "use_vsync_new\\default", "false");
+                        ini.WriteValue("Renderer", "use_vsync_new", "false");
+                    }
+                    else
+                    {
+                        ini.WriteValue("Renderer", "use_vsync_new\\default", "true");
+                        ini.WriteValue("Renderer", "use_vsync_new", "true");
                     }
                 }
 
@@ -305,7 +316,10 @@ namespace EmulatorLauncher
 
             var toSet = new byte[] { (byte)langId };
             for (int i = 0; i < toSet.Length; i++)
+            {
                 bytes[128] = toSet[i];
+                bytes[272] = toSet[i];
+            }
 
             File.WriteAllBytes(path, bytes);
         }

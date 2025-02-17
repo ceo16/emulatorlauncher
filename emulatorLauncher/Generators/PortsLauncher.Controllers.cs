@@ -7,13 +7,39 @@ using System.Collections.Generic;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Joysticks;
 using Newtonsoft.Json.Linq;
+using System.Windows.Controls;
 
 namespace EmulatorLauncher
 {
     partial class PortsLauncherGenerator : Generator
     {
-        #region cgenius
+        #region cdogs
+        private void ConfigureCDogsControls(DynamicJson settings)
+        {
+            if (_emulator != "cdogs")
+                return;
 
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
+                return;
+
+            var input = settings.GetOrCreateContainer("Input");
+            var player1 = input.GetOrCreateContainer("PlayerCodes0");
+            var player2 = input.GetOrCreateContainer("PlayerCodes1");
+
+            // Set config based on number of pads
+            //int controllerCount = Controllers.Where(c => !c.IsKeyboard).Count();
+            //Controller c1 = null;
+            //Controller c2 = null;
+
+            foreach (var s in cdogsKeyboard1)
+                player1[s.Key] = s.Value;
+
+            foreach (var s in cdogsKeyboard2)
+                player2[s.Key] = s.Value;
+        }
+        #endregion
+
+        #region cgenius
         private void ConfigureCGeniusControls(IniFile ini)
         {
             if (_emulator != "cgenius")
@@ -117,6 +143,207 @@ namespace EmulatorLauncher
                 BindBoolIniFeature(ini, "input" + padIndex, "SuperPogo", "cgenius_SuperPogo", "true", "false");
                 BindBoolIniFeatureOn(ini, "input" + padIndex, "ImpossiblePogo", "cgenius_ImpossiblePogo", "true", "false");
                 BindBoolIniFeature(ini, "input" + padIndex, "AutoFire", "cgenius_AutoFire", "true", "false");
+            }
+        }
+        #endregion
+
+        #region dhewm3
+        private void ConfigureDhewm3Controls(List<Dhewm3ConfigChange> changes)
+        {
+            if (_emulator != "dhewm3")
+                return;
+
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
+                return;
+
+            // Keyboard defaults
+            changes.Add(new Dhewm3ConfigChange("bind", "TAB", "_impulse19"));
+            changes.Add(new Dhewm3ConfigChange("bind", "ENTER", "_button2"));
+            changes.Add(new Dhewm3ConfigChange("bind", "ESCAPE", "togglemenu"));
+            changes.Add(new Dhewm3ConfigChange("bind", "SPACE", "_moveup"));
+            changes.Add(new Dhewm3ConfigChange("bind", "/", "_impulse14"));
+            changes.Add(new Dhewm3ConfigChange("bind", "0", "_impulse27"));
+            changes.Add(new Dhewm3ConfigChange("bind", "1", "_impulse1"));
+            changes.Add(new Dhewm3ConfigChange("bind", "2", "_impulse3"));
+            changes.Add(new Dhewm3ConfigChange("bind", "3", "_impulse4"));
+            changes.Add(new Dhewm3ConfigChange("bind", "4", "_impulse6"));
+            changes.Add(new Dhewm3ConfigChange("bind", "5", "_impulse7"));
+            changes.Add(new Dhewm3ConfigChange("bind", "6", "_impulse8"));
+            changes.Add(new Dhewm3ConfigChange("bind", "7", "_impulse9"));
+            changes.Add(new Dhewm3ConfigChange("bind", "8", "_impulse10"));
+            changes.Add(new Dhewm3ConfigChange("bind", "9", "_impulse11"));
+            changes.Add(new Dhewm3ConfigChange("bind", "[", "_impulse15"));
+            changes.Add(new Dhewm3ConfigChange("bind", "\\", "_mlook"));
+            changes.Add(new Dhewm3ConfigChange("bind", "]", "_impulse14"));
+            changes.Add(new Dhewm3ConfigChange("bind", "a", "_moveleft"));
+            changes.Add(new Dhewm3ConfigChange("bind", "c", "_movedown"));
+            changes.Add(new Dhewm3ConfigChange("bind", "d", "_moveright"));
+            changes.Add(new Dhewm3ConfigChange("bind", "f", "_impulse0"));
+            changes.Add(new Dhewm3ConfigChange("bind", "q", "_impulse12"));
+            changes.Add(new Dhewm3ConfigChange("bind", "r", "_impulse13"));
+            changes.Add(new Dhewm3ConfigChange("bind", "s", "_back"));
+            changes.Add(new Dhewm3ConfigChange("bind", "t", "clientMessageMode"));
+            changes.Add(new Dhewm3ConfigChange("bind", "w", "_forward"));
+            changes.Add(new Dhewm3ConfigChange("bind", "y", "clientMessageMode 1"));
+            changes.Add(new Dhewm3ConfigChange("bind", "z", "_zoom"));
+            changes.Add(new Dhewm3ConfigChange("bind", "BACKSPACE", "clientDropWeapon"));
+            changes.Add(new Dhewm3ConfigChange("bind", "PAUSE", "pause"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F11", "pause"));
+            changes.Add(new Dhewm3ConfigChange("bind", "UPARROW", "_forward"));
+            changes.Add(new Dhewm3ConfigChange("bind", "DOWNARROW", "_back"));
+            changes.Add(new Dhewm3ConfigChange("bind", "LEFTARROW", "_moveLeft"));
+            changes.Add(new Dhewm3ConfigChange("bind", "RIGHTARROW", "_moveright"));
+            changes.Add(new Dhewm3ConfigChange("bind", "ALT", "_strafe"));
+            changes.Add(new Dhewm3ConfigChange("bind", "CTRL", "_attack"));
+            changes.Add(new Dhewm3ConfigChange("bind", "SHIFT", "_speed"));
+            changes.Add(new Dhewm3ConfigChange("bind", "DEL", "_lookdown"));
+            changes.Add(new Dhewm3ConfigChange("bind", "PGDN", "_lookup"));
+            changes.Add(new Dhewm3ConfigChange("bind", "END", "_impulse18"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F1", "_impulse28"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F2", "_impulse29"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F3", "_impulse17"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F5", "savegame quick"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F6", "_impulse20"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F7", "_impulse22"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F9", "loadgame quick"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F10", "dhewm3Settings"));
+            changes.Add(new Dhewm3ConfigChange("bind", "F12", "screenshot"));
+            changes.Add(new Dhewm3ConfigChange("bind", "MOUSE1", "_attack"));
+            changes.Add(new Dhewm3ConfigChange("bind", "MOUSE2", "_moveup"));
+            changes.Add(new Dhewm3ConfigChange("bind", "MOUSE3", "_zoom"));
+            changes.Add(new Dhewm3ConfigChange("bind", "MWHEELDOWN", "_impulse15"));
+            changes.Add(new Dhewm3ConfigChange("bind", "MWHEELUP", "_impulse14"));
+
+            int controllerCount = Controllers.Where(c => !c.IsKeyboard).Count();
+            if (controllerCount > 0)
+            {
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_SOUTH", "_moveUp"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_EAST", "_moveDown"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_WEST", "_speed"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_NORTH", "_zoom"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_LSHOULDER", "_impulse13"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_BTN_RSHOULDER", "_attack"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_DPAD_UP", "_forward"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_DPAD_DOWN", "_back"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_DPAD_LEFT", "_moveLeft"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_DPAD_RIGHT", "_moveRight"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK1_UP", "_forward"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK1_DOWN", "_back"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK1_LEFT", "_moveLeft"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK1_RIGHT", "_moveRight"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK2_UP", "_lookUp"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK2_DOWN", "_lookDown"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK2_LEFT", "_left"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_STICK2_RIGHT", "_right"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_TRIGGER1", "_impulse15"));
+                changes.Add(new Dhewm3ConfigChange("bind", "JOY_TRIGGER2", "_impulse14"));
+            }
+        }
+        #endregion
+
+        #region pdark
+        private void ConfigurePDarkControls(IniFile ini)
+        {
+            if (_emulator != "pdark")
+                return;
+
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
+                return;
+
+            ini.WriteValue("Input", "FirstGamepadNum", "0");
+
+            for (int i = 1; i < 5; i++)
+            {
+                string gameSection = "Game.Player" + i;
+                ini.WriteValue(gameSection, "ExtendedControls", "1");
+
+                string inputSection = "Input.Player" + i;
+
+                if (SystemConfig.isOptSet("pdark_rumble") && !string.IsNullOrEmpty(SystemConfig["pdark_rumble"]))
+                    ini.WriteValue(inputSection, "RumbleScale", SystemConfig["pdark_rumble"]);
+                else
+                    ini.WriteValue(inputSection, "RumbleScale", "0.500000");
+
+                ini.WriteValue(inputSection, "LStickDeadzoneX", "4096");
+                ini.WriteValue(inputSection, "LStickDeadzoneY", "4096");
+                ini.WriteValue(inputSection, "RStickDeadzoneX", "4096");
+                ini.WriteValue(inputSection, "RStickDeadzoneY", "6144");
+                ini.WriteValue(inputSection, "LStickScaleX", "1.000000");
+                ini.WriteValue(inputSection, "LStickScaleY", "1.000000");
+                ini.WriteValue(inputSection, "RStickScaleX", "1.000000");
+                ini.WriteValue(inputSection, "RStickScaleY", "1.000000");
+                ini.WriteValue(inputSection, "StickCButtons", "0");
+                ini.WriteValue(inputSection, "SwapSticks", "1");
+                ini.WriteValue(inputSection, "ControllerIndex", "-1");
+
+                string bindingSection = "Input.Player" + i + ".Binds";
+                foreach (string key in pdarkMapping)
+                {
+                    ini.WriteValue(bindingSection, key, "NONE");
+                }
+            }
+
+            foreach (var controller in this.Controllers.OrderBy(i => i.PlayerIndex).Take(4))
+                ConfigurePDarkInput(ini, controller, controller.PlayerIndex);
+        }
+
+        private void ConfigurePDarkInput(IniFile ini, Controller ctrl, int playerIndex)
+        {
+            if (ctrl == null || ctrl.Config == null)
+                return;
+
+            int index = ctrl.SdlController != null ? ctrl.SdlController.Index : ctrl.DeviceIndex;
+
+            string joyIndex = "JOY" + playerIndex.ToString();
+            string inputSection = "Input.Player" + playerIndex;
+            string bindingSection = "Input.Player" + playerIndex + ".Binds";
+
+            ini.WriteValue(inputSection, "ControllerIndex", index.ToString());
+
+            if (playerIndex == 1)
+            {
+                ini.WriteValue(bindingSection, "R_CBUTTONS", "D, JOY1_DPAD_RIGHT");
+                ini.WriteValue(bindingSection, "L_CBUTTONS", "A, JOY1_DPAD_LEFT");
+                ini.WriteValue(bindingSection, "D_CBUTTONS", "S, JOY1_DPAD_DOWN");
+                ini.WriteValue(bindingSection, "U_CBUTTONS", "W, JOY1_DPAD_UP");
+                ini.WriteValue(bindingSection, "R_TRIG", "MOUSE_RIGHT, Z, JOY1_LTRIGGER");
+                ini.WriteValue(bindingSection, "L_TRIG", "F, X, JOY1_RSHOULDER");
+                ini.WriteValue(bindingSection, "X_BUTTON", "R, JOY1_X");
+                ini.WriteValue(bindingSection, "Y_BUTTON", "MOUSE_WHEEL_DN, JOY1_Y");
+                ini.WriteValue(bindingSection, "L_JPAD", "MOUSE_WHEEL_UP, JOY1_B");
+                ini.WriteValue(bindingSection, "D_JPAD", "Q, MOUSE_MIDDLE, JOY1_LSHOULDER");
+                ini.WriteValue(bindingSection, "START_BUTTON", "RETURN, TAB, JOY1_START");
+                ini.WriteValue(bindingSection, "Z_TRIG", "MOUSE_LEFT, SPACE, JOY1_RTRIGGER");
+                ini.WriteValue(bindingSection, "B_BUTTON", "E");
+                ini.WriteValue(bindingSection, "A_BUTTON", "JOY1_A");
+                ini.WriteValue(bindingSection, "STICK_XNEG", "LEFT");
+                ini.WriteValue(bindingSection, "STICK_XPOS", "RIGHT");
+                ini.WriteValue(bindingSection, "STICK_YNEG", "DOWN");
+                ini.WriteValue(bindingSection, "STICK_YPOS", "UP");
+                ini.WriteValue(bindingSection, "ACCEPT_BUTTON", "JOY1_A");
+                ini.WriteValue(bindingSection, "CANCEL_BUTTON", "JOY1_B");
+                ini.WriteValue(bindingSection, "CK_2000", "LEFT_CTRL");
+                ini.WriteValue(bindingSection, "CK_4000", "LEFT_SHIFT");
+                ini.WriteValue(bindingSection, "CK_8000", "JOY1_LSTICK");
+            }
+            else
+            {
+                ini.WriteValue(bindingSection, "R_CBUTTONS", joyIndex + "_DPAD_RIGHT");
+                ini.WriteValue(bindingSection, "L_CBUTTONS", joyIndex + "_DPAD_LEFT");
+                ini.WriteValue(bindingSection, "D_CBUTTONS", joyIndex + "_DPAD_DOWN");
+                ini.WriteValue(bindingSection, "U_CBUTTONS", joyIndex + "_DPAD_UP");
+                ini.WriteValue(bindingSection, "R_TRIG", joyIndex + "_LTRIGGER");
+                ini.WriteValue(bindingSection, "L_TRIG", joyIndex + "_RSHOULDER");
+                ini.WriteValue(bindingSection, "X_BUTTON", joyIndex + "_X");
+                ini.WriteValue(bindingSection, "Y_BUTTON", joyIndex + "_Y");
+                ini.WriteValue(bindingSection, "L_JPAD", joyIndex + "_B");
+                ini.WriteValue(bindingSection, "D_JPAD", joyIndex + "_LSHOULDER");
+                ini.WriteValue(bindingSection, "START_BUTTON", joyIndex + "_START");
+                ini.WriteValue(bindingSection, "Z_TRIG", joyIndex + "_RTRIGGER");
+                ini.WriteValue(bindingSection, "A_BUTTON", joyIndex + "_A");
+                ini.WriteValue(bindingSection, "ACCEPT_BUTTON", joyIndex + "_A");
+                ini.WriteValue(bindingSection, "CANCEL_BUTTON", joyIndex + "_B");
+                ini.WriteValue(bindingSection, "CK_8000", joyIndex + "_LSTICK");
             }
         }
         #endregion
@@ -521,6 +748,31 @@ namespace EmulatorLauncher
         /// <summary>
         /// Dictionaries and mappings can be added below if necessary, keep alphabetical order and name it with port name
         /// </summary>
+        
+        private static Dictionary<string, string> cdogsKeyboard1 = new Dictionary<string, string>()
+        {
+            { "left", "80" },
+            { "right", "79" },
+            { "up", "82" },
+            { "down", "81" },
+            { "button1", "44" },
+            { "button2", "29" },
+            { "grenade", "22" },
+            { "map", "4" }
+        };
+
+        private static Dictionary<string, string> cdogsKeyboard2 = new Dictionary<string, string>()
+        {
+            { "left", "92" },
+            { "right", "94" },
+            { "up", "96" },
+            { "down", "90" },
+            { "button1", "88" },
+            { "button2", "99" },
+            { "grenade", "91" },
+            { "map", "98" }
+        };
+
         private InputKeyMapping cgeniusMapping = new InputKeyMapping
         {
             { InputKey.select,      "Back" },
@@ -536,6 +788,11 @@ namespace EmulatorLauncher
             { InputKey.pageup,      "Status" },
             { InputKey.up,          "Up" }
         };
+
+        private List<string> pdarkMapping = new List<string>
+        { "R_CBUTTONS", "L_CBUTTONS", "D_CBUTTONS", "U_CBUTTONS", "R_TRIG", "L_TRIG", "X_BUTTON", "Y_BUTTON", "R_JPAD", "L_JPAD", "D_JPAD", "U_JPAD", "START_BUTTON",
+        "Z_TRIG", "B_BUTTON", "A_BUTTON", "STICK_XNEG", "STICK_XPOS", "STICK_YNEG", "STICK_YPOS", "ACCEPT_BUTTON", "CANCEL_BUTTON", "CK_0040",
+        "CK_0080", "CK_0100", "CK_0200", "CK_0400", "CK_0800", "CK_1000", "CK_2000", "CK_4000", "CK_8000" };
 
         private Dictionary<int, InputKey> sohMapping = new Dictionary<int, InputKey>()
         {

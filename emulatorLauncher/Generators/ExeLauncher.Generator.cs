@@ -321,6 +321,9 @@ namespace EmulatorLauncher
             // If game was uncompressed, say we are going to launch, so the deletion will not be silent
             ValidateUncompressedGame();
 
+            // Configure guns if needed
+            ConfigureExeLauncherGuns(system, rom);
+
             return ret;
         }
 

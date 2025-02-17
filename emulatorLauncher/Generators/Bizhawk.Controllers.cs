@@ -107,6 +107,7 @@ namespace EmulatorLauncher
             for (int i = 1; i < 11; i++)
             {
                 hotkeyBindings["Save State " + i] = "Ctrl+F" + i;
+                hotkeyBindings["Load State " + i] = "Shift+F" + i;
             }
             hotkeyBindings["Rewind"] = "F1";
             hotkeyBindings["Fast Forward"] = "F2";
@@ -520,6 +521,9 @@ namespace EmulatorLauncher
                     controllerConfig["P1 Mode 2: Set B"] = "X" + index + " RStickDown";
                 }
             }
+
+            if (system == "psx" && !isDInput)
+                controllerConfig["P" + playerIndex + " Analog"] = "X" + index + " Guide";
 
             if (system == "tic80")
             {

@@ -22,6 +22,8 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            string targetRom = "";
+
             if (Directory.Exists(rom))
             {
                 rom = Directory.GetFiles(rom, "eboot.bin", SearchOption.AllDirectories).FirstOrDefault();
@@ -36,6 +38,11 @@ namespace EmulatorLauncher
                 string romSubPath = File.ReadAllText(rom);
                 rom = Path.Combine(romPath, romSubPath);
             }
+            
+            else if (Path.GetExtension(rom).ToLower() == ".lnk")
+            {
+                targetRom = FileTools.GetShortcutArgswsh(rom);
+            }
 
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
@@ -44,7 +51,18 @@ namespace EmulatorLauncher
 
             var commandArray = new List<string>();
 
-            commandArray.Add("\"" + rom + "\"");
+            if (SystemConfig.getOptBoolean("shadps4_gui"))
+                commandArray.Add("-s");
+
+            if (Path.GetExtension(rom).ToLower() == ".lnk")
+            {
+                commandArray.Add(targetRom);
+            }
+            else
+            {
+                commandArray.Add("-g");
+                commandArray.Add("\"" + rom + "\"");
+            }
 
             string args = string.Join(" ", commandArray);
 
@@ -66,14 +84,20 @@ namespace EmulatorLauncher
             string settingsFile = Path.Combine(path, "user", "config.toml");
             string romPath = Path.GetDirectoryName(rom);
             if (Path.GetExtension(romPath).ToLower() == ".ps4")
-                romPath = Directory.GetParent(romPath).FullName.Replace("\\", "\\\\");
+                romPath = Directory.GetParent(romPath).FullName.Replace("\\", "/");
             else if (Path.GetExtension(romPath).ToLower() == ".m3u")
-                romPath = romPath.Replace("\\", "\\\\");
+                romPath = romPath.Replace("\\", "/");
 
             using (IniFile toml = new IniFile(settingsFile, IniOptions.KeepEmptyLines | IniOptions.UseSpaces))
             {
                 // General section
                 BindBoolIniFeature(toml, "General", "isPS4Pro", "shadps4_isps4pro", "true", "false");
+                BindBoolIniFeature(toml, "General", "enableDiscordRPC", "discord", "true", "false");
+                BindBoolIniFeatureOn(toml, "Input", "isMotionControlsEnabled", "shadps4_motion", "true", "false");
+
+                if (SystemConfig.isOptSet("shadps4_username") && !string.IsNullOrEmpty(SystemConfig["shadps4_username"]))
+                    toml.WriteValue("General", "userName", "\"" + SystemConfig["shadps4_username"] + "\"");
+
                 if (fullscreen)
                     toml.WriteValue("General", "Fullscreen", "true");
                 else
@@ -96,9 +120,27 @@ namespace EmulatorLauncher
                 toml.WriteValue("Settings", "consoleLanguage", ps4Lang);
 
                 // GUI section
-                toml.WriteValue("GUI", "installDir", "\"" + romPath + "\"");
+                string currentDirs = toml.GetValue("GUI", "installDirs");
+                
+                if (currentDirs == null || currentDirs == "[]")
+                    toml.WriteValue("GUI", "installDirs", "[\"" + romPath + "\"]");
+                else
+                {
+                    currentDirs = currentDirs.Substring(1, currentDirs.Length - 2);
+                    string[] dirs = currentDirs.Split(new char[] { ',' });
+                    List<string> newDirs = dirs.Select(dir => dir.TrimStart()).ToList();
+                    newDirs = newDirs.Where(s => !string.IsNullOrEmpty(s)).ToList();
 
-                // LLE section
+                    if (newDirs.Count > 0 && !newDirs.Contains("\"" + romPath + "\""))
+                        newDirs.Add("\"" + romPath + "\"");
+                    string finalDirList = string.Join(", ", newDirs);
+                    toml.WriteValue("GUI", "installDirs", "[" + finalDirList + "]");
+                }
+
+                string savePath = AppConfig.GetFullPath("saves");
+                string shadSavePath = Path.Combine(savePath, "ps4", "shadps4");
+                if (!Directory.Exists(savePath))
+                    try { Directory.CreateDirectory(savePath); } catch { }
             }
         }
 

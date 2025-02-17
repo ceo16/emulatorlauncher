@@ -24,6 +24,7 @@ namespace EmulatorLauncher
         private string _path;
         private SaveStatesWatcher _saveStatesWatcher;
         private int _saveStateSlot;
+        private bool _sindenSoft;
 
         private static readonly List<string> preferredRomExtensions = new List<string>() { ".bin", ".cue", ".img", ".iso", ".rom" };
         private static readonly List<string> zipSystems = new List<string>() { "3ds", "psx", "saturn", "n64", "n64dd", "pcenginecd", "jaguarcd", "vectrex", "odyssey2", "uzebox" };
@@ -671,8 +672,16 @@ namespace EmulatorLauncher
             if (Features.IsSupported("cheevos") && SystemConfig.getOptBoolean("retroachievements"))
             {
                 json["SkipRATelemetryWarning"] = "true";
+                
                 json["RAUsername"] = SystemConfig["retroachievements.username"];
-                json["RAToken"] = SystemConfig["retroachievements.token"];
+
+                string unencryptedToken = SystemConfig["retroachievements.token"];
+                if (!string.IsNullOrEmpty(unencryptedToken))
+                {
+                    string encryptedToken = EncryptStrings.EncryptString(unencryptedToken);
+                    json["RAToken"] = encryptedToken;
+                }
+
                 json["RACheevosActive"] = "true";
                 json["RALBoardsActive"] = SystemConfig.getOptBoolean("retroachievements.leaderboards") ? "true" : "false";
                 json["RARichPresenceActive"] = SystemConfig.getOptBoolean("retroachievements.richpresence") ? "true" : "false";
@@ -724,6 +733,9 @@ namespace EmulatorLauncher
                 _saveStatesWatcher.Dispose();
                 _saveStatesWatcher = null;
             }
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }

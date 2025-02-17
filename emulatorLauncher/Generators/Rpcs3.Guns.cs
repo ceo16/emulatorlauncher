@@ -1,10 +1,13 @@
 ﻿using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
+using EmulatorLauncher.Common.Lightguns;
+using System.Linq;
 
 namespace EmulatorLauncher
 {
     partial class Rpcs3Generator
     {
+        private bool _sindenSoft = false;
         /// <summary>
         /// Setup config.yml file for guns
         /// </summary>
@@ -13,6 +16,13 @@ namespace EmulatorLauncher
         {
             if (!Program.SystemConfig.isOptSet("rpcs3_guns") || Program.SystemConfig["rpcs3_guns"] == "none")
                 return;
+
+            var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
 
             SimpleLogger.Instance.Info("[GENERATOR] Setting up guns.");
 
@@ -28,10 +38,6 @@ namespace EmulatorLauncher
 
                 BindBoolFeature(io, "Show move cursor", "rpcs3_mouse_cursor", "true", "false");
             }
-            if (Program.SystemConfig["rpcs3_guns"] == "1")
-                io["GunCon3 emulated controller"] = "1 controller";
-            else if (Program.SystemConfig["rpcs3_guns"] == "2")
-                io["GunCon3 emulated controller"] = "2 controllers";
         }
     }
 }

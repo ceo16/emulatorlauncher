@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
+using EmulatorLauncher.Common.Lightguns;
+using System.Linq;
 
 namespace EmulatorLauncher
 {
@@ -14,6 +16,8 @@ namespace EmulatorLauncher
         private bool _isUsingReshader = false;
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
+        private bool _demulshooter = false;
+        private bool _sindenSoft = false;
 
         public DemulGenerator()
         {
@@ -41,6 +45,10 @@ namespace EmulatorLauncher
 
             string demulCore = GetDemulCore(emulator, core, system);
 
+            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
+            if (!fullscreen)
+                SystemConfig["forceNoBezel"] = "true";
+
             // Allow fake decorations if ratio is set to 4/3, otherwise disable bezels
             if (SystemConfig.isOptSet("demul_ratio") && SystemConfig["demul_ratio"] != "1")
                 SystemConfig["bezel"] = "none";
@@ -60,6 +68,9 @@ namespace EmulatorLauncher
 
             SetupGeneralConfig(path, rom, system, core, demulCore);
             SetupDx11Config(path, resolution);
+
+            // Configure DemulShooter if needed
+            ConfigureDemulGuns(system, rom);
 
             if (demulCore == "dc")
             {
@@ -114,11 +125,17 @@ namespace EmulatorLauncher
 
                     ini.WriteValue("files", "romsPathsCount", romsPaths.Count.ToString());
 
+                    var savesPath = Path.Combine(AppConfig.GetFullPath("saves"), "dreamcast", system, "nvram");
+                    if (!Directory.Exists(savesPath))
+                        try { Directory.CreateDirectory(savesPath); } catch { }
+
+                    ini.WriteValue("files", "nvram", savesPath);
+
                     // Plugins
                     ini.WriteValue("plugins", "directory", @".\plugins\");
 
                     string gpu = "gpuDX11.dll";
-                    if (_oldVersion || core == "gaelco" || system == "galeco")
+                    if (_oldVersion || core == "gaelco" || system == "galeco" || SystemConfig.getOptBoolean("demul_oldgpu"))
                     {
                         _videoDriverName = "gpuDX11old";
                         gpu = "gpuDX11old.dll";
@@ -293,21 +310,64 @@ namespace EmulatorLauncher
 
             if (process != null)
             {
+                if (!_isUsingReshader)
+                {
+                    System.Threading.Thread.Sleep(2000);
+                    SendKeys.SendWait("%~");
+                }
+
                 process.WaitForExit();
 
                 bezel?.Dispose();
 
-                ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, path.WorkingDirectory);
+                if (_demulshooter)
+                    Demulshooter.KillDemulShooter();
+
+                if (_sindenSoft)
+                    Guns.KillSindenSoftware();
 
                 try { return process.ExitCode; }
                 catch { }
             }
 
             bezel?.Dispose();
+            
+            if (_demulshooter)
+                Demulshooter.KillDemulShooter();
 
-            ReshadeManager.UninstallReshader(ReshadeBezelType.dxgi, path.WorkingDirectory);
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             return -1;
+        }
+
+        private void ConfigureDemulGuns(string system, string rom)
+        {
+            if (!SystemConfig.getOptBoolean("use_guns"))
+                return;
+
+            var guns = RawLightgun.GetRawLightguns();
+
+            if (guns.Length == 0)
+                return;
+
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
+
+            // Get first gun
+            var gun1 = guns.Length > 0 ? guns[0] : null;
+            var gun2 = guns.Length > 1 ? guns[1] : null;
+
+            // If DemulShooter is enabled, configure it
+            if (SystemConfig.getOptBoolean("use_demulshooter"))
+            {
+                _demulshooter = true;
+                SimpleLogger.Instance.Info("[INFO] Configuring DemulShooter");
+                Demulshooter.StartDemulshooter("demul", system, rom, gun1, gun2);
+            }
         }
     }
 }

@@ -190,6 +190,7 @@ namespace EmulatorLauncher
                     case "citra":
                     case "citra-canary":
                     case "lime3ds":
+                    case "mandarine":
                         if (Program.SystemConfig["n3ds_motion"] == "sdl")
                             ret = revert ? "3ds_stylus_cstick_revert" : "3ds_stylus_cstick";
                         else
@@ -425,6 +426,7 @@ namespace EmulatorLauncher
                         else
                             ret = "n64-standalone";
                         break;
+                    case "project64":
                     case "mupen64":
                     case "simple64":
                         if (Program.SystemConfig.isOptSet("mupen64_inputprofile1") && !string.IsNullOrEmpty(Program.SystemConfig["mupen64_inputprofile1"]))

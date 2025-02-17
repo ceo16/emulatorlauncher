@@ -1,4 +1,5 @@
 ﻿using EmulatorLauncher.Common.FileFormats;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,7 @@ namespace EmulatorLauncher.Libretro
         static readonly List<string> coreNoRemap = new List<string>() { "mednafen_snes" };
 
         private static int _playerCount = 1;
+        private static int _maxCount = 2;
 
         public static void GenerateCoreInputRemap(string system, string core, Dictionary<string, string> inputremap)
         {
@@ -28,6 +30,21 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             _playerCount = Program.Controllers.Count;
+            _maxCount = _playerCount + 2;
+
+            if (Program.SystemConfig.getOptBoolean("force1pOnly"))
+            {
+                if (coreToP2Device.ContainsKey(core))
+                {
+                    for (int i = 3; i < _maxCount + 1; i++)
+                        inputremap["input_libretro_device_p" + i] = "0";
+                }
+                else
+                {
+                    for (int i = 2; i < _maxCount + 1; i++)
+                        inputremap["input_libretro_device_p" + i] = "0";
+                }
+            }
 
             if (_playerCount == 0)
                 return;
@@ -519,6 +536,49 @@ namespace EmulatorLauncher.Libretro
                     inputremap["input_player" + i + "_" + button.Key] = button.Value;
             }
             return true;
+        }
+
+        private Dictionary<string, string> InputRemap = new Dictionary<string, string>();
+
+        private void CreateInputRemap(string cleanSystemName, Action<ConfigFile> createRemap)
+        {
+            if (string.IsNullOrEmpty(cleanSystemName))
+                return;
+
+            //DeleteInputRemap(cleanSystemName);
+            if (createRemap == null)
+                return;
+
+            string dir = Path.Combine(RetroarchPath, "config", "remaps", cleanSystemName);
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            string path = Path.Combine(dir, cleanSystemName + ".rmp");
+
+            //this.AddFileForRestoration(path);
+
+            var cfg = ConfigFile.FromFile(path, new ConfigFileOptions() { CaseSensitive = true });
+            createRemap(cfg);
+            cfg.Save(path, true);
+        }
+
+        private void DeleteInputRemap(string cleanSystemName)
+        {
+            if (string.IsNullOrEmpty(cleanSystemName))
+                return;
+
+            string dir = Path.Combine(RetroarchPath, "config", "remaps", cleanSystemName);
+            string path = Path.Combine(dir, cleanSystemName + ".rmp");
+
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+
+                if (Directory.Exists(dir) && Directory.GetFiles(dir).Length == 0)
+                    Directory.Delete(dir);
+            }
+            catch { }
         }
 
         static string[] mappingPaths =

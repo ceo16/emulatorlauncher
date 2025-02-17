@@ -15,6 +15,7 @@ namespace EmulatorLauncher
         private bool _isArcade;
         private SaveStatesWatcher _saveStatesWatcher;
         private int _saveStateSlot;
+        private bool _sindenSoft = false;
 
         public FlycastGenerator()
         {
@@ -335,6 +336,12 @@ namespace EmulatorLauncher
                 _saveStatesWatcher.Dispose();
                 _saveStatesWatcher = null;
             }
+
+            if (_demulshooter)
+                Demulshooter.KillDemulShooter();
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }

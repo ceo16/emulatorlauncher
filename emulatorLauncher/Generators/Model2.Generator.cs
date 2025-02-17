@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common;
-using EmulatorLauncher.Common.Lightguns;
 
 namespace EmulatorLauncher
 {
@@ -18,6 +17,7 @@ namespace EmulatorLauncher
         private string _destFile;
         private string _destParent;
         private string _path;
+        private string _rom;
 
         public Model2Generator()
         {
@@ -90,6 +90,8 @@ namespace EmulatorLauncher
             if (SystemConfig.isOptSet("m2_joystick_driver") && SystemConfig["m2_joystick_driver"] == "dinput")
                 _dinput = true;
 
+            _rom = Path.GetFileNameWithoutExtension(rom);
+
             SetupConfig(path, resolution, rom, fullscreen);
             SetupLUAScript(path, rom);
 
@@ -127,6 +129,9 @@ namespace EmulatorLauncher
                     else
                         ini.WriteValue("Renderer", "WideScreenWindow", "0");
 
+                    if (SystemConfig.isOptSet("m2_widescreen") && SystemConfig.getOptBoolean("m2_widescreen"))
+                        ini.WriteValue("Renderer", "WideScreenWindow", "1");
+
                     ini.WriteValue("Renderer", "FullScreenWidth", (resolution == null ? Screen.PrimaryScreen.Bounds.Width : resolution.Width).ToString());
                     ini.WriteValue("Renderer", "FullScreenHeight", (resolution == null ? Screen.PrimaryScreen.Bounds.Height : resolution.Height).ToString());
                     
@@ -136,7 +141,15 @@ namespace EmulatorLauncher
                     BindBoolIniFeature(ini, "Renderer", "ForceManaged", "m2_ForceManaged", "1", "0");
                     BindBoolIniFeature(ini, "Renderer", "AutoMip", "m2_AutoMip", "1", "0");
                     BindBoolIniFeature(ini, "Renderer", "FSAA", "m2_fsaa", "1", "0");
-                    BindBoolIniFeature(ini, "Renderer", "DrawCross", "m2_crosshair", "1", "0");
+                    if (SystemConfig.isOptSet("m2_crosshair") && !string.IsNullOrEmpty(SystemConfig["m2_crosshair"]))
+                    {
+                        if (SystemConfig["m2_crosshair"] == "0")
+                            ini.WriteValue("Renderer", "DrawCross", "0");
+                        else
+                            ini.WriteValue("Renderer", "DrawCross", "1");
+                    }
+                    else
+                        ini.WriteValue("Renderer", "DrawCross", "0");
 
                     // Input Drivers
                     if (SystemConfig.isOptSet("m2_joystick_driver") && SystemConfig["m2_joystick_driver"] == "dinput")
@@ -147,28 +160,6 @@ namespace EmulatorLauncher
                     BindBoolIniFeature(ini, "Input", "EnableFF", "m2_force_feedback", "1", "0");
                     BindBoolIniFeature(ini, "Input", "HoldGears", "m2_HoldGears", "1", "0");
                     BindBoolIniFeature(ini, "Input", "UseRawInput", "m2_rawinput", "1", "0");
-
-                    // Gun indexes
-                    string mouse1Index = "0";
-                    string mouse2Index = "1";
-                    int gunCount = RawLightgun.GetUsableLightGunCount();
-                    var guns = RawLightgun.GetRawLightguns();
-
-                    if (gunCount > 0 && guns.Length > 0)
-                    {
-                        SimpleLogger.Instance.Info("[GUNS] Found " + gunCount.ToString() + " usable guns.");
-                        mouse1Index = guns[0].Index.ToString();
-                        if (gunCount > 1 && guns.Length > 1)
-                            mouse2Index = guns[1].Index.ToString();
-                    }
-
-                    if (SystemConfig.isOptSet("m2_rawinput_p1") && !string.IsNullOrEmpty(SystemConfig["m2_rawinput_p1"]))
-                        mouse1Index = SystemConfig["m2_rawinput_p1"];
-                    if (SystemConfig.isOptSet("m2_rawinput_p2") && !string.IsNullOrEmpty(SystemConfig["m2_rawinput_p2"]))
-                        mouse2Index = SystemConfig["m2_rawinput_p2"];
-
-                    ini.WriteValue("Input", "RawDevP1", mouse1Index);
-                    ini.WriteValue("Input", "RawDevP2", mouse2Index);
 
                     if (SystemConfig.isOptSet("m2_deadzone") && !string.IsNullOrEmpty(SystemConfig["m2_deadzone"]))
                     {
@@ -197,7 +188,7 @@ namespace EmulatorLauncher
                 ini.WriteValue("Input", "XInput", "0");
             }
 
-            else if (Program.SystemConfig.isOptSet("m2_joystick_autoconfig") && Program.SystemConfig["m2_joystick_autoconfig"] == "template")
+            if (Program.SystemConfig.isOptSet("m2_joystick_autoconfig") && Program.SystemConfig["m2_joystick_autoconfig"] == "template")
             {
                 string inputCFGpath = Path.Combine(path, "CFG");
                 if (!Directory.Exists(inputCFGpath)) try { Directory.CreateDirectory(inputCFGpath); }
@@ -252,6 +243,12 @@ namespace EmulatorLauncher
 
         public override void Cleanup()
         {
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
+
+            if (_demulshooter)
+                Demulshooter.KillDemulShooter();
+
             if (_destFile != null && File.Exists(_destFile))
                 File.Delete(_destFile);
 

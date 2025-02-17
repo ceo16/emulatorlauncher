@@ -121,13 +121,16 @@ namespace EmulatorLauncher.Libretro
                 string croftSubPath = croftSubFile[0];
                 rom = Path.Combine(Path.GetDirectoryName(rom), croftSubPath);
             }
-            else if (Path.GetExtension(rom).ToLowerInvariant() == ".boom3")
+            else if (core == "boom3")
             {
-                string[] pakFile = File.ReadAllLines(rom);
-                string pakSubPath = pakFile[0];
-                if (pakSubPath.StartsWith("d3xp"))
-                    core = "boom3_xp";
-                rom = Path.Combine(Path.GetDirectoryName(rom), pakSubPath);
+                if (Path.GetExtension(rom).ToLowerInvariant() == ".boom3" || Path.GetExtension(rom).ToLowerInvariant() == ".game")
+                {
+                    string[] pakFile = File.ReadAllLines(rom);
+                    string pakSubPath = pakFile[0];
+                    if (pakSubPath.StartsWith("d3xp"))
+                        core = "boom3_xp";
+                    rom = Path.Combine(Path.GetDirectoryName(rom), pakSubPath);
+                }
             }
             else if (core == "vitaquake2")
             {
@@ -509,6 +512,8 @@ namespace EmulatorLauncher.Libretro
             retroarchConfig["menu_framebuffer_opacity"] = "0.900000";
             retroarchConfig["video_fullscreen"] = "true";
             retroarchConfig["video_window_save_positions"] = "false";
+            retroarchConfig.DisableAll("video_viewport_bias_x");
+            retroarchConfig.DisableAll("video_viewport_bias_y");
             retroarchConfig["notification_show_autoconfig"] = "false";
             retroarchConfig["notification_show_config_override_load"] = "false";            
             retroarchConfig["notification_show_remap_load"] = "false";
@@ -522,7 +527,8 @@ namespace EmulatorLauncher.Libretro
             retroarchConfig["rgui_extended_ascii"] = "true";
             retroarchConfig["rgui_show_start_screen"] = "false";
             retroarchConfig["rgui_browser_directory"] = AppConfig.GetFullPath("roms") ?? "default";
-            
+            retroarchConfig["input_overlay_enable_autopreferred"] = "false";
+
             // input driver set to raw if multigun is enabled
             if (SystemConfig.getOptBoolean("use_guns") && !SystemConfig.getOptBoolean("one_gun"))
             {
@@ -703,7 +709,10 @@ namespace EmulatorLauncher.Libretro
 
                 retroarchConfig["savestate_directory"] = saveStatePath;
                 retroarchConfig["savestate_thumbnail_enable"] = "true";
-                retroarchConfig["savestates_in_content_dir"] = "false";                
+                retroarchConfig["savestates_in_content_dir"] = "false";
+                retroarchConfig["sort_savestates_enable"] = "false";
+                retroarchConfig["sort_savestates_by_content_enable"] = "false";
+
             }
 
             if (SystemConfig.isOptSet("incrementalsavestates") && !SystemConfig.getOptBoolean("incrementalsavestates"))
@@ -760,6 +769,8 @@ namespace EmulatorLauncher.Libretro
                 {
                     retroarchConfig["video_aspect_ratio_auto"] = "false";
                     retroarchConfig["aspect_ratio_index"] = ratioIndexes.IndexOf("custom").ToString();
+                    retroarchConfig["video_viewport_bias_x"] = "0.000000";
+                    retroarchConfig["video_viewport_bias_y"] = "0.000000";
                 }
                 else
                 {
@@ -776,8 +787,14 @@ namespace EmulatorLauncher.Libretro
                     }
                 }
             }
-            else if (core == "tgbdual" || system == "wii" || system == "fbneo")
+            else if (core == "tgbdual" || system == "wii" || system == "fbneo" || system == "nds")
+            {
                 retroarchConfig["aspect_ratio_index"] = ratioIndexes.IndexOf("core").ToString();
+            }
+            else if (SystemConfig["shader"].Contains("Mega_Bezel"))
+            {
+                retroarchConfig["aspect_ratio_index"] = ratioIndexes.IndexOf("full").ToString();
+            }
             else
                 retroarchConfig["aspect_ratio_index"] = "";
             
@@ -891,8 +908,8 @@ namespace EmulatorLauncher.Libretro
             ConfigureAIService(retroarchConfig);
             ConfigureRunahead(system, core, retroarchConfig);
             ConfigureCoreOptions(retroarchConfig, system, core);
-            ConfigureBezels(retroarchConfig, system, rom, resolution);
-            
+            ConfigureBezels(retroarchConfig, system, rom, core, resolution);
+
             // Video driver
             ConfigureVideoDriver(core, retroarchConfig);
             ConfigureGPUIndex(retroarchConfig);
@@ -976,6 +993,11 @@ namespace EmulatorLauncher.Libretro
                 _video_driver = "vulkan";
                 retroarchConfig["video_driver"] = "vulkan";
             }
+            else if (core == "pcsx2" && retroarchConfig["video_driver"] == "gl")
+            {
+                _video_driver = "glcore";
+                retroarchConfig["video_driver"] = "glcore";
+            }
 
             // Set default video driver per core
             if (!SystemConfig.isOptSet("video_driver") && defaultVideoDriver.ContainsKey(core))
@@ -983,6 +1005,7 @@ namespace EmulatorLauncher.Libretro
                 _video_driver = defaultVideoDriver[core];
                 retroarchConfig["video_driver"] = defaultVideoDriver[core];
             }
+            
         }
 
         /// <summary>
@@ -1366,7 +1389,7 @@ namespace EmulatorLauncher.Libretro
         /// <param name="systemName"></param>
         /// <param name="rom"></param>
         /// <param name="resolution"></param>
-        private void ConfigureBezels(ConfigFile retroarchConfig, string systemName, string rom, ScreenResolution resolution)
+        private void ConfigureBezels(ConfigFile retroarchConfig, string systemName, string rom, string core, ScreenResolution resolution)
         {
             retroarchConfig["input_overlay_hide_in_menu"] = "false";
             retroarchConfig["input_overlay_enable"] = "false";
@@ -1541,6 +1564,21 @@ namespace EmulatorLauncher.Libretro
             fd.AppendLine("overlay0_full_screen = true");
             fd.AppendLine("overlay0_descs = 0");
             File.WriteAllText(overlay_cfg_file, fd.ToString());
+
+            bool bias = true;
+            if (retroarchConfig["aspect_ratio_index"] == ratioIndexes.IndexOf("custom").ToString())
+                bias = false;
+
+            if (bias)
+            {
+                retroarchConfig["video_viewport_bias_x"] = "0.500000";
+                retroarchConfig["video_viewport_bias_y"] = "0.500000";
+            }
+            else
+            {
+                retroarchConfig["video_viewport_bias_x"] = "0.000000";
+                retroarchConfig["video_viewport_bias_y"] = "1.000000";
+            }
         }
 
         private static Size GetImageSize(string file)
@@ -1598,6 +1636,9 @@ namespace EmulatorLauncher.Libretro
                 _stateFileManager.Dispose();
                 _stateFileManager = null;
             }
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }
@@ -1735,11 +1776,13 @@ namespace EmulatorLauncher.Libretro
         static List<string> capsimgCore = new List<string>() { "hatari", "hatarib", "puae" };
         static List<string> hdrCompatibleVideoDrivers = new List<string>() { "d3d12", "d3d11", "vulkan" };
         static List<string> coreNoGL = new List<string>() { "citra", "kronos", "mednafen_psx", "mednafen_psx_hw", "pcsx2", "swanstation" };
-        static Dictionary<string, string> coreToP1Device = new Dictionary<string, string>() { { "atari800", "513" }, { "cap32", "513" }, { "81", "257" }, { "fuse", "513" } };
+        static Dictionary<string, string> coreToP1Device = new Dictionary<string, string>() { { "atari800", "513" }, { "cap32", "513" }, { "fuse", "513" } };
         static Dictionary<string, string> coreToP2Device = new Dictionary<string, string>() { { "atari800", "513" }, { "fuse", "513" } };
         static Dictionary<string, string> defaultVideoDriver = new Dictionary<string, string>() 
         { 
-            { "flycast", "vulkan" }
+            { "flycast", "vulkan" },
+            { "melondsds", "glcore" },
+            { "pcsx2", "glcore" }
         };
         static Dictionary<string, retro_language> Languages = new Dictionary<string, retro_language>()
         {

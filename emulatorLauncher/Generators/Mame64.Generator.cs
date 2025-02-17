@@ -18,8 +18,25 @@ namespace EmulatorLauncher
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
+            // Always kill any existing MameHook process at startup
+            SimpleLogger.Instance.Info("[INFO] Checking for existing MameHook process");
+            try
+            {
+                var existingProcess = Process.GetProcessesByName("mamehook").FirstOrDefault();
+                if (existingProcess != null)
+                {
+                    existingProcess.Kill();
+                    existingProcess.WaitForExit(1000);
+                }
+            }
+            catch (Exception ex)
+            {
+                SimpleLogger.Instance.Error($"[ERROR] Failed to stop existing MameHooker: {ex.Message}");
+            }
+
             bool hbmame = system == "hbmame";
 
+            // Get MAME executable path
             string path = AppConfig.GetFullPath("mame");
             if (string.IsNullOrEmpty(path) && Environment.Is64BitOperatingSystem)
                 path = AppConfig.GetFullPath("mame64");
@@ -42,6 +59,19 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            // Configure MameHooker first if enabled and wait for it to be ready
+            bool mamehookStarted = false;
+            if (SystemConfig.isOptSet("use_mamehooker") && SystemConfig.getOptBoolean("use_mamehooker"))
+            {
+                SimpleLogger.Instance.Info("[INFO] MameHooker option enabled for Mame64");
+                string romName = Path.GetFileNameWithoutExtension(rom).ToLowerInvariant();
+                mamehookStarted = MameHooker.Mame64.ConfigureMame64(romName);
+                
+                if (!mamehookStarted)
+                    SimpleLogger.Instance.Warning("[WARNING] Failed to start MameHooker, continuing without it");
+            }
+
+            // Then configure MAME
             ConfigureBezels(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "artwork"), system, rom, resolution, emulator);
             ConfigureUIini(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "ini"));
             ConfigureMameini(Path.Combine(AppConfig.GetFullPath("bios"), "mame", "ini"));
@@ -56,7 +86,7 @@ namespace EmulatorLauncher
                     "-skip_gameinfo",
 
                     // rompath
-                    "-rompath"
+                    "-rp"
                 };
                 if (!string.IsNullOrEmpty(AppConfig["bios"]) && Directory.Exists(AppConfig["bios"]))
                     commandArray.Add(AppConfig.GetFullPath("bios") + ";" + Path.GetDirectoryName(rom));
@@ -69,7 +99,7 @@ namespace EmulatorLauncher
                     catch { }
                 if (!string.IsNullOrEmpty(samplePath) && Directory.Exists(samplePath))
                 {
-                    commandArray.Add("-samplepath");
+                    commandArray.Add("-sp");
                     commandArray.Add(samplePath);
                 }
 
@@ -101,7 +131,7 @@ namespace EmulatorLauncher
                     string cheatPath = hbmame ? Path.Combine(AppConfig.GetFullPath("cheats"), "hbmame") : Path.Combine(AppConfig.GetFullPath("cheats"), "mame");
                     if (!string.IsNullOrEmpty(cheatPath) && Directory.Exists(cheatPath))
                     {
-                        commandArray.Add("-cheat");
+                        commandArray.Add("-c");
                         commandArray.Add("-cheatpath");
                         commandArray.Add(cheatPath);
                     }
@@ -139,7 +169,7 @@ namespace EmulatorLauncher
                     catch { }
                 if (!string.IsNullOrEmpty(hashPath) && Directory.Exists(hashPath))
                 {
-                    commandArray.Add("-hashpath");
+                    commandArray.Add("-hash");
                     commandArray.Add(hashPath);
                 }
 
@@ -180,7 +210,7 @@ namespace EmulatorLauncher
             var retList = new List<string>();
 
             if (SystemConfig.isOptSet("noread_ini") && SystemConfig.getOptBoolean("noread_ini"))
-                retList.Add("-noreadconfig");
+                retList.Add("-norc");
 
             string sstatePath = Path.Combine(AppConfig.GetFullPath("saves"), "mame", "states");
             if (!Directory.Exists(sstatePath)) try { Directory.CreateDirectory(sstatePath); }
@@ -200,15 +230,6 @@ namespace EmulatorLauncher
                 retList.Add(nvramPath);
             }
 
-            string homePath = Path.Combine(AppConfig.GetFullPath("bios"), "mame");
-            if (!Directory.Exists(homePath)) try { Directory.CreateDirectory(homePath); }
-                catch { }
-            if (Directory.Exists(homePath))
-            {
-                retList.Add("-homepath");
-                retList.Add(homePath);
-            }
-
             string ctrlrPath = hbmame? Path.Combine(AppConfig.GetFullPath("saves"), "hbmame", "ctrlr") : Path.Combine(AppConfig.GetFullPath("saves"), "mame", "ctrlr");
             if (!Directory.Exists(ctrlrPath)) try { Directory.CreateDirectory(ctrlrPath); }
                 catch { }
@@ -219,9 +240,9 @@ namespace EmulatorLauncher
             }
 
             if (!SystemConfig.isOptSet("smooth") || !SystemConfig.getOptBoolean("smooth"))
-                retList.Add("-nofilter");
+                retList.Add("-noflt");
 
-            retList.Add("-verbose");
+            retList.Add("-v");
 
             // Throttle
             if (SystemConfig.isOptSet("mame_throttle") && SystemConfig.getOptBoolean("mame_throttle"))
@@ -268,7 +289,7 @@ namespace EmulatorLauncher
             // Aspect ratio
             if (SystemConfig.isOptSet("mame_ratio") && SystemConfig["mame_ratio"] == "stretch")
             {
-                    retList.Add("-nokeepaspect");
+                    retList.Add("-noka");
             }
             else
             {
@@ -290,7 +311,7 @@ namespace EmulatorLauncher
 
             // Other video options
             if (SystemConfig.isOptSet("triplebuffer") && SystemConfig.getOptBoolean("triplebuffer") && SystemConfig["mame_video_driver"] != "gdi")
-                retList.Add("-triplebuffer");
+                retList.Add("-tb");
 
             if ((!SystemConfig.isOptSet("vsync") || SystemConfig.getOptBoolean("vsync")) && SystemConfig["mame_video_driver"] != "gdi")
                 retList.Add("-waitvsync");
@@ -362,7 +383,7 @@ namespace EmulatorLauncher
                 retList.Add("-plugin");
                 retList.Add(pluginJoin);
             }
-
+            
             // DEVICES
             // Mouse
             if (SystemConfig.isOptSet("mame_mouse") && SystemConfig["mame_mouse"] == "none")
@@ -382,7 +403,7 @@ namespace EmulatorLauncher
 
             // Lightgun
             if (SystemConfig.isOptSet("mame_lightgun") && SystemConfig["mame_lightgun"] == "none")
-                retList.Add("-nolightgun");
+                retList.Add("-nogun");
             else if (SystemConfig.isOptSet("mame_lightgun") && !string.IsNullOrEmpty(SystemConfig["mame_lightgun"]))
             {
                 retList.Add("-lightgun_device");
@@ -455,7 +476,7 @@ namespace EmulatorLauncher
             }
 
             if (SystemConfig.isOptSet("mame_offscreen_reload") && SystemConfig.getOptBoolean("mame_offscreen_reload") && SystemConfig["mame_lightgun"] != "none")
-                retList.Add("-offscreen_reload");
+                retList.Add("-reload");
 
             if (SystemConfig.isOptSet("mame_multimouse") && SystemConfig.getOptBoolean("mame_multimouse"))
             {
@@ -594,6 +615,14 @@ namespace EmulatorLauncher
                 pluginsIni["hiscore"] = "0";
 
             pluginsIni.Save();
+        }
+
+        public override void Cleanup()
+        {
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
+
+            base.Cleanup();
         }
     }
 

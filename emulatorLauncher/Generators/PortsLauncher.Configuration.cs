@@ -9,6 +9,8 @@ using EmulatorLauncher.Common.FileFormats;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Globalization;
+using System.Text.RegularExpressions;
+using EmulatorLauncher.Common.EmulationStation;
 
 namespace EmulatorLauncher
 {
@@ -20,17 +22,70 @@ namespace EmulatorLauncher
             // If the port allows controller configuration, create the controller configuration method in PortsLauncher.Controller.cs and call it from the port configuration method
             // Keep alphabetical order
 
+            ConfigureCDogs(commandArray, rom);
             Configurecgenius(commandArray, rom);
             Configurecorsixth(commandArray, rom);
+            Configuredhewm3(commandArray, rom);
             ConfigureOpenGoal(commandArray, rom);
             ConfigureOpenJazz(commandArray, rom);
+            ConfigurePDark(commandArray, rom);
             ConfigureSOH(rom, exe);
             ConfigureSonic3air(rom, exe);
             ConfigureSonicMania(rom, exe);
             ConfigureSonicRetro(rom, exe);
+            ConfigureStarship(rom, exe);
         }
 
         #region ports
+        private void ConfigureCDogs(List<string> commandArray, string rom)
+        {
+            if (_emulator != "cdogs")
+                return;
+
+            // Write environment variable
+            string envConfigPath = AppConfig.GetFullPath(_emulator) + "\\";
+            Environment.SetEnvironmentVariable("CDOGS_CONFIG_DIR", envConfigPath, EnvironmentVariableTarget.User);
+
+            string configPath = Path.Combine(AppConfig.GetFullPath(_emulator), "C-Dogs SDL");
+            if (!Directory.Exists(configPath))
+                try { Directory.CreateDirectory(configPath); } catch { }
+
+            // Create settings file if not existing
+            string configJSON = Path.Combine(configPath, "options.cnf");
+            if (!File.Exists(configJSON))
+            {
+                try
+                {
+                    File.WriteAllText(configJSON, cdogs_config);
+                    System.Threading.Thread.Sleep(100);
+                }
+                catch { }
+            }
+
+            // Settings file update
+            var height = _resolution == null ? ScreenResolution.CurrentResolution.Height : _resolution.Height;
+            var width = _resolution == null ? ScreenResolution.CurrentResolution.Width : _resolution.Width;
+            
+            var settings = DynamicJson.Load(configJSON);
+            var graphics = settings.GetOrCreateContainer("Graphics");
+            var jsoninterface = settings.GetOrCreateContainer("Interface");
+            
+            graphics["Fullscreen"] = _fullscreen? "true" : "false";
+            graphics["WindowWidth"] = width.ToString();
+            graphics["WindowHeight"] = height.ToString();
+            BindBoolFeatureOn(graphics, "ShowHUD", "cdogs_hud", "true", "false");
+            BindFeature(graphics, "ScaleMode", "cdogs_scalemode", "Nearest neighbor");
+            BindBoolFeatureOn(graphics, "Shadows", "cdogs_shadows", "true", "false");
+
+            BindBoolFeature(jsoninterface, "ShowFPS", "cdogs_fps", "true", "false");
+            BindBoolFeature(jsoninterface, "ShowTime", "cdogs_time", "true", "false");
+            BindBoolFeatureOn(jsoninterface, "ShowHUDMap", "cdogs_hudmap", "true", "false");
+            BindFeature(jsoninterface, "Splitscreen", "cdogs_splitscreen", "Never");
+
+            ConfigureCDogsControls(settings);
+
+            settings.Save();
+        }
         private void Configurecgenius(List<string> commandArray, string rom)
         {
             if (_emulator != "cgenius")
@@ -219,6 +274,123 @@ namespace EmulatorLauncher
             }
             commandArray.Add("--config-file=" + "\"" + cfgFile + "\"");
             commandArray.Add("--hotkeys-file=" + "\"" + hotkeyFile + "\"");
+        }
+
+        private void Configuredhewm3(List<string> commandArray, string rom)
+        {
+            if (_emulator != "dhewm3")
+                return;
+
+            string cfgPath = _path;
+            string savesPath = Path.Combine(AppConfig.GetFullPath("saves"), "doom3", "dhewm3");
+            if (!Directory.Exists(savesPath))
+                try { Directory.CreateDirectory(savesPath); } catch { }
+
+            commandArray.Add("+set");
+            commandArray.Add("fs_basepath");
+            commandArray.Add("\"" + _romPath + "\"");
+            commandArray.Add("+set");
+            commandArray.Add("fs_configpath");
+            commandArray.Add("\"" + cfgPath + "\"");
+            commandArray.Add("+set");
+            commandArray.Add("fs_savepath");
+            commandArray.Add("\"" + savesPath + "\"");
+
+            if (_fullscreen)
+            {
+                commandArray.Add("+set");
+                commandArray.Add("r_fullscreen");
+                commandArray.Add("1");
+            }
+            else
+            {
+                commandArray.Add("+set");
+                commandArray.Add("r_fullscreen");
+                commandArray.Add("0");
+            }
+
+            if (_resolution != null)
+            {
+                commandArray.Add("+set");
+                commandArray.Add("r_fullscreenDesktop");
+                commandArray.Add("0");
+            }
+            else
+            {
+                commandArray.Add("+set");
+                commandArray.Add("r_fullscreenDesktop");
+                commandArray.Add("1");
+            }
+
+            string[] pakFile = File.ReadAllLines(rom);
+            if (pakFile.Length < 1)
+            {
+                throw new ApplicationException("Empty game file.");
+            }
+
+            string pakSubPath = pakFile[0];
+            string game = pakSubPath.Split('\\')[0];
+
+            commandArray.Add("+set");
+            commandArray.Add("fs_game");
+            commandArray.Add(game);
+
+            if (pakFile.Length > 1)
+            {
+                for (int i = 1; i < pakFile.Length; i++)
+                {
+                    commandArray.Add(pakFile[i]);
+                }
+            }
+
+            var changes = new List<Dhewm3ConfigChange>();
+            string cfgFile = Path.Combine(_path, game, "dhewm.cfg");
+
+            if (SystemConfig.isOptSet("dhewm3_resolution") && !string.IsNullOrEmpty(SystemConfig["dhewm3_resolution"]))
+                changes.Add(new Dhewm3ConfigChange("seta", "r_mode", SystemConfig["dhewm3_resolution"]));
+
+            if (!SystemConfig.isOptSet("dhewm3_vsync") || SystemConfig.getOptBoolean("dhewm3_vsync"))
+                changes.Add(new Dhewm3ConfigChange("seta", "r_swapInterval", "1"));
+            else
+                changes.Add(new Dhewm3ConfigChange("seta", "r_swapInterval", "0"));
+            
+            if (SystemConfig.isOptSet("dhewm3_quality") && !string.IsNullOrEmpty(SystemConfig["dhewm3_quality"]))
+                changes.Add(new Dhewm3ConfigChange("seta", "com_machineSpec", SystemConfig["dhewm3_quality"]));
+
+            if (SystemConfig.isOptSet("dhewm3_antialiasing") && !string.IsNullOrEmpty(SystemConfig["dhewm3_antialiasing"]))
+                changes.Add(new Dhewm3ConfigChange("seta", "r_multiSamples", SystemConfig["dhewm3_antialiasing"]));
+            else
+                changes.Add(new Dhewm3ConfigChange("seta", "r_multiSamples", "0"));
+
+            if (SystemConfig.isOptSet("dhewm3_sound") && !string.IsNullOrEmpty(SystemConfig["dhewm3_sound"]))
+                changes.Add(new Dhewm3ConfigChange("seta", "s_numberOfSpeakers", SystemConfig["dhewm3_sound"]));
+
+            if (SystemConfig.isOptSet("dhewm3_eax") && SystemConfig.getOptBoolean("dhewm3_eax"))
+                changes.Add(new Dhewm3ConfigChange("seta", "s_useEAXReverb", "1"));
+            else
+                changes.Add(new Dhewm3ConfigChange("seta", "s_useEAXReverb", "0"));
+
+            if (SystemConfig.isOptSet("dhewm3_playerName") && !string.IsNullOrEmpty(SystemConfig["dhewm3_playerName"]))
+                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", SystemConfig["dhewm3_playerName"]));
+            else
+                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", "RetroBat"));
+
+            if (SystemConfig.isOptSet("dhewm3_hideHUD") && SystemConfig.getOptBoolean("dhewm3_hideHUD"))
+                changes.Add(new Dhewm3ConfigChange("seta", "g_showHud", "0"));
+            else
+                changes.Add(new Dhewm3ConfigChange("seta", "g_showHud", "1"));
+
+            ConfigureDhewm3Controls(changes);
+
+            ConfigEditor.ChangeConfigValues(cfgFile, changes);
+
+            // Cleanup if disabled autoconfigure
+            if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
+            {
+                string[] lines = File.ReadAllLines(cfgFile);
+                lines = lines.Where(line => !line.StartsWith("bind \"JOY")).ToArray();
+                File.WriteAllLines(cfgFile, lines);
+            }
         }
 
         private void ConfigureOpenGoal(List<string> commandArray, string rom)
@@ -445,6 +617,66 @@ namespace EmulatorLauncher
             File.WriteAllBytes(configFile, configBytes);
         }
 
+        private void ConfigurePDark(List<string> commandArray, string rom)
+        {
+            if (_emulator != "pdark")
+                return;
+
+            string targetRom = Path.Combine(_path, "data", "pd.ntsc-final.z64");
+            if (SystemConfig.isOptSet("pdark_region") && !string.IsNullOrEmpty(SystemConfig["pdark_region"]))
+            {
+                string pdarkRegion = SystemConfig["pdark_region"];
+                switch (pdarkRegion)
+                {
+                    case "EUR":
+                        targetRom = Path.Combine(_path, "data", "pd.pal-final.z64");
+                        break;
+                    case "JPN":
+                        targetRom = Path.Combine(_path, "data", "pd.jpn-final.z64");
+                        break;
+                    case "USA":
+                        targetRom = Path.Combine(_path, "data", "pd.ntsc-final.z64");
+                        break;
+                }
+            }
+
+            if (!File.Exists(targetRom))
+            {
+                try { File.Copy(rom, targetRom, true); }
+                catch { }
+            }
+
+            string cfgFile = Path.Combine(_path, "pd.ini");
+            using (var ini = IniFile.FromFile(cfgFile))
+            {
+                try
+                {
+                    ini.WriteValue("video", "DefaultFullscreen", _fullscreen ? "1" : "0");
+                    ini.WriteValue("video", "DefaultMaximize", "1");
+
+                    if (_resolution != null)
+                    {
+                        ini.WriteValue("video", "ExclusiveFullscreen", "1");
+                        ini.WriteValue("video", "DefaultWidth", _resolution.Width.ToString());
+                        ini.WriteValue("video", "DefaultHeight", _resolution.Height.ToString());
+                    }
+                    else
+                    {
+                        ini.WriteValue("video", "ExclusiveFullscreen", "0");
+                        ini.WriteValue("video", "DefaultWidth", ScreenResolution.CurrentResolution.Width.ToString());
+                        ini.WriteValue("video", "DefaultHeight", ScreenResolution.CurrentResolution.Height.ToString());
+                    }
+
+                    BindBoolIniFeatureOn(ini, "video", "VSync", "pdark_vsync", "1", "0");
+                    BindBoolIniFeatureOn(ini, "video", "DetailTextures", "pdark_detailtexture", "1", "0");
+                    BindIniFeature(ini, "video", "TextureFilter", "pdark_texturefilter", "1");
+
+                    ConfigurePDarkControls(ini);
+                }
+                catch { }
+            }
+        }
+
         private void ConfigureSOH(string rom, string exe)
         {
             if (_emulator != "soh")
@@ -466,7 +698,6 @@ namespace EmulatorLauncher
             JObject window;
             JObject fs;
             string settingsFile = Path.Combine(_path, "shipofharkinian.json");
-            //var json = DynamicJson.Load(Path.Combine(_path, "shipofharkinian.json"));
             if (File.Exists(settingsFile))
             {
                 string jsonString = File.ReadAllText(settingsFile);
@@ -820,6 +1051,277 @@ namespace EmulatorLauncher
             }
         }
 
+        private void ConfigureStarship(string rom, string exe)
+        {
+            if (_emulator != "starship")
+                return;
+
+            var otrFiles = Directory.GetFiles(_path, "*.otr");
+            var gameOtrFiles = otrFiles.Where(file => !file.EndsWith("starship.otr", StringComparison.OrdinalIgnoreCase));
+
+            if (!gameOtrFiles.Any())
+            {
+                string emulatorRom = Path.Combine(_path, Path.GetFileName(rom));
+                try { File.Copy(rom, emulatorRom); } catch { SimpleLogger.Instance.Warning("[WARNING] Impossible to copy game file to Starship folder."); }
+
+                string otrExtractExe = Path.Combine(_path, "generate_otr.bat");
+                var starshipExtract = new ProcessStartInfo()
+                {
+                    FileName = otrExtractExe,
+                    WorkingDirectory = _path
+                };
+
+                using (Process process = new Process())
+                {
+                    process.StartInfo = starshipExtract;
+                    process.Start();
+                    process.WaitForExit();
+                    if (process.ExitCode == 0)
+                    {
+                        SimpleLogger.Instance.Info("[INFO] OTR extracted succesfully.");
+                    }
+                    else
+                    {
+                        SimpleLogger.Instance.Error("[INFO] There was a problem extracting OTR data.");
+                    }
+                }
+            }
+
+            // Settings
+            JObject jsonObj;
+            JObject cvars;
+            JObject advancedRes;
+            JObject intScale;
+            JObject window;
+            JObject backend;
+            JObject fs;
+            
+            string settingsFile = Path.Combine(_path, "starship.cfg.json");
+            if (File.Exists(settingsFile))
+            {
+                string jsonString = File.ReadAllText(settingsFile);
+                try { jsonObj = JObject.Parse(jsonString); } catch { jsonObj = new JObject(); }
+            }
+            else
+                jsonObj = new JObject();
+
+            if (jsonObj["CVars"] == null)
+            {
+                cvars = new JObject();
+                jsonObj["CVars"] = cvars;
+            }
+            else
+                cvars = (JObject)jsonObj["CVars"];
+
+            if (cvars["gAdvancedResolution"] == null)
+            {
+                advancedRes = new JObject();
+                cvars["gAdvancedResolution"] = advancedRes;
+            }
+            else
+                advancedRes = (JObject)cvars["gAdvancedResolution"];
+
+            if (advancedRes["IntegerScale"] == null)
+            {
+                intScale = new JObject();
+                advancedRes["IntegerScale"] = intScale;
+            }
+            else
+                intScale = (JObject)advancedRes["IntegerScale"];
+
+            if (jsonObj["Window"] == null)
+            {
+                window = new JObject();
+                jsonObj["Window"] = window;
+            }
+            else
+                window = (JObject)jsonObj["Window"];
+
+            if (window["Backend"] == null)
+            {
+                backend = new JObject();
+                window["Backend"] = backend;
+            }
+            else
+                backend = (JObject)window["Backend"];
+
+            if (window["Fullscreen"] == null)
+            {
+                fs = new JObject();
+                window["Fullscreen"] = fs;
+            }
+            else
+                fs = (JObject)window["Fullscreen"];
+
+            // Aspect ratio
+            if (SystemConfig.isOptSet("starship_ratio") && !string.IsNullOrEmpty(SystemConfig["starship_ratio"]))
+            {
+                string starshipRatio = SystemConfig["starship_ratio"];
+                switch (starshipRatio)
+                {
+                    case "off":
+                        advancedRes["AspectRatioX"] = 0.0;
+                        advancedRes["AspectRatioY"] = 0.0;
+                        break;
+                    case "native":
+                        advancedRes["AspectRatioX"] = 4.0;
+                        advancedRes["AspectRatioY"] = 3.0;
+                        break;
+                    case "widescreen":
+                        advancedRes["AspectRatioX"] = 16.0;
+                        advancedRes["AspectRatioY"] = 9.0;
+                        break;
+                    case "3ds":
+                        advancedRes["AspectRatioX"] = 5.0;
+                        advancedRes["AspectRatioY"] = 3.0;
+                        break;
+                    case "16:10":
+                        advancedRes["AspectRatioX"] = 16.0;
+                        advancedRes["AspectRatioY"] = 10.0;
+                        break;
+                    case "ultrawide":
+                        advancedRes["AspectRatioX"] = 21.0;
+                        advancedRes["AspectRatioY"] = 9.0;
+                        break;
+                }
+            }
+            else
+            {
+                advancedRes["AspectRatioX"] = 0.0;
+                advancedRes["AspectRatioY"] = 0.0;
+            }
+
+            advancedRes["Enabled"] = 1;
+
+            if (SystemConfig.isOptSet("integerscale") && SystemConfig.getOptBoolean("integerscale"))
+            {
+                intScale["Factor"] = 0;
+                intScale["FitAutomatically"] = 1;
+                intScale["NeverExceedBounds"] = 1;
+                advancedRes["PixelPerfectMode"] = 1;
+            }
+            else
+            {
+                intScale["Factor"] = 0;
+                intScale["FitAutomatically"] = 0;
+                intScale["NeverExceedBounds"] = 1;
+                advancedRes["PixelPerfectMode"] = 0;
+            }
+
+            BindFeatureInt(advancedRes, "VerticalPixelCount", "starship_resolution", "720");
+
+            advancedRes["VerticalResolutionToggle"] = 1;
+
+            cvars["gAdvancedResolutionEditorEnabled"] = 0;
+            cvars["gControlNav"] = 1;
+
+            //ConfigureStarshipControls(controllers);
+
+            cvars["gEnableMultiViewports"] = 1;
+            cvars["gInternalResolution"] = 1.0;
+
+            if (SystemConfig.isOptSet("starship_fps") && !string.IsNullOrEmpty(SystemConfig["starship_fps"]))
+            {
+                int starshipFPS = SystemConfig["starship_fps"].ToInteger();
+                cvars["gInterpolationFPS"] = starshipFPS;
+                cvars["gMatchRefreshRate"] = 0;
+            }
+            else
+            {
+                cvars["gInterpolationFPS"] = 60;
+                cvars["gMatchRefreshRate"] = 1;
+            }
+
+            BindFeatureSliderInt(cvars, "gMSAAValue", "starship_msaa", "1");
+            cvars["gOpenMenuBar"] = 1;
+            cvars["gSdlWindowedFullscreen"] = 1;
+            BindFeatureInt(cvars, "gTextureFilter", "starship_texturefilter", "1");
+            BindBoolFeatureOnInt(cvars, "gVsyncEnabled", "starship_vsync", "1", "0");
+            BindFeature(window, "AudioBackend", "starship_audioapi", "wasapi");
+
+            if (SystemConfig.isOptSet("starship_renderer") && !string.IsNullOrEmpty(SystemConfig["starship_renderer"]))
+            {
+                string starshipRenderer = SystemConfig["starship_renderer"];
+                switch (starshipRenderer) 
+                {
+                    case "OpenGL":
+                        backend["Id"] = 1;
+                        backend["Name"] = "OpenGL";
+                        break;
+                    case "DirectX":
+                        backend["Id"] = 0;
+                        backend["Name"] = "DirectX";
+                        break;
+                }
+            }
+            else
+            {
+                backend["Id"] = 1;
+                backend["Name"] = "OpenGL";
+            }
+
+            fs["Enabled"] = _fullscreen ? true : false;
+
+            File.WriteAllText(settingsFile, jsonObj.ToString(Formatting.Indented));
+        }
         #endregion
     }
+
+    #region dhew3 config class
+    class Dhewm3ConfigChange
+    {
+        public string Type { get; set; }
+        public string Key { get; set; }
+        public string NewValue { get; set; }
+
+        public Dhewm3ConfigChange(string type, string key, string newValue)
+        {
+            Type = type;
+            Key = key;
+            NewValue = newValue;
+        }
+    }
+
+    class ConfigEditor
+    {
+        public static void ChangeConfigValues(string filePath, List<Dhewm3ConfigChange> changes)
+        {
+            if (!File.Exists(filePath))
+                return;
+
+            // Read all lines from the file
+            string[] lines = File.ReadAllLines(filePath);
+            bool[] foundFlags = new bool[changes.Count];
+
+            // Make changes in memory
+            for (int i = 0; i < lines.Length; i++)
+            {
+                for (int j = 0; j < changes.Count; j++)
+                {
+                    string pattern = $@"^{Regex.Escape(changes[j].Type)}\s+{Regex.Escape(changes[j].Key)}\s+""(.*?)""";
+                    if (Regex.IsMatch(lines[i], pattern))
+                    {
+                        lines[i] = $"{changes[j].Type} {changes[j].Key} \"{changes[j].NewValue}\"";
+                        foundFlags[j] = true;
+                    }
+                }
+            }
+
+            // Append any missing keys to the file
+            using (StreamWriter writer = File.AppendText(filePath))
+            {
+                for (int j = 0; j < changes.Count; j++)
+                {
+                    if (!foundFlags[j])
+                    {
+                        writer.WriteLine($"{changes[j].Type} {changes[j].Key} \"{changes[j].NewValue}\"");
+                    }
+                }
+            }
+
+            // Write all updated lines back to the file
+            File.WriteAllLines(filePath, lines);
+        }
+    }
+    #endregion
 }

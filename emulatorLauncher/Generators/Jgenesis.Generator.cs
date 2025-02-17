@@ -6,6 +6,7 @@ using EmulatorLauncher.Common;
 using System.Linq;
 using System;
 using EmulatorLauncher.Common.EmulationStation;
+using EmulatorLauncher.Common.Lightguns;
 
 namespace EmulatorLauncher
 {
@@ -15,6 +16,7 @@ namespace EmulatorLauncher
         private ScreenResolution _resolution;
         private SaveStatesWatcher _saveStatesWatcher;
         private int _saveStateSlot;
+        private bool _sindenSoft;
         static List<string> _mdSystems = new List<string>() { "sega_cd", "genesis", "sega_32x" };
         static List<string> _noZipSystems = new List<string>() { "sega_cd" };
 
@@ -124,6 +126,8 @@ namespace EmulatorLauncher
                 string savesPath = Path.Combine(AppConfig.GetFullPath("saves"), system, "jgenesis");
                 if (!Directory.Exists(savesPath))
                     try { Directory.CreateDirectory(savesPath); } catch { }
+
+                ini.DeleteSection("game_boy");
 
                 ini.WriteValue("common", "save_path", "\"Custom\"");
 
@@ -380,6 +384,13 @@ namespace EmulatorLauncher
 
         private void SetupGuns(IniFileJGenesis ini, string jgenSystem)
         {
+            var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
+
             if (!SystemConfig.getOptBoolean("use_guns"))
             {
                 ini.WriteValue("input.snes", "p2_type", "\"" + "Gamepad" + "\"");
@@ -540,6 +551,9 @@ namespace EmulatorLauncher
                 _saveStatesWatcher.Dispose();
                 _saveStatesWatcher = null;
             }
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }

@@ -23,6 +23,7 @@ namespace EmulatorLauncher
         private ScreenResolution _resolution;
         private bool _isPcsxqt;
         private bool _fullscreen;
+        private bool _sindenSoft = false;
 
         public override void Cleanup()
         {
@@ -31,6 +32,9 @@ namespace EmulatorLauncher
                 _saveStatesWatcher.Dispose();
                 _saveStatesWatcher = null;
             }
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             base.Cleanup();
         }
@@ -117,7 +121,9 @@ namespace EmulatorLauncher
             if (_isPcsxqt)
             {
                 commandArray.Add("-batch");
-                commandArray.Add("-nogui");
+                
+                if (!SystemConfig.isOptSet("pcsx2_gui") || !SystemConfig.getOptBoolean("pcsx2_gui"))
+                    commandArray.Add("-nogui");
 
                 if (SystemConfig.isOptSet("pcsx2_startbios") && SystemConfig.getOptBoolean("pcsx2_startbios"))
                 {
@@ -657,8 +663,6 @@ namespace EmulatorLauncher
                 cheatsRootPath = string.IsNullOrEmpty(cheatsRootPath) ? path : Path.Combine(cheatsRootPath, "pcsx2");
                 
                 SetIniPath(ini, "Folders", "Cheats", Path.Combine(cheatsRootPath, "cheats"));
-                SetIniPath(ini, "Folders", "CheatsWS", Path.Combine(cheatsRootPath, "cheats_ws"));
-                SetIniPath(ini, "Folders", "CheatsNI", Path.Combine(cheatsRootPath, "cheats_ni"));
                 
                 // Snapshots path
                 string screenShotsPath = Path.Combine(AppConfig.GetFullPath("screenshots"), "pcsx2");
@@ -680,7 +684,7 @@ namespace EmulatorLauncher
                     if (newSaveStates)
                     {
                         // Keep the original folder, we'll listen to it, and inject in our custom folder
-                        ini.WriteValue("Folders", "Savestates ", "sstates");
+                        ini.WriteValue("Folders", "SaveStates ", "sstates");
 
                         _saveStatesWatcher = new Pcsx2SaveStatesMonitor(rom, Path.Combine(path, "sstates"), savesPath);
                         _saveStatesWatcher.PrepareEmulatorRepository();
@@ -688,7 +692,7 @@ namespace EmulatorLauncher
                     else
                     {
                         FileTools.TryCreateDirectory(savesPath);
-                        ini.WriteValue("Folders", "Savestates ", savesPath);
+                        ini.WriteValue("Folders", "SaveStates ", savesPath);
                     }
                 }
 
@@ -722,7 +726,14 @@ namespace EmulatorLauncher
 
                 // Emucore section
                 ini.WriteValue("EmuCore", "SavestateZstdCompression", "true");
-                ini.WriteValue("EmuCore", "EnableFastBoot", SystemConfig.getOptBoolean("fullboot") ? "false" : "true");
+                ini.WriteValue("EmuCore", "EnableGameFixes", "true");
+                ini.WriteValue("EmuCore", "EnablePatches", "true");
+                
+                if (!SystemConfig.isOptSet("fullboot") || SystemConfig.getOptBoolean("fullboot"))
+                    ini.WriteValue("EmuCore", "EnableFastBoot", "true");
+                else
+                    ini.WriteValue("EmuCore", "EnableFastBoot", "false");
+                
                 ini.WriteValue("EmuCore", "EnableFastBootFastForward", SystemConfig.getOptBoolean("pcsx2_fastboot") ? "true" : "false");
 
                 //Enable cheats automatically on load if Retroachievements-hardcore is not set only
@@ -732,6 +743,7 @@ namespace EmulatorLauncher
                     ini.WriteValue("EmuCore", "EnableCheats", "false");
 
                 BindBoolIniFeature(ini, "EmuCore", "EnableDiscordPresence", "discord", "true", "false");
+                
                 BindBoolIniFeatureOn(ini, "EmuCore", "EnableWideScreenPatches", "widescreen_patch", "true", "false");
                 BindBoolIniFeatureOn(ini, "EmuCore", "EnableNoInterlacingPatches", "interlacing_patch", "true", "false");
 
@@ -773,7 +785,6 @@ namespace EmulatorLauncher
                 else if (Features.IsSupported("bilinear_filtering"))
                     ini.WriteValue("EmuCore/GS", "linear_present_mode", "1");
 
-                BindIniFeature(ini, "EmuCore/GS", "texture_preloading", "texture_preloading", "2");
                 BindIniFeature(ini, "EmuCore/GS", "CASMode", "pcsx2_casmode", "0");
 
                 // User hacks
@@ -836,7 +847,7 @@ namespace EmulatorLauncher
                 }
 
                 // OSD information
-                BindBoolIniFeature(ini, "EmuCore/GS", "OsdShowMessages", "Notifications", "true", "false");
+                //BindBoolIniFeature(ini, "EmuCore/GS", "OsdShowMessages", "Notifications", "true", "false");
 
                 if (SystemConfig.isOptSet("DrawFramerate") && SystemConfig.getOptBoolean("DrawFramerate"))
                 {
@@ -862,11 +873,6 @@ namespace EmulatorLauncher
                 BindIniFeatureSlider(ini, "Framerate", "NominalScalar", "pcsx2_NominalScalar", "1", 1);
 
                 // Game fixes
-                if (SystemConfig.getOptBoolean("FpuNegDivHack"))
-                    ini.WriteValue("EmuCore/Gamefixes", "FpuNegDivHack", "true");
-                else if (Features.IsSupported("FpuNegDivHack"))
-                    ini.Remove("EmuCore/Gamefixes", "FpuNegDivHack");
-
                 if (SystemConfig.getOptBoolean("FpuMulHack"))
                     ini.WriteValue("EmuCore/Gamefixes", "FpuMulHack", "true");
                 else if (Features.IsSupported("FpuMulHack"))

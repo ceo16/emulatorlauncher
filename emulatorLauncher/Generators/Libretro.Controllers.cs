@@ -37,10 +37,18 @@ namespace EmulatorLauncher.Libretro
                 _inputDriver = "dinput";
 
             // no menu in non full uimode
-            if (Program.SystemConfig.isOptSet("uimode") && Program.SystemConfig["uimode"] != "Full" && retroarchspecials.ContainsKey(InputKey.a))
-                retroarchspecials.Remove(InputKey.a);
+            if (Program.SystemConfig.isOptSet("uimode") && Program.SystemConfig["uimode"] != "Full")
+            {
+                if (retroarchspecialsALT.ContainsKey(InputKey.x))
+                    retroarchspecialsALT.Remove(InputKey.x);
+                if (retroarchspecials.ContainsKey(InputKey.a))
+                    retroarchspecials.Remove(InputKey.a);
+            }
 
             CleanControllerConfig(retroconfig);
+
+            int controllerNb = Program.Controllers.Count + 1;
+            retroconfig["input_max_users"] = (controllerNb + 1).ToString();
 
             foreach (var controller in Program.Controllers)
                 WriteControllerConfig(retroconfig, controller, system, core);
@@ -98,6 +106,24 @@ namespace EmulatorLauncher.Libretro
             { InputKey.right, "hold_fast_forward"}
         };
 
+        static public Dictionary<InputKey, string> retroarchspecialsALT = new Dictionary<InputKey, string>()
+        {
+            { InputKey.start, "exit_emulator"},
+            { InputKey.b, "pause_toggle"},
+            { InputKey.a, "state_slot_decrease"},
+            { InputKey.x, "menu_toggle"},
+            { InputKey.y, "state_slot_increase"},
+            { InputKey.pageup, "load_state"},
+            { InputKey.pagedown, "save_state"},
+            { InputKey.l2, "rewind"},
+            { InputKey.r2, "hold_fast_forward"},
+            { InputKey.r3, "screenshot"},
+            { InputKey.up, "ai_service"},
+            { InputKey.down, "disk_eject_toggle"},
+            { InputKey.left, "disk_prev"},
+            { InputKey.right, "disk_next"}
+        };
+
         static public Dictionary<string, InputKey> turbobuttons = new Dictionary<string, InputKey>()
         {
             { "L1", InputKey.pageup},
@@ -115,6 +141,7 @@ namespace EmulatorLauncher.Libretro
 
             foreach (var specialkey in retroarchspecials)
                 retroconfig.DisableAll("input_" + specialkey.Value);
+
             retroconfig.DisableAll("input_toggle_fast_forward");
         }
 
@@ -185,7 +212,10 @@ namespace EmulatorLauncher.Libretro
                 return;
 
             if (Program.SystemConfig.getOptBoolean("fastforward_toggle"))
+            {
+                retroarchspecialsALT[InputKey.r2] = "toggle_fast_forward";
                 retroarchspecials[InputKey.right] = "toggle_fast_forward";
+            }
 
             if (Misc.HasWiimoteGun())
             {
@@ -212,6 +242,9 @@ namespace EmulatorLauncher.Libretro
 
         private static string GetAnalogMode(Controller controller, string system)
         {
+            if (Program.SystemConfig.isOptSet("analogToDpad") && !string.IsNullOrEmpty(Program.SystemConfig["analogToDpad"]))
+                return Program.SystemConfig["analogToDpad"];
+
             if (disabledAnalogModeSystems.Contains(system))
                 return "0";
            
@@ -333,9 +366,16 @@ namespace EmulatorLauncher.Libretro
             if (controller.PlayerIndex == 1 && !_noHotkey)
             {
                 if (Program.SystemConfig.getOptBoolean("fastforward_toggle"))
+                {
                     retroarchspecials[InputKey.right] = "toggle_fast_forward";
+                    retroarchspecialsALT[InputKey.r2] = "toggle_fast_forward";
+                }
 
-                foreach (var specialkey in retroarchspecials)
+                var hotkeyList = retroarchspecials;
+                if (Program.SystemConfig.getOptBoolean("alt_hotkeys"))
+                    hotkeyList = retroarchspecialsALT;
+
+                foreach (var specialkey in hotkeyList)
                 {
                     var input = GetInputCode(controller, specialkey.Key);
                     if (input == null)

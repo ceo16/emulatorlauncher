@@ -7,8 +7,7 @@ using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.Joysticks;
-using System.Reflection;
-using System.Diagnostics.Eventing.Reader;
+using EmulatorLauncher.Common.Lightguns;
 
 namespace EmulatorLauncher
 {
@@ -29,8 +28,10 @@ namespace EmulatorLauncher
             Program.Controllers.ForEach(c => c.ResetSdlController());
         }
 
-        public static bool WriteControllersConfig(string path, string system, bool triforce)
+        public static bool WriteControllersConfig(string path, string system, bool triforce, out bool sindenSoft)
         {
+            sindenSoft = false;
+
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 return false;
 
@@ -43,7 +44,7 @@ namespace EmulatorLauncher
                 // Guns
                 if (Program.SystemConfig.getOptBoolean("use_guns"))
                 {
-                    GenerateControllerConfig_wiilightgun(path, "WiimoteNew.ini", "Wiimote");
+                    GenerateControllerConfig_wiilightgun(path, "WiimoteNew.ini", "Wiimote", sindenSoft);
                     return true;
                 }
 
@@ -555,7 +556,7 @@ namespace EmulatorLauncher
             { "ir_right", "IR/Right" }
         };
 
-        private static void GenerateControllerConfig_wiilightgun(string path, string filename, string anyDefKey)
+        private static void GenerateControllerConfig_wiilightgun(string path, string filename, string anyDefKey, bool sindenSoft)
         {
             string iniFile = Path.Combine(path, "User", "Config", filename);
 
@@ -563,6 +564,14 @@ namespace EmulatorLauncher
 
             string rom = Program.SystemConfig["rom"];
             var mappingToUse = defaultGunMapping;
+            
+            var guns = RawLightgun.GetRawLightguns();
+
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                sindenSoft = true;
+            }
 
             // Search gun game in gamesDB.xml file
             var game = Program.GunGames.FindGunGame("wii", rom);
@@ -713,6 +722,7 @@ namespace EmulatorLauncher
                 foreach (var pad in Program.Controllers.OrderBy(i => i.PlayerIndex).Take(4))
                 {
                     bool xinputAsSdl = false;
+                    bool isNintendo = pad.VendorID == USB_VENDOR.NINTENDO;
                     string gcpad = anyDefKey + pad.PlayerIndex;
                     ini.ClearSection(gcpad);
 
@@ -795,18 +805,70 @@ namespace EmulatorLauncher
                     bool revertXY = Program.Features.IsSupported("gamecube_buttons") && Program.SystemConfig.isOptSet("gamecube_buttons") && Program.SystemConfig["gamecube_buttons"] == "reverse_ab";
                     bool rumble = !Program.SystemConfig.isOptSet("input_rumble") || Program.SystemConfig.getOptBoolean("input_rumble");
 
+                    if (isNintendo && pad.PlayerIndex == 1)
+                    {
+                        string tempMapA = anyMapping[InputKey.a];
+                        string tempMapB = anyMapping[InputKey.b];
+                        string tempMapX = anyMapping[InputKey.x];
+                        string tempMapY = anyMapping[InputKey.y];
+
+                        anyMapping[InputKey.a] = tempMapB;
+                        anyMapping[InputKey.b] = tempMapA;
+                        anyMapping[InputKey.x] = tempMapY;
+                        anyMapping[InputKey.y] = tempMapX;
+                    }
+
                     foreach (var x in anyMapping)
                     {
                         string value = x.Value;
 
                         if (xboxLayout && reversedButtons.ContainsKey(x.Key))
+                        {
                             value = reversedButtons[x.Key];
+                            if (isNintendo)
+                            {
+                                if (value == "Buttons/B")
+                                    value = "Buttons/A";
+                                else if (value == "Buttons/A")
+                                    value = "Buttons/B";
+                                else if (value == "Buttons/X")
+                                    value = "Buttons/Y";
+                                else if (value == "Buttons/Y")
+                                    value = "Buttons/X";
+                            }
+                        }
 
                         if (revertXY && reversedButtonsXY.ContainsKey(x.Key))
+                        {
                             value = reversedButtonsXY[x.Key];
+                            if (isNintendo)
+                            {
+                                if (value == "Buttons/B")
+                                    value = "Buttons/A";
+                                else if (value == "Buttons/A")
+                                    value = "Buttons/B";
+                                else if (value == "Buttons/X")
+                                    value = "Buttons/Y";
+                                else if (value == "Buttons/Y")
+                                    value = "Buttons/X";
+                            }
+                        }
 
                         if (positional && reversedButtonsRotate.ContainsKey(x.Key))
+                        {
                             value = reversedButtonsRotate[x.Key];
+                            if (isNintendo)
+                            {
+                                if (value == "Buttons/B")
+                                    value = "Buttons/Y";
+                                else if (value == "Buttons/A")
+                                    value = "Buttons/X";
+                                else if (value == "Buttons/X")
+                                    value = "Buttons/A";
+                                else if (value == "Buttons/Y")
+                                    value = "Buttons/B";
+                            }
+                        }
 
                         if (triforce && Program.SystemConfig.isOptSet("triforce_mapping") && Program.SystemConfig["triforce_mapping"] == "vs4")
                         {
@@ -1278,46 +1340,25 @@ namespace EmulatorLauncher
                 ini.WriteValue("Hotkeys", "Load State/Load State Slot 1", "F1");
                 ini.WriteValue("Hotkeys", "Save State/Save State Slot 1", "@(Shift+F1)");
 
-                if (tech == "XInput")
+                if (c1.Config.Type != "keyboard")
                 {
                     if (xinputAsSdl)
                         ini.WriteValue("Hotkeys", "Device", "SDL" + "/" + _p1sdlindex + "/" + deviceName);
                     else
                         ini.WriteValue("Hotkeys", "Device", tech + "/" + xIndex + "/" + deviceName);
-                    ini.WriteValue("Hotkeys", "General/Toggle Pause", "Back&`Button B`");
-                    ini.WriteValue("Hotkeys", "General/Toggle Fullscreen", "Back&`Button A`");
-                    ini.WriteValue("Hotkeys", "General/Exit", "Back&Start");
+                    ini.WriteValue("Hotkeys", "General/Toggle Pause", c1.IsXInputDevice? "@(Back+`Button B`)" : "@(Back+`Button E`)");
+                    ini.WriteValue("Hotkeys", "General/Toggle Fullscreen", c1.IsXInputDevice ? "@(Back+`Button A`)" : "@(Back+`Button S`)");
+                    ini.WriteValue("Hotkeys", "General/Exit", "@(Back+Start)");
 
                     // SaveStates
-                    ini.WriteValue("Hotkeys", "General/Take Screenshot", "@(Back+`Button X`)"); // Use Same value as SaveState....
-                    ini.WriteValue("Hotkeys", "Save State/Save to Selected Slot", "@(Back+`Button X`)");
-                    ini.WriteValue("Hotkeys", "Load State/Load from Selected Slot", "@(Back+`Button Y`)");
+                    ini.WriteValue("Hotkeys", "General/Take Screenshot", c1.IsXInputDevice ? "@(Back+`Button X`)" : "@(Back+`Button W`)"); // Use Same value as SaveState....
+                    ini.WriteValue("Hotkeys", "Save State/Save to Selected Slot", c1.IsXInputDevice ? "@(Back+`Button X`)" : "@(Back+`Button W`)");
+                    ini.WriteValue("Hotkeys", "Load State/Load from Selected Slot", c1.IsXInputDevice ? "@(Back+`Button Y`)" : "@(Back+`Button N`)");
                     ini.WriteValue("Hotkeys", "Other State Hotkeys/Increase Selected State Slot", "@(Back+`Pad N`)");
                     ini.WriteValue("Hotkeys", "Other State Hotkeys/Decrease Selected State Slot", "@(Back+`Pad S`)");
 
-                    ini.WriteValue("Hotkeys", "General/Eject Disc", "Back&`Shoulder L`");
-                    ini.WriteValue("Hotkeys", "General/Change Disc", "Back&`Shoulder R`");
-                }
-                else if (tech == "SDL")
-                {
-                    bool revert = c1.VendorID == USB_VENDOR.NINTENDO;
-                    ini.WriteValue("Hotkeys", "Device", tech + "/" + _p1sdlindex + "/" + deviceName);
-                    ini.WriteValue("Hotkeys", "General/Toggle Pause", revert ? "`Button 4`&`Button 0`" : "`Button 4`&`Button 1`");
-                    ini.WriteValue("Hotkeys", "General/Toggle Fullscreen", revert ? "`Button 4`&`Button 1`" : "`Button 4`&`Button 0`");
-
-                    ini.WriteValue("Hotkeys", "General/Exit", "`Button 4`&`Button 6`");
-
-                    var save = (GetSDLMappingName(c1, InputKey.hotkey) ?? "") + "&" + (GetSDLMappingName(c1, InputKey.y) ?? "");
-                    ini.WriteValue("Hotkeys", "General/Take Screenshot", save); // Use Same value as SaveState....
-                    ini.WriteValue("Hotkeys", "Save State/Save to Selected Slot", save);
-                    ini.WriteValue("Hotkeys", "Load State/Load from Selected Slot", (GetSDLMappingName(c1, InputKey.hotkey) ?? "") + "&" + (GetSDLMappingName(c1, InputKey.x) ?? ""));
-
-                    // Save State/Save to Selected Slot = @(`Button 6`+`Button 2`)
-
-                    ini.WriteValue("Hotkeys", "General/Take Screenshot", "`Button 4`&`Full Axis 5+`");
-
-                    ini.WriteValue("Hotkeys", "General/Eject Disc", "`Button 4`&`Button 9`");
-                    ini.WriteValue("Hotkeys", "General/Change Disc", "`Button 4`&`Button 10`");
+                    ini.WriteValue("Hotkeys", "Emulation Speed/Decrease Emulation Speed", "@(Back+`Shoulder L`)");
+                    ini.WriteValue("Hotkeys", "Emulation Speed/Increase Emulation Speed", "@(Back+`Shoulder R`)");
                 }
                 else        // Keyboard
                 {
@@ -1326,8 +1367,8 @@ namespace EmulatorLauncher
                     ini.WriteValue("Hotkeys", "General/Toggle Fullscreen", "@(Alt+RETURN)");
                     ini.WriteValue("Hotkeys", "General/Exit", "ESCAPE");
                     ini.WriteValue("Hotkeys", "General/Take Screenshot", "`F9`");
-                    ini.WriteValue("Hotkeys", "General/Eject Disc", "Alt&E");
-                    ini.WriteValue("Hotkeys", "General/Change Disc", "Alt&S");
+                    ini.WriteValue("Hotkeys", "General/Eject Disc", "Alt+E");
+                    ini.WriteValue("Hotkeys", "General/Change Disc", "Alt+S");
                 }
             }
         }

@@ -82,6 +82,7 @@ namespace EmulatorLauncher
             if (mesenSystem == "Nes")
                 revertButtons = !SystemConfig.getOptBoolean("rotate_buttons");
 
+            bool isNintendo = ctrl.VendorID == Common.Joysticks.USB_VENDOR.NINTENDO;
             bool isXInput = ctrl.IsXInputDevice;
             int index = isXInput ? ctrl.XInput.DeviceIndex : (ctrl.DirectInput != null ? ctrl.DirectInput.DeviceIndex : ctrl.DeviceIndex);
             int playerIndex = ctrl.PlayerIndex;
@@ -94,10 +95,18 @@ namespace EmulatorLauncher
 
             var port = systemSection.GetOrCreateContainer(portSection);
             var mapping = port.GetOrCreateContainer("Mapping1");
+            var inputKeyMapping = inputKeyMappingDefault;
+            if (isNintendo)
+            {
+                inputKeyMapping[InputKey.b] = "South";
+                inputKeyMapping[InputKey.a] = "West";
+                inputKeyMapping[InputKey.y] = "East";
+                inputKeyMapping[InputKey.x] = "North";
+            }
 
             string controllerType = "None";
-            if (SystemConfig.isOptSet("mesen_controller" + playerIndex) && !string.IsNullOrEmpty(SystemConfig["mesen_controller" + playerIndex]))
-                controllerType = SystemConfig["mesen_controller" + playerIndex];
+            if (SystemConfig.isOptSet("mesen_controllertype" + playerIndex) && !string.IsNullOrEmpty(SystemConfig["mesen_controllertype" + playerIndex]))
+                controllerType = SystemConfig["mesen_controllertype" + playerIndex];
             else if (systemDefaultController.ContainsKey(mesenSystem))
                 controllerType = systemDefaultController[mesenSystem];
 
@@ -229,7 +238,7 @@ namespace EmulatorLauncher
             }
 
             if (playerIndex == 1)
-                WriteHotkeys(pref, index, isXInput);
+                WriteHotkeys(pref, index, isXInput, inputKeyMapping);
 
             SimpleLogger.Instance.Info("[INFO] Assigned controller " + ctrl.DevicePath + " to player : " + ctrl.PlayerIndex.ToString());
         }
@@ -249,8 +258,8 @@ namespace EmulatorLauncher
             var mapping = port.GetOrCreateContainer("Mapping2");
 
             string controllerType = "None";
-            if (SystemConfig.isOptSet("mesen_controller1") && !string.IsNullOrEmpty(SystemConfig["mesen_controller1"]))
-                controllerType = SystemConfig["mesen_controller1"];
+            if (SystemConfig.isOptSet("mesen_controllertype1") && !string.IsNullOrEmpty(SystemConfig["mesen_controllertype1"]))
+                controllerType = SystemConfig["mesen_controllertype1"];
             else if (systemDefaultController.ContainsKey(mesenSystem))
                 controllerType = systemDefaultController[mesenSystem];
 
@@ -620,7 +629,7 @@ namespace EmulatorLauncher
             }
         }
 
-        private void WriteHotkeys(DynamicJson pref, int index, bool isXInput)
+        private void WriteHotkeys(DynamicJson pref, int index, bool isXInput, Dictionary<InputKey, string> inputKeyMapping)
         {
             pref.Remove("ShortcutKeys");
             var shortcuts = new List<DynamicJson>();
@@ -726,7 +735,7 @@ namespace EmulatorLauncher
         static readonly List<string> pcePorts = new List<string>() { "Port1", "Port1A", "Port1B", "Port1C", "Port1D", "Port1E" };
         static readonly List<string> smsPorts = new List<string>() { "Port1", "Port2" };
 
-        static readonly Dictionary<InputKey, string> inputKeyMapping = new Dictionary<InputKey, string>()
+        static readonly Dictionary<InputKey, string> inputKeyMappingDefault = new Dictionary<InputKey, string>()
         {
             { InputKey.b, "East" },
             { InputKey.a, "South" },

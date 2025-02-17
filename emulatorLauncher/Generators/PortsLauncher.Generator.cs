@@ -2,6 +2,8 @@
 using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common;
+using EmulatorLauncher.Common.EmulationStation;
+using EmulatorLauncher.PadToKeyboard;
 
 namespace EmulatorLauncher
 {
@@ -11,14 +13,26 @@ namespace EmulatorLauncher
     partial class OpenGoalGenerator : PortsLauncherGenerator
     { public OpenGoalGenerator() { _exeName = "gk.exe"; DependsOnDesktopResolution = true; } }
 
+    partial class CDogsGenerator : PortsLauncherGenerator
+    { public CDogsGenerator() { _exeName = "bin\\cdogs-sdl.exe"; DependsOnDesktopResolution = true; } }
+
     partial class CGeniusGenerator : PortsLauncherGenerator
     { public CGeniusGenerator() { _exeName = "CGenius.exe"; DependsOnDesktopResolution = true; } }
+
+    partial class PDarkGenerator : PortsLauncherGenerator
+    { public PDarkGenerator() { DependsOnDesktopResolution = false; } }
 
     partial class SohGenerator : PortsLauncherGenerator
     { public SohGenerator() { _exeName = "soh.exe"; DependsOnDesktopResolution = true; } }
 
+    partial class StarshipGenerator : PortsLauncherGenerator
+    { public StarshipGenerator() { _exeName = "Starship.exe"; DependsOnDesktopResolution = true; } }
+
     partial class CorsixTHGenerator : PortsLauncherGenerator
     { public CorsixTHGenerator() { _exeName = "CorsixTH.exe"; DependsOnDesktopResolution = true; } }
+
+    partial class Dhewm3Generator : PortsLauncherGenerator
+    { public Dhewm3Generator() { _exeName = "dhewm3.exe"; DependsOnDesktopResolution = false; } }
 
     partial class PortsLauncherGenerator : Generator
     {
@@ -28,8 +42,10 @@ namespace EmulatorLauncher
         private string _path;
         protected string _exeName;
         private string _romPath;
+        private string _workingPath = null;
         private bool _fullscreen;
         private bool _nobezels;
+        private bool _useReshade = false;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -44,11 +60,44 @@ namespace EmulatorLauncher
 
             // Get emulator path, emulator must match the name in es_systems
             _path = AppConfig.GetFullPath(emulator);
+            if (emulator == "cdogs")
+            {
+                _path = Path.Combine(_path, "bin");
+                _workingPath = _path + "\\";
+            }
             if (!Directory.Exists(_path))
                 return null;
 
-            // Get exe name for the port, using a dictionary
+            // Get exe name for the port, using a dictionary (or specific method for pdark)
             _exeName = exeDictionnary[emulator];
+            if (emulator == "pdark")
+            {
+                if (SystemConfig.isOptSet("pdark_region") && !string.IsNullOrEmpty(SystemConfig["pdark_region"]))
+                {
+                    string pdarkRegion = SystemConfig["pdark_region"];
+                    switch (pdarkRegion)
+                    {
+                        case "EUR":
+                            _exeName = "pd.pal.x86_64.exe";
+                            break;
+                        case "JPN":
+                            _exeName = "pd.jpn.x86_64.exe";
+                            break;
+                        case "USA":
+                            _exeName = "pd.x86_64.exe";
+                            break;
+                    }
+                }
+                else
+                {
+                    string romName = Path.GetFileNameWithoutExtension(rom).ToLowerInvariant();
+                    if (rom.Contains("eur"))
+                        _exeName = "pd.pal.x86_64.exe";
+                    else if (rom.Contains("jap") || rom.Contains("jp"))
+                        _exeName = "pd.jpn.x86_64.exe";
+                }
+            }
+            
             string exe = Path.Combine(_path, _exeName);
             if (!File.Exists(exe))
                 return null;
@@ -72,7 +121,13 @@ namespace EmulatorLauncher
                 switch (bezelType)
                 {
                     case "reshade":
-                        ReshadeManager.Setup(ReshadeBezelType.d3d9, ReshadePlatform.x64, system, rom, _path, resolution, emulator);   // TO BE DONE LATER
+                        if (!reshadePlatform.ContainsKey(emulator) || !reshadeType.ContainsKey(emulator))
+                            break;
+                        ReshadePlatform RSplatform = reshadePlatform[emulator];
+                        ReshadeBezelType RStype = reshadeType[emulator];
+                        SimpleLogger.Instance.Info("[INFO] Setting up Reshade");
+                        ReshadeManager.Setup(RStype, RSplatform, system, rom, _path, resolution, emulator);
+                        _useReshade = true;
                         break;
                     default:
                         _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
@@ -87,40 +142,66 @@ namespace EmulatorLauncher
             return new ProcessStartInfo()
             {
                 FileName = exe,
-                WorkingDirectory = _path,
+                WorkingDirectory = _workingPath?? _path,
                 Arguments = args,
             };
         }
 
         private readonly Dictionary<string, string> exeDictionnary = new Dictionary<string, string>
         {
+            { "cdogs", "cdogs-sdl.exe"},
             { "cgenius", "CGenius.exe"},
             { "corsixth", "CorsixTH.exe"},
+            { "dhewm3", "dhewm3.exe"},
             { "opengoal", "gk.exe"},
             { "openjazz", "OpenJazz.exe"},
+            { "pdark", "pd.x86_64.exe"},
             { "soh", "soh.exe"},
             { "sonic3air", "Sonic3AIR.exe"},
             { "sonicmania", "RSDKv5U_x64.exe"},
             { "sonicretro", "RSDKv4_64.exe"},
-            { "sonicretrocd", "RSDKv3_64.exe"}
+            { "sonicretrocd", "RSDKv3_64.exe"},
+            { "starship", "Starship.exe"}
         };
 
         private readonly Dictionary<string, string> systemBezels = new Dictionary<string, string>
         {
+            { "cdogs", "no"},
             { "cgenius", "yes"},
             { "corsixth", "yes"},
+            { "dhewm3", "reshade"},
+            { "pdark", "yes"},
             { "sonic3air", "no"},
             { "sonicmania", "no"},
             { "sonicretro", "no"},
             { "sonicretrocd", "no"},
             { "opengoal", "yes"},
             { "openjazz", "no"},
-            { "soh", "yes"}
+            { "soh", "yes"},
+            { "starship", "yes"}
         };
 
         // Dictionaries to use if a port uses Reshade to specify platform and type
-        private readonly Dictionary<string, ReshadeBezelType> reshadeType = new Dictionary<string, ReshadeBezelType>();
-        private readonly Dictionary<string, ReshadePlatform> reshadePlatform = new Dictionary<string, ReshadePlatform>();
+        private readonly Dictionary<string, ReshadeBezelType> reshadeType = new Dictionary<string, ReshadeBezelType>()
+        {
+            { "dhewm3", ReshadeBezelType.opengl }
+        };
+        private readonly Dictionary<string, ReshadePlatform> reshadePlatform = new Dictionary<string, ReshadePlatform>()
+        {
+            { "dhewm3", ReshadePlatform.x86 }
+        };
+
+        public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
+        {
+            if (_emulator == "pdark")
+            {
+                string exe = Path.GetFileNameWithoutExtension(_exeName);
+                return mapping = PadToKey.AddOrUpdateKeyMapping(mapping, exe, InputKey.hotkey | InputKey.start, "(%{CLOSE})");
+            }
+
+            else
+                return mapping;
+        }
 
         // RunAnd Wait override
         // Used so far to dispose bezels
@@ -134,6 +215,15 @@ namespace EmulatorLauncher
             int ret = base.RunAndWait(path);
 
             bezel?.Dispose();
+
+            if (_useReshade)
+            {
+                if (reshadeType.ContainsKey(_emulator))
+                {
+                    ReshadeBezelType RStype = reshadeType[_emulator];
+                    ReshadeManager.UninstallReshader(RStype, _path);
+                }
+            }
 
             if (ret == 1)
                 return 0;

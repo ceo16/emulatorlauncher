@@ -95,11 +95,21 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Common\Generator.cs" />
+    <Compile Include="Common\Guns.cs" />
     <Compile Include="Common\SaveStatesWatcher.cs" />
     <Compile Include="Common\ScreenShotsWatcher.cs" />
     <Compile Include="Common\SystemDefaults.cs" />
     <Compile Include="Common\SystemShaders.cs" />
     <Compile Include="Common\Wheels.cs" />
+    <Compile Include="Demulshooter\Demulshooter.cs" />
+    <Compile Include="MameHooker\MameHooker.cs" />
+    <Compile Include="MameHooker\MameHooker.Model2.cs" />
+    <Compile Include="MameHooker\MameHooker.Model3.cs" />
+    <Compile Include="MameHooker\MameHooker.Teknoparrot.cs" />
+    <Compile Include="MameHooker\MameHooker.ExeLauncher.cs" />
+    <Compile Include="MameHooker\MameHooker.Demul.cs" />
+    <Compile Include="MameHooker\MameHooker.Flycast.cs" />
+    <Compile Include="MameHooker\MameHooker.Mame64.cs" />
     <Compile Include="Generators\AmigaForever.Generator.cs" />
     <Compile Include="Generators\AppleWin.Generator.cs" />
     <Compile Include="Generators\ArcadeFlashWeb.Generator.cs" />
@@ -181,6 +191,9 @@
       <DependentUpon>Eka2l1.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\ExeLauncher.Generator.cs" />
+    <Compile Include="Generators\ExeLauncher.Guns.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
     <Compile Include="Generators\EpicLauncher.Generator.cs">
       <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
     </Compile>
@@ -248,6 +261,9 @@
     <Compile Include="Generators\LibRetro.InputRemap.cs">
       <DependentUpon>LibRetro.Generator.cs</DependentUpon>
     </Compile>
+    <Compile Include="Generators\LibRetro.Wheels.cs">
+      <DependentUpon>LibRetro.Generator.cs</DependentUpon>
+    </Compile>
     <Compile Include="Generators\Lime3ds.Generator.cs" />
     <Compile Include="Generators\Lime3ds.Controllers.cs">
       <DependentUpon>Lime3ds.Generator.cs</DependentUpon>
@@ -263,6 +279,10 @@
     </Compile>
     <Compile Include="Generators\Mame64.Controllers.cs">
       <DependentUpon>Mame64.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\Mandarine.Generator.cs" />
+    <Compile Include="Generators\Mandarine.Controllers.cs">
+      <DependentUpon>Mandarine.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\Mednafen.Generator.cs" />
     <Compile Include="Generators\Mednafen.Controllers.cs">
@@ -280,6 +300,9 @@
     <Compile Include="Generators\mGBA.Generator.cs" />
     <Compile Include="Generators\Model2.Generator.cs" />
     <Compile Include="Generators\Model2.Controllers.cs">
+      <DependentUpon>Model2.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\Model2.Guns.cs">
       <DependentUpon>Model2.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\Model3.Generator.cs" />
@@ -348,6 +371,9 @@
       <DependentUpon>Ppsspp.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\Project64.Generator.cs" />
+    <Compile Include="Generators\Project64.Controllers.cs">
+      <DependentUpon>Project64.Generator.cs</DependentUpon>
+    </Compile>
     <Compile Include="Generators\PSXMame.Generator.cs" />
     <Compile Include="Generators\PSXMame.Controllers.cs">
       <DependentUpon>PSXMame.Generator.cs</DependentUpon>
@@ -405,6 +431,9 @@
     </Compile>
     <Compile Include="Generators\TeknoParrot.Generator.cs" />
     <Compile Include="Generators\TeknoParrot.Controllers.cs">
+      <DependentUpon>TeknoParrot.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\TeknoParrot.Guns.cs">
       <DependentUpon>TeknoParrot.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\Tsugaru.Generator.cs" />

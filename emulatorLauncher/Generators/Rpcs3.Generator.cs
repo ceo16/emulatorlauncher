@@ -84,9 +84,11 @@ namespace EmulatorLauncher
             List<string> commandArray = new List<string>
             {
                 "\"" + rom + "\"",
-                "--no-gui"
             };
 
+            if (!SystemConfig.getOptBoolean("rpcs3_gui"))
+                commandArray.Add("--no-gui");
+            
             if (fullscreen)
                 commandArray.Add("--fullscreen");
 
@@ -105,39 +107,36 @@ namespace EmulatorLauncher
             ValidateUncompressedGame();
             
             // Configuration
-            if (!SystemConfig.getOptBoolean("disableautoconfig"))
-            {
-                SetupGuiConfiguration(path);
-                SetupConfiguration(path, fullscreen);
-                SetupVFSConfiguration(path, savesPath);
-                CreateControllerConfiguration(path);
+            SetupGuiConfiguration(path);
+            SetupConfiguration(path, fullscreen);
+            SetupVFSConfiguration(path, savesPath);
+            CreateControllerConfiguration(path);
 
-                // Check if firmware is installed in emulator, if not and if firmware is available in \bios path then install it instead of running the game
-                string firmware = Path.Combine(path, "dev_flash", "vsh", "etc", "version.txt");
-                string biosPath = AppConfig.GetFullPath("bios");
-                string biosPs3 = Path.Combine(biosPath, "PS3UPDAT.PUP");
+            // Check if firmware is installed in emulator, if not and if firmware is available in \bios path then install it instead of running the game
+            string firmware = Path.Combine(path, "dev_flash", "vsh", "etc", "version.txt");
+            string biosPath = AppConfig.GetFullPath("bios");
+            string biosPs3 = Path.Combine(biosPath, "PS3UPDAT.PUP");
 
-                if (!File.Exists(firmware) && !File.Exists(biosPs3))
-                    throw new ApplicationException("PS3 firmware is not installed in rpcs3 emulator, either place it in \\bios folder, or launch the emulator and install the firware.");
+            if (!File.Exists(firmware) && !File.Exists(biosPs3))
+                throw new ApplicationException("PS3 firmware is not installed in rpcs3 emulator, either place it in \\bios folder, or launch the emulator and install the firware.");
             
-                else if (!File.Exists(firmware) && File.Exists(biosPs3))
+            else if (!File.Exists(firmware) && File.Exists(biosPs3))
+            {
+                SimpleLogger.Instance.Info("[INFO] Firmware not installed, launching RPCS3 with 'installfirmware' command.");
+                List<string> commandArrayfirmware = new List<string>
                 {
-                    SimpleLogger.Instance.Info("[INFO] Firmware not installed, launching RPCS3 with 'installfirmware' command.");
-                    List<string> commandArrayfirmware = new List<string>
-                    {
-                        "--installfw",
-                        biosPs3
-                    };
+                    "--installfw",
+                    biosPs3
+                };
                     
-                    string argsfirmware = string.Join(" ", commandArrayfirmware);
+                string argsfirmware = string.Join(" ", commandArrayfirmware);
 
-                    return new ProcessStartInfo()
-                    {
-                        FileName = exe,
-                        WorkingDirectory = path,
-                        Arguments = argsfirmware,
-                    };
-                }
+                return new ProcessStartInfo()
+                {
+                    FileName = exe,
+                    WorkingDirectory = path,
+                    Arguments = argsfirmware,
+                };
             }
 
             if (Path.GetExtension(rom).ToLower() == ".lnk")
@@ -168,6 +167,9 @@ namespace EmulatorLauncher
 
             Process process = Process.Start(path);
             process.WaitForExit();
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             // In some cases, the process seems to be launched again by the main one
             process = Process.GetProcessesByName("rpcs3").FirstOrDefault();
@@ -205,6 +207,17 @@ namespace EmulatorLauncher
                     ini.WriteValue("GSFrame", "lockMouseInFullscreen", "true");
 
                 ini.WriteValue("GSFrame", "disableMouse", "true");
+
+                if (SystemConfig.isOptSet("MonitorIndex") && !string.IsNullOrEmpty(SystemConfig["MonitorIndex"]))
+                {
+                    int index = SystemConfig["MonitorIndex"].ToInteger();
+
+                    if (index != -1)
+                    {
+                        index = index - 1;
+                        ini.WriteValue("GSFrame", "screen", index.ToString());
+                    }
+                }
             }
         }
 
@@ -265,6 +278,7 @@ namespace EmulatorLauncher
             BindBoolFeature(core, "SPU loop detection", "spuloopdetect", "true", "false");
             BindFeature(core, "SPU Block Size", "spublocksize", "Safe");
             BindBoolFeature(core, "Accurate RSX reservation access", "accuratersx", "true", "false");
+            BindFeature(core, "RSX FIFO Accuracy", "rpcs3_rsxfifoaccuracy", "Fast");
             BindBoolFeature(core, "PPU Accurate Vector NaN Values", "vectornan", "true", "false");
             BindBoolFeature(core, "Full Width AVX-512", "fullavx", "true", "false");
             BindFeature(core, "XFloat Accuracy", "rpcs3_xfloat", "Accurate");

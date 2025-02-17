@@ -4,6 +4,10 @@ using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using EmulatorLauncher.Common.Lightguns;
+using System.Linq;
 
 namespace EmulatorLauncher
 {
@@ -11,6 +15,7 @@ namespace EmulatorLauncher
     {
         private BezelFiles _bezelFileInfo;
         private ScreenResolution _resolution;
+        private bool _sindenSoft = false;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -20,12 +25,15 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
+
             // settings (xml configuration)
             SetupJsonConfiguration(path, system, rom);
 
-            _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
+            if (fullscreen)
+                _bezelFileInfo = BezelFiles.GetBezelFiles(system, rom, resolution, emulator);
             _resolution = resolution;
-            bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
+            
 
             // command line parameters
             var commandArray = new List<string>
@@ -96,7 +104,7 @@ namespace EmulatorLauncher
 
             BindBoolFeatureOn(preference, "AutoLoadPatches", "mesen_patches", "true", "false");
             BindBoolFeature(preference, "EnableRewind", "rewind", "true", "false");
-            BindBoolFeature(preference, "DisableOsd", "mesen_osd", "false", "true");
+            BindBoolFeatureOn(preference, "DisableOsd", "mesen_osd", "false", "true");
             BindBoolFeature(preference, "ShowGameTimer", "mesen_timecounter", "true", "false");
             BindBoolFeature(preference, "ShowFps", "mesen_fps", "true", "false");
 
@@ -250,6 +258,13 @@ namespace EmulatorLauncher
 
         private void SetupGuns(DynamicJson section, string mesenSystem)
         {
+            var guns = RawLightgun.GetRawLightguns();
+            if (guns.Any(g => g.Type == RawLighGunType.SindenLightgun))
+            {
+                Guns.StartSindenSoftware();
+                _sindenSoft = true;
+            }
+
             foreach (var port in nesPorts)
             {
                 var portSection = section.GetOrCreateContainer(port);
@@ -357,6 +372,9 @@ namespace EmulatorLauncher
             int ret = base.RunAndWait(path);
 
             bezel?.Dispose();
+
+            if (_sindenSoft)
+                Guns.KillSindenSoftware();
 
             if (ret == 1)
                 return 0;
