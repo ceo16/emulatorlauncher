@@ -264,7 +264,7 @@ namespace EmulatorLauncher.Libretro
             Dictionary<InputKey, string> retroarchbtns = new Dictionary<InputKey, string>()
             {
                 { InputKey.b, "a" },
-                { InputKey.a, "b" }, // A and B reverted for RetroBat
+                { InputKey.a, "b" }, // A and B reverted for Lumaca
                 { InputKey.x, "x" }, 
                 { InputKey.y, "y" },
                 { InputKey.pageup, "l" },
@@ -404,7 +404,7 @@ namespace EmulatorLauncher.Libretro
                     hotkeyList = retroarchspecialsALT;
 
                 // override shortcuts from file
-                string cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "retroarch_controller_hotkeys.yml");
+                string cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "retroarch_controller_hotkeys.yml");
 
                 if (File.Exists(cHotkeyFile))
                 {

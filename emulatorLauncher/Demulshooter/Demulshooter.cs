@@ -12,7 +12,7 @@ namespace EmulatorLauncher
         private static bool GetDemulshooterExecutable(string emulator, string rom, out string executable, out string path)
         {
             executable = "DemulShooter.exe";
-            path = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "demulshooter");
+            path = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "demulshooter");
 
             if (!Directory.Exists(path))
             {
@@ -106,7 +106,7 @@ namespace EmulatorLauncher
                 }
             }
 
-            string iniFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "demulshooter", "config.ini");
+            string iniFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "demulshooter", "config.ini");
 
             if (iniFile != null)
                 SimpleLogger.Instance.Info("[GUNS] Writing in DemulShooter ini file: " + iniFile);

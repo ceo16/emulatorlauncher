@@ -583,7 +583,7 @@ namespace EmulatorLauncher
 
             if (!File.Exists(configFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "openjazz", "openjazz.cfg");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "openjazz", "openjazz.cfg");
                 if (File.Exists(templateFile))
                     try { File.Copy(templateFile, configFile); } catch { }
             }

@@ -70,7 +70,7 @@ namespace EmulatorLauncher
             wheelIndex1 = wheel1.DinputIndex;
             SimpleLogger.Instance.Info("[WHEELS] Wheel 1 directinput index : " + wheelIndex1);
 
-            // Get mapping from yml file in retrobat\system\resources\inputmapping\wheels and retrieve mapping
+            // Get mapping from yml file in lumaca\system\resources\inputmapping\wheels and retrieve mapping
             YmlFile ymlFile = null;
             YmlContainer wheel1Mapping = null;
             Dictionary<string, string> wheel1buttonMap = new Dictionary<string, string>();

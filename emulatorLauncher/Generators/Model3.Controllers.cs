@@ -228,7 +228,7 @@ namespace EmulatorLauncher
 
                     // Get mapping in yml file
                     
-                    string model3WheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "model3_wheels.yml");
+                    string model3WheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "model3_wheels.yml");
                     if (File.Exists(model3WheelMapping))
                     {
                         ymlFile = YmlFile.Load(model3WheelMapping);
