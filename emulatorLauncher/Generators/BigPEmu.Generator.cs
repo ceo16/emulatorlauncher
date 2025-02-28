@@ -5,6 +5,7 @@ using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 using System.Linq;
 using System;
+using EmulatorLauncher.Common.Joysticks;
 
 namespace EmulatorLauncher
 {
@@ -15,6 +16,7 @@ namespace EmulatorLauncher
         private string _path;
         private SaveStatesWatcher _saveStatesWatcher;
         private int _saveStateSlot = 0;
+        private SdlVersion _sdlVersion = SdlVersion.SDL2_30;
 
         public override void Cleanup()
         {
@@ -38,6 +40,10 @@ namespace EmulatorLauncher
             string exe = Path.Combine(path, "BigPEmu.exe");
             if (!File.Exists(exe))
                 return null;
+
+            string sdl2 = Path.Combine(path, "Data", "ThirdParty", "bin", "SDL2.dll");
+            if (File.Exists(sdl2))
+                _sdlVersion = SdlJoystickGuidManager.GetSdlVersion(sdl2);
 
             string[] extensions = new string[] { ".cue", ".cdi", ".j64",".jag", ".rom", ".bin", ".prg", ".cof", ".abs" };
             if (Path.GetExtension(rom).ToLowerInvariant() == ".zip" || Path.GetExtension(rom).ToLowerInvariant() == ".7z" || Path.GetExtension(rom).ToLowerInvariant() == ".squashfs")
@@ -149,7 +155,17 @@ namespace EmulatorLauncher
 
                 //video part
                 var video = bigpemucore.GetOrCreateContainer("Video");
-                BindFeature(video, "DisplayMode", "displaymode", fullscreen ? "0" : "1");      //0 for borderless windows, 1 for windowed, 2 for fullscreen
+
+                if (fullscreen)                             //0 for borderless windows, 1 for windowed, 2 for fullscreen
+                {
+                    if (SystemConfig.getOptBoolean("exclusivefs"))
+                        video["DisplayMode"] = "2";
+                    else
+                        video["DisplayMode"] = "0";
+                }
+                else
+                    video["DisplayMode"] = "1";
+
                 BindBoolFeatureOn(video, "VSync", "vsync", "1", "0");                  // vsync on as default setting
                 BindFeature(video, "HDROutput", "enable_hdr", "0");
                 video["ShittyFreqWarn"] = "0";

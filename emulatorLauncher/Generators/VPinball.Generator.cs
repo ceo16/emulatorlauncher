@@ -15,6 +15,7 @@ using EmulatorLauncher.Common.EmulationStation;
 using EmulatorLauncher.Common.FileFormats;
 using System.Drawing.Imaging;
 using EmulatorLauncher.Common.Joysticks;
+using System.Configuration;
 
 namespace EmulatorLauncher
 {
@@ -28,7 +29,8 @@ namespace EmulatorLauncher
         private LoadingForm _splash;       
         private Version _version;
         private string _processName;
-        private string _exe;        
+        private string _exe;
+        private string _gamePath;
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
         {
@@ -45,6 +47,7 @@ namespace EmulatorLauncher
             _exe = exe;
             _processName = Path.GetFileNameWithoutExtension(exe);
             _version = new Version(10, 0, 0, 0);
+            _gamePath = Path.GetDirectoryName(rom);
 
             // Get version from executable
             var versionInfo = FileVersionInfo.GetVersionInfo(exe);
@@ -69,7 +72,6 @@ namespace EmulatorLauncher
             EnsurePinupDOFRegistered(path);
             EnsurePupServerRegistered(path);
             EnsurePupDMDControlRegistered(path);
-            //WritePinUPPopperOptions(path);
 
             string romPath = Path.Combine(Path.GetDirectoryName(rom), "roms");
             if (!Directory.Exists(romPath))
@@ -656,52 +658,6 @@ namespace EmulatorLauncher
             catch { }
         }
 
-        /*private void WritePinUPPopperOptions(string path)
-        {
-            string PopperPath = "PopperPath";
-            string VPINMamePath = "VPINMamePath";
-            string VPXPath = "VPXPath";
-
-            string targetPopperPath = Path.Combine(path, "PinUPSystem");
-            string targetVPINMamePath = Path.Combine(path, "VPinMAME");
-            string targetVPXPath = path;
-
-            try
-            {
-                var softwareKey = Registry.CurrentUser.OpenSubKey(@"Software\PinUPPopper\Settings", true);
-                {
-                    if (softwareKey != null)
-                    {
-                        string PopperPathvalue = softwareKey.GetValue(PopperPath) as string;
-
-                        if (PopperPathvalue != null)
-                        {
-                            if (PopperPathvalue != targetPopperPath)
-                                SetOption(softwareKey, "PopperPath", targetPopperPath);
-                        }
-
-                        string VPINMamePathvalue = softwareKey.GetValue(VPINMamePath) as string;
-
-                        if (VPINMamePathvalue != null)
-                        {
-                            if (VPINMamePathvalue != targetVPINMamePath)
-                                SetOption(softwareKey, "VPINMamePath", targetVPINMamePath);
-                        }
-
-                        string VPXPathvalue = softwareKey.GetValue(VPXPath) as string;
-
-                        if (VPXPathvalue != null)
-                        {
-                            if (VPXPathvalue != targetVPINMamePath)
-                                SetOption(softwareKey, "VPXPath", targetVPINMamePath);
-                        }
-                    }  
-                }
-            }
-            catch
-            { }
-        }*/
-
         private static string GetRegAsmPath(RegistryViewEx view = RegistryViewEx.Registry32)
         {
             string installRoot = string.Empty;
@@ -807,6 +763,7 @@ namespace EmulatorLauncher
                 SetupOptionsRegistry(resolution);
 
             SetupVPinMameOptions(path, romPath);
+            SetupDmdDevice(path);
         }
 
         private void SetupOptionsIniFile(string path, ScreenResolution resolution)
@@ -890,6 +847,7 @@ namespace EmulatorLauncher
 
                 // Audio
                 ini.WriteValue("Player", "PlayMusic", SystemConfig.getOptBoolean("vp_music_off") ? "0" : "1");
+                BindIniFeature(ini, "Player", "Sound3D", "vp_audiochannels", "0");
 
                 // Controls
                 Controller controller = null;
@@ -985,6 +943,7 @@ namespace EmulatorLauncher
             ini.WriteValue("Player", "JoyCustom3Key", "203");
             ini.WriteValue("Player", "JoyCustom4Key", "205");
         }
+
         private void SetupOptionsRegistry(ScreenResolution resolution)
         {
             //HKEY_CURRENT_USER\Software\Visual Pinball\VP10\Player
@@ -1138,6 +1097,7 @@ namespace EmulatorLauncher
                 var globalKey = visualPinMame.CreateSubKey("globals");
                 var defaultKey = visualPinMame.CreateSubKey("default");
 
+                // global key
                 if (globalKey != null)
                 {
                     string vPinMamePath = Path.Combine(path, "VPinMAME");
@@ -1169,6 +1129,7 @@ namespace EmulatorLauncher
                     globalKey.Close();
                 }
 
+                // default key
                 if (defaultKey != null)
                 {
                     if (Program.SystemConfig.getOptBoolean("vpmame_dmd"))
@@ -1182,9 +1143,13 @@ namespace EmulatorLauncher
                         SetOption(defaultKey, "showwindmd", 1);
                     }
 
+                    BindBoolRegistryFeature(defaultKey, "cabinet_mode", "vpmame_cabinet", 1, 0, true);
+                    BindBoolRegistryFeature(defaultKey, "dmd_colorize", "vpmame_colordmd", 1, 0, false);
+
                     defaultKey.Close();
                 }
 
+                // per rom config
                 if (romPath != null)
                 {
                     string[] romList = Directory.GetFiles(romPath, "*.zip").Select(r => Path.GetFileNameWithoutExtension(r)).Distinct().ToArray();
@@ -1206,12 +1171,28 @@ namespace EmulatorLauncher
                             SetOption(romKey, "showwindmd", 1);
                         }
 
+                        BindBoolRegistryFeature(romKey, "cabinet_mode", "vpmame_cabinet", 1, 0, true);
+                        BindBoolRegistryFeature(romKey, "dmd_colorize", "vpmame_colordmd", 1, 0, false);
+
                         romKey.Close();
                     }
                 }
             }
 
             softwareKey.Close();
+        }
+
+        private void SetupDmdDevice(string path)
+        {
+            string iniFile = Path.Combine(path, "VPinMAME", "DmdDevice.ini");
+
+            using (var ini = new IniFile(iniFile, IniOptions.UseSpaces | IniOptions.KeepEmptyValues | IniOptions.KeepEmptyLines))
+            {
+                BindBoolIniFeatureOn(ini, "virtualdmd", "enabled", "vpmame_virtualdmd", "true", "false");
+                BindBoolIniFeature(ini, "zedmd", "enabled", "vpmame_zedmd", "true", "false");
+
+                ini.Save();
+            }
         }
 
         private static void DisableVPinMameLicenceDialogs(string romPath, RegistryKey visualPinMame)
@@ -1263,8 +1244,9 @@ namespace EmulatorLauncher
         private void SetupB2STableSettings(string path)
         {
             string b2STableSettingsPath = Path.Combine(path, "BackglassServer", "B2STableSettings.xml");
+            string b2STableSettingsPathRom = Path.Combine(_gamePath, "B2STableSettings.xml");
 
-            if (!File.Exists(b2STableSettingsPath))
+            if (!File.Exists(b2STableSettingsPathRom))
             {
                 try
                 {
@@ -1273,6 +1255,7 @@ namespace EmulatorLauncher
                     new XElement("ArePluginsOn", 1),
                     new XElement("DefaultStartMode", 2),
                     new XElement("DisableFuzzyMatching", 1),
+                    new XElement("HideGrill", SystemConfig.getOptBoolean("vpbg_hidegrill") ? 1 : 0),
                     new XElement("LogPath", ""),  // Empty value
                     new XElement("IsLampsStateLogOn", 0),
                     new XElement("IsSolenoidsStateLogOn", 0),
@@ -1286,6 +1269,7 @@ namespace EmulatorLauncher
                     new XElement("ScreenshotFileType", 0)
                     ));
 
+                    xmlDoc.Save(b2STableSettingsPathRom);
                     xmlDoc.Save(b2STableSettingsPath);
                 }
                 catch { }
@@ -1294,11 +1278,12 @@ namespace EmulatorLauncher
             {
                 try
                 {
-                    XDocument xmlDoc = XDocument.Load(b2STableSettingsPath);
+                    XDocument xmlDoc = XDocument.Load(b2STableSettingsPathRom);
                     XElement root = xmlDoc.Element("B2STableSettings");
 
                     if (root != null)
                     {
+                        // Plugins
                         XElement element = root.Element("ArePluginsOn");
 
                         if (element != null)
@@ -1306,6 +1291,15 @@ namespace EmulatorLauncher
                         else
                             root.Add(new XElement("ArePluginsOn", "1"));
 
+                        // Hide grill
+                        XElement hidegrill = root.Element("HideGrill");
+
+                        if (element != null)
+                            element.Value = SystemConfig.getOptBoolean("vpbg_hidegrill") ? "1" : "0";
+                        else
+                            root.Add(new XElement("HideGrill", SystemConfig.getOptBoolean("vpbg_hidegrill") ? "1" : "0"));
+
+                        xmlDoc.Save(b2STableSettingsPathRom);
                         xmlDoc.Save(b2STableSettingsPath);
                     }
                     else
@@ -1353,6 +1347,24 @@ namespace EmulatorLauncher
             }
 
             return null;
+        }
+
+        private static void BindBoolRegistryFeature(RegistryKey key, string name, string featureName, object truevalue, object falsevalue, bool defaultOn)
+        {
+            if (Program.Features.IsSupported(featureName))
+            {
+                if (Program.SystemConfig.isOptSet(featureName) && Program.SystemConfig.getOptBoolean(featureName))
+                    SetOption(key, name, truevalue);
+                else
+                {
+                    if (Program.SystemConfig.isOptSet(featureName) && !Program.SystemConfig.getOptBoolean(featureName))
+                        SetOption(key, name, falsevalue);
+                    else if (defaultOn)
+                        SetOption(key, name, truevalue);
+                    else
+                        SetOption(key, name, falsevalue);
+                }
+            }
         }
 
         class DirectB2sData
