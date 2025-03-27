@@ -35,7 +35,7 @@ namespace EmulatorLauncher
                 Directory.CreateDirectory(folder);
 
             // Check if config file already exists or not and create it if not
-            string controllerSettings = Path.Combine(folder, "Lumaca.yml");
+            string controllerSettings = Path.Combine(folder, "Retrobat.yml");
             
             var yml = YmlFile.Load(controllerSettings);
 
