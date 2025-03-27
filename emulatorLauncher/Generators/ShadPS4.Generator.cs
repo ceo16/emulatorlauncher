@@ -81,7 +81,11 @@ namespace EmulatorLauncher
         /// <param name="rom"></param>
         private void SetupConfiguration(string path, string rom, bool fullscreen, ScreenResolution resolution)
         {
-            string settingsFile = Path.Combine(path, "user", "config.toml");
+            string userFolder = Path.Combine(path, "user");
+            if (!Directory.Exists(userFolder))
+                try { Directory.CreateDirectory(userFolder); } catch { }
+
+            string settingsFile = Path.Combine(userFolder, "config.toml");
             string romPath = Path.GetDirectoryName(rom);
             if (Path.GetExtension(romPath).ToLower() == ".ps4")
                 romPath = Directory.GetParent(romPath).FullName.Replace("\\", "/");
@@ -98,16 +102,6 @@ namespace EmulatorLauncher
                 if (SystemConfig.isOptSet("shadps4_username") && !string.IsNullOrEmpty(SystemConfig["shadps4_username"]))
                     toml.WriteValue("General", "userName", "\"" + SystemConfig["shadps4_username"] + "\"");
 
-                if (fullscreen)
-                    toml.WriteValue("General", "Fullscreen", "true");
-                else
-                    toml.WriteValue("General", "Fullscreen", "false");
-
-                if (SystemConfig.getOptBoolean("exclusivefs"))
-                    toml.WriteValue("General", "FullscreenMode", "True");
-                else
-                    toml.WriteValue("General", "FullscreenMode", "Borderless");
-
                 toml.WriteValue("General", "autoUpdate", "false");
                 toml.WriteValue("General", "showSplash", "false");
 
@@ -117,6 +111,17 @@ namespace EmulatorLauncher
                     toml.WriteValue("GPU", "screenHeight", resolution == null ? ScreenResolution.CurrentResolution.Height.ToString() : resolution.Height.ToString());
                     toml.WriteValue("GPU", "screenWidth", resolution == null ? ScreenResolution.CurrentResolution.Width.ToString() : resolution.Width.ToString());
                 }
+                BindBoolIniFeature(toml, "GPU", "allowHDR", "enable_hdr", "true", "false");
+
+                if (fullscreen)
+                    toml.WriteValue("GPU", "Fullscreen", "true");
+                else
+                    toml.WriteValue("GPU", "Fullscreen", "false");
+
+                if (SystemConfig.getOptBoolean("exclusivefs"))
+                    toml.WriteValue("GPU", "FullscreenMode", "\"Fullscreen\"");
+                else
+                    toml.WriteValue("GPU", "FullscreenMode", "\"Fullscreen (Borderless)\"");
 
                 // Settings section
                 string ps4Lang = Getps4LangFromEnvironment();
@@ -144,8 +149,14 @@ namespace EmulatorLauncher
 
                 string savePath = AppConfig.GetFullPath("saves");
                 string shadSavePath = Path.Combine(savePath, "ps4", "shadps4");
-                if (!Directory.Exists(savePath))
-                    try { Directory.CreateDirectory(savePath); } catch { }
+                if (!Directory.Exists(shadSavePath))
+                    try { Directory.CreateDirectory(shadSavePath); } catch { }
+                toml.WriteValue("GUI", "saveDataPath", "\"" + shadSavePath.Replace("\\", "/") + "\"");
+
+                string dlcPath = Path.Combine(savePath, "ps4", "DLC");
+                if (!Directory.Exists(dlcPath))
+                    try { Directory.CreateDirectory(dlcPath); } catch { }
+                toml.WriteValue("GUI", "addonInstallDir", "\"" + dlcPath.Replace("\\", "\\\\") + "\"");
             }
         }
 
