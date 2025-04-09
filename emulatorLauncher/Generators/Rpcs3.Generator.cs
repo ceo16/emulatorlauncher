@@ -22,6 +22,7 @@ namespace EmulatorLauncher
             SimpleLogger.Instance.Info("[Generator] Getting " + emulator + " path and executable name.");
 
             string path = AppConfig.GetFullPath(emulator);
+
             if (string.IsNullOrEmpty(path) && emulator != "rpcs3")
                 path = AppConfig.GetFullPath("rpcs3");
 

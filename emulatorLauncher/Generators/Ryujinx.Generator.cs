@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common;
-using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.Joysticks;
+using Newtonsoft.Json;
+using System.Linq;
+using System;
 
 namespace EmulatorLauncher
 {
@@ -31,6 +33,32 @@ namespace EmulatorLauncher
             if (!File.Exists(exe))
                 return null;
 
+            try
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(exe);
+                if (versionInfo != null)
+                {
+                    string version = versionInfo.FileMajorPart + "." + versionInfo.FileMinorPart + "." + versionInfo.FileBuildPart + "." + versionInfo.FilePrivatePart;
+                    if (!string.IsNullOrEmpty(version))
+                    {
+                        SimpleLogger.Instance.Info("[Generator] " + emulator + " version: " + version);
+
+                        string checkversion = "1.2.28.0";
+                        if (Version.TryParse(checkversion, out Version tocheck))
+                        {
+                            if (Version.TryParse(version, out Version current))
+                            {
+                                if (current <= tocheck)
+                                {
+                                    SystemConfig["ryujinx_sdlguid"] = "true";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
             string setupPath = Path.Combine(path, "portable");
 
             string portablePath = Path.Combine(AppConfig.GetFullPath("saves"), "switch", "ryujinx", "portable");
@@ -39,7 +67,12 @@ namespace EmulatorLauncher
 
             SimpleLogger.Instance.Info("[Generator] Setting '" + setupPath + "' as content path for the emulator");
 
-            SetupConfiguration(setupPath);
+            // First of all delete the Config.json file near the executable if it exists
+            string jsonFiletoDelete = Path.Combine(path, "Config.json");
+            if (File.Exists(jsonFiletoDelete))
+                try { File.Delete(jsonFiletoDelete); } catch { }
+
+            SetupConfiguration(setupPath, path);
 
             var commandArray = new List<string>();
 
@@ -98,90 +131,95 @@ namespace EmulatorLauncher
         }
 
         //Manage Config.json file settings
-        private void SetupConfiguration(string setupPath)
+        private void SetupConfiguration(string setupPath, string path)
         {
-            if (SystemConfig.isOptSet("disableautoconfig") && SystemConfig.getOptBoolean("disableautoconfig"))
-                return;
-
             bool fullscreen = !IsEmulationStationWindowed() || SystemConfig.getOptBoolean("forcefullscreen");
 
-            var json = DynamicJson.Load(Path.Combine(setupPath, "Config.json"));
+            // Read and parse JSON
+            string filePath = Path.Combine(setupPath, "Config.json");
+            string jsonConfig = File.ReadAllText(filePath);
+            dynamic json = JsonConvert.DeserializeObject(jsonConfig);
+
+            //var json = DynamicJson.Load(Path.Combine(setupPath, "Config.json"));
 
             //Set fullscreen
-            json["start_fullscreen"] = fullscreen ? "true" : "false";
+            json.start_fullscreen = fullscreen ? true : false;
 
             // Folder
-            List<string> paths = new List<string>();
+            List<string> gameDirs = new List<string>(json.game_dirs.ToObject<string[]>());
             string romPath = Path.Combine(AppConfig.GetFullPath("roms"), "switch");
             if (Directory.Exists(romPath))
             {
-                paths.Add(romPath);
-                json.SetObject("game_dirs", paths);
+                gameDirs.Add(romPath);
+                gameDirs = gameDirs.Distinct().ToList();
+                json.game_dirs = new Newtonsoft.Json.Linq.JArray(gameDirs);
             }
 
             //General Settings
-            json["check_updates_on_start"] = "false";
-            json["update_checker_type"] = "Off";
-            json["show_confirm_exit"] = "false";
-            json["show_console"] = "false";
+            json.check_updates_on_start = false;
+            json.update_checker_type = "Off";
+            json.show_confirm_exit = false;
+            json.show_console = false;
 
             //Input
-            BindBoolFeature(json, "docked_mode", "ryujinx_undock", "false", "true");
-            json["hide_cursor"] = "2";
+            BindBoolFeatureDefaultFalse(json, "docked_mode", "ryujinx_undock");
+            json.hide_cursor = 2;
 
             // Discord
-            BindBoolFeature(json, "enable_discord_integration", "discord", "true", "false");
+            BindBoolFeatureDefaultFalse(json, "enable_discord_integration", "discord");
 
             //System
             BindFeature(json, "system_language", "switch_language", GetDefaultswitchLanguage());
-            BindFeature(json, "vsync_mode", "ryujinx_vsync", "0");
+            BindFeatureInt(json, "vsync_mode", "ryujinx_vsync", 0);
             if (SystemConfig.isOptSet("ryujinx_vsync") && SystemConfig["ryujinx_vsync"] == "2")
-                json["enable_custom_vsync_interval"] = "true";
+                json.enable_custom_vsync_interval = true;
             else
-                json["enable_custom_vsync_interval"] = "false";
+                json.enable_custom_vsync_interval = false;
 
-            BindBoolFeatureOn(json, "enable_ptc", "enable_ptc", "true", "false");
+            BindBoolFeatureDefaultTrue(json, "enable_ptc", "enable_ptc");
 
             // internet access
             if (SystemConfig.isOptSet("ryujinx_network") && SystemConfig["ryujinx_network"] == "internet")
-                json["enable_internet_access"] = "true";
+                json.enable_internet_access = true;
             else
-                json["enable_internet_access"] = "false";
+                json.enable_internet_access = false;
 
-            BindBoolFeatureOn(json, "enable_fs_integrity_checks", "enable_fs_integrity_checks", "true", "false");
+            BindBoolFeatureDefaultTrue(json, "enable_fs_integrity_checks", "enable_fs_integrity_checks");
             BindFeature(json, "audio_backend", "audio_backend", "SDL2");
             BindFeature(json, "memory_manager_mode", "memory_manager_mode", "HostMappedUnsafe");
-            BindBoolFeature(json, "ignore_missing_services", "ignore_missing_services", "true", "false");
+            BindBoolFeatureDefaultFalse(json, "ignore_missing_services", "ignore_missing_services");
             BindFeature(json, "system_region", "system_region", "USA");
 
             //Graphics Settings
             BindBoolFeatureAuto(json, "backend_threading", "backend_threading", "On", "Off", "Auto");
             BindFeature(json, "anti_aliasing", "ryujinx_antialiasing", "None");
             BindFeature(json, "scaling_filter", "ryujinx_scaling_filter", "Bilinear");
-            BindBoolFeatureOn(json, "enable_shader_cache", "enable_shader_cache", "true", "false");
-            BindBoolFeature(json, "enable_texture_recompression", "enable_texture_recompression", "true", "false");
+            BindBoolFeatureDefaultTrue(json, "enable_shader_cache", "enable_shader_cache");
+            BindBoolFeatureDefaultFalse(json, "enable_texture_recompression", "enable_texture_recompression");
 
             // Resolution
-            string res;
+            double res;
             if (SystemConfig.isOptSet("res_scale") && !string.IsNullOrEmpty(SystemConfig["res_scale"]))
             {
-                res = SystemConfig["res_scale"];
+                res = SystemConfig["res_scale"].ToDouble();
 
-                if (res.StartsWith("0."))
+                if (res == 0)
+                    json.res_scale = 1;
+                else if (res < 1)
                 {
-                    json["res_scale"] = "-1";
-                    json["res_scale_custom"] = res;
+                    json.res_scale = -1;
+                    json.res_scale_custom = res;
                 }
                 else
                 {
-                    json["res_scale"] = res;
+                    json.res_scale = res;
                 }
             }
 
             else
-                json["res_scale"] = "1";
+                json.res_scale = 1;
 
-            BindFeature(json, "max_anisotropy", "max_anisotropy", "-1");
+            BindFeatureInt(json, "max_anisotropy", "max_anisotropy", -1);
             BindFeature(json, "aspect_ratio", "aspect_ratio", "Fixed16x9");
 
             //Perform conroller configuration
@@ -197,19 +235,25 @@ namespace EmulatorLauncher
                 switch(network)
                 {
                     case "no":
-                        json["multiplayer_mode"] = "0";
+                        json.multiplayer_mode = 0;
                         break;
                     case "local":
                     case "internet":
-                        json["multiplayer_mode"] = "1";
+                        json.multiplayer_mode = 1;
                         break;
                 }
             }
             else
-                json["multiplayer_mode"] = "0";
+                json.multiplayer_mode = 0;
 
             //save config file
-            json.Save();
+            string updatedJson = JsonConvert.SerializeObject(json, Formatting.Indented);
+            File.WriteAllText(filePath, updatedJson);
+
+            // Also write the config file near the emulator in case it could not be deleted
+            string jsonNearExe = Path.Combine(path, "Config.json");
+            if (File.Exists(jsonNearExe))
+                File.WriteAllText(jsonNearExe, updatedJson);
         }
     }
 }
