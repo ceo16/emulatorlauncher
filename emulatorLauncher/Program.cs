@@ -133,7 +133,7 @@
   { "raine", () => new RaineGenerator() },
   { "raze", () => new RazeGenerator() },
   { "redream", () => new RedreamGenerator() },
-  { "lumaca", () => new LumacaLauncherGenerator() },
+  { "retrobat", () => new RetrobatLauncherGenerator() },
   { "rpcs3", () => new Rpcs3Generator() },
   { "ruffle", () => new RuffleGenerator() },
   { "ryujinx", () => new RyujinxGenerator() },
