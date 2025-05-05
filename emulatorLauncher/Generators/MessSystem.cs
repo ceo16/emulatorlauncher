@@ -28,7 +28,7 @@ namespace EmulatorLauncher
 
         static readonly MessSystem[] MessSystems = new MessSystem[]
             {
-                // IN RETROBAT
+                // IN LUMACA
 
                 // Acorn Electron
                 
@@ -350,7 +350,7 @@ namespace EmulatorLauncher
                 new MessSystem("pegasus"      ,"pegasus"       , "rom1"  ),     // Amber Pegasus
                 new MessSystem("pegasus"      ,"pegasusm"     , "rom1"  ),      // Amber Pegasus (memory expansion)
 
-                // NOT IN RETROBAT
+                // NOT IN LUMACA
                 new MessSystem("x1"           ,"x1" , new MessRomType[] 
                         { 
                             new MessRomType("cart", new string[] { "bin", "rom" } ), 

@@ -128,7 +128,7 @@ namespace EmulatorLauncher
             { "raine", () => new RaineGenerator() },
             { "raze", () => new RazeGenerator() },
             { "redream", () => new RedreamGenerator() },
-            { "retrobat", () => new RetrobatLauncherGenerator() },
+            { "lumaca", () => new LumacaLauncherGenerator() },
             { "rpcs3", () => new Rpcs3Generator() },
             { "ruffle", () => new RuffleGenerator() },
             { "ryujinx", () => new RyujinxGenerator() },

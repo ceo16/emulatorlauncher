@@ -373,7 +373,7 @@ namespace EmulatorLauncher
             if (SystemConfig.isOptSet("dhewm3_playerName") && !string.IsNullOrEmpty(SystemConfig["dhewm3_playerName"]))
                 changes.Add(new Dhewm3ConfigChange("seta", "ui_name", SystemConfig["dhewm3_playerName"]));
             else
-                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", "RetroBat"));
+                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", "Lumaca"));
 
             if (SystemConfig.isOptSet("dhewm3_hideHUD") && SystemConfig.getOptBoolean("dhewm3_hideHUD"))
                 changes.Add(new Dhewm3ConfigChange("seta", "g_showHud", "0"));
@@ -583,7 +583,7 @@ namespace EmulatorLauncher
 
             if (!File.Exists(configFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "openjazz", "openjazz.cfg");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "openjazz", "openjazz.cfg");
                 if (File.Exists(templateFile))
                     try { File.Copy(templateFile, configFile); } catch { }
             }

@@ -173,7 +173,7 @@ namespace EmulatorLauncher
 
                 if (!SystemConfig.isOptSet("disableautocontrollers") || SystemConfig["disableautocontrollers"] != "1")
                 {
-                    padProfile.SetAttributeValue("Value", "Retrobat");
+                    padProfile.SetAttributeValue("Value", "Lumaca");
                 }
 
                 else

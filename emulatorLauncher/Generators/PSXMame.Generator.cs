@@ -110,7 +110,7 @@ namespace EmulatorLauncher
             else if (ConfigureMameControllers(path))
             {
                 commandArray.Add("-ctrlr");
-                commandArray.Add("retrobat");
+                commandArray.Add("lumaca");
             }
 
             commandArray.Add("-verbose");

@@ -9,7 +9,7 @@ namespace EmulatorLauncher.Libretro
     partial class LibRetroGenerator : Generator
     {
         // Used to get user specific remap files from inputmapping yml file
-        // Used to managed Retroarch remaps and align controls between several cores (Retrobat default remaps)
+        // Used to managed Retroarch remaps and align controls between several cores (Lumaca default remaps)
         // Used for options to invert buttons, etc.
 
 
@@ -490,7 +490,7 @@ namespace EmulatorLauncher.Libretro
                     .Replace("{systempath}", "system")
                     .Replace("{userpath}", "inputmapping");
 
-                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                coreMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                 if (File.Exists(coreMapping))
                     break;
@@ -591,7 +591,7 @@ namespace EmulatorLauncher.Libretro
             "{userpath}\\libretro_{core}.yml",
             "{userpath}\\libretro.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\libretro_{core}_{system}.yml",
             "{systempath}\\resources\\inputmapping\\libretro_{core}.yml",
             "{systempath}\\resources\\inputmapping\\libretro.yml"

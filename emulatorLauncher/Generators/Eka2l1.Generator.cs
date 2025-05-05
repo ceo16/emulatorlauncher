@@ -161,7 +161,7 @@ namespace EmulatorLauncher
             if (Program.SystemConfig.isOptSet("disableautocontrollers") && Program.SystemConfig["disableautocontrollers"] == "1")
                 yml["current-keybind-profile"] = "default";
             else
-                yml["current-keybind-profile"] = "retrobat";
+                yml["current-keybind-profile"] = "lumaca";
 
             // Save to yml file
             yml.Save();

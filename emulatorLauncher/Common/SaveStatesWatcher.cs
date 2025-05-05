@@ -22,11 +22,11 @@ namespace EmulatorLauncher.Common
         public bool IncrementalMode { get; private set; }
         public int Slot { get; private set; }
 
-        public string SaveStatesPath { get { return _retrobatPath; } }
+        public string SaveStatesPath { get { return _lumacaPath; } }
         public string EmulatorPath { get { return _emulatorPath; } }
 
         private string _rom;
-        private string _retrobatPath;
+        private string _lumacaPath;
         private string _emulatorPath;
 
         private FileSystemWatcher _fsw;
@@ -38,7 +38,7 @@ namespace EmulatorLauncher.Common
 
         public bool IsValid { get { return _infos != null; } }
 
-        public SaveStatesWatcher(string romfile, string emulatorPath, string retrobatPath, SaveStatesWatcherMethod method = SaveStatesWatcherMethod.Rename)
+        public SaveStatesWatcher(string romfile, string emulatorPath, string lumacaPath, SaveStatesWatcherMethod method = SaveStatesWatcherMethod.Rename)
         {
             _infos = Program.EsSaveStates[Program.SystemConfig["emulator"]];
             
@@ -51,10 +51,10 @@ namespace EmulatorLauncher.Common
 
             _method = method;
             _rom = romfile;
-            _retrobatPath = retrobatPath;
+            _lumacaPath = lumacaPath;
             _emulatorPath = emulatorPath;
 
-            FileTools.TryCreateDirectory(_retrobatPath);
+            FileTools.TryCreateDirectory(_lumacaPath);
             FileTools.TryCreateDirectory(_emulatorPath);
 
 #if DEBUG
@@ -133,15 +133,15 @@ namespace EmulatorLauncher.Common
         private void ImportSaveState(SaveStateFileInfo saveState)
         {
             string stem = Path.GetFileNameWithoutExtension(_rom);
-            string newFn = Path.Combine(_retrobatPath, MakeFilename(stem, saveState.Slot, saveState.IsAutoSave ? FileNameType.AutoFile : FileNameType.File));
+            string newFn = Path.Combine(_lumacaPath, MakeFilename(stem, saveState.Slot, saveState.IsAutoSave ? FileNameType.AutoFile : FileNameType.File));
 
             if (IncrementalMode && !saveState.IsAutoSave)
             {
-                newFn = Path.Combine(_retrobatPath, MakeFilename(stem, this.Slot, FileNameType.File));
+                newFn = Path.Combine(_lumacaPath, MakeFilename(stem, this.Slot, FileNameType.File));
                 if (File.Exists(newFn))
                 {
                     Slot = GetNextFreeSlot();
-                    newFn = Path.Combine(_retrobatPath, MakeFilename(stem, this.Slot, FileNameType.File));
+                    newFn = Path.Combine(_lumacaPath, MakeFilename(stem, this.Slot, FileNameType.File));
                 }
 
                 Slot = GetNextFreeSlot();
@@ -150,11 +150,11 @@ namespace EmulatorLauncher.Common
             FileTools.TryCopyFile(saveState.FullPath, newFn);
 
             // Screenshot
-            try { SaveScreenshot(saveState.FullPath, Path.Combine(_retrobatPath, MakeFilename(stem, saveState.Slot, saveState.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image))); }
+            try { SaveScreenshot(saveState.FullPath, Path.Combine(_lumacaPath, MakeFilename(stem, saveState.Slot, saveState.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image))); }
             catch { }
 
             // Filename information
-            File.WriteAllText(Path.Combine(_retrobatPath, stem + ".txt"), saveState.FileName);
+            File.WriteAllText(Path.Combine(_lumacaPath, stem + ".txt"), saveState.FileName);
         }
 
         /// <summary>
@@ -248,7 +248,7 @@ namespace EmulatorLauncher.Common
 
             try
             {
-                string txt = Path.Combine(_retrobatPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
+                string txt = Path.Combine(_lumacaPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
                 if (!File.Exists(txt))
                     return false;
 
@@ -259,7 +259,7 @@ namespace EmulatorLauncher.Common
                 string destFileName = Path.Combine(_emulatorPath, MakeFilename(ppssppName, slot, FileNameType.File));
                 FileTools.TryCopyFile(state_file, destFileName);
 
-                var screenShot = Path.Combine(_retrobatPath, MakeFilename(info.FileName, info.Slot, info.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image)); ;
+                var screenShot = Path.Combine(_lumacaPath, MakeFilename(info.FileName, info.Slot, info.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image)); ;
                 var destScreenShot = Path.Combine(_emulatorPath, MakeFilename(Path.GetFileName(destFileName), info.Slot, info.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image));
                 FileTools.TryCopyFile(screenShot, destScreenShot);
             }
@@ -273,13 +273,13 @@ namespace EmulatorLauncher.Common
 
         public void SyncPhysicalPath()
         {
-            string ppssppName = Path.Combine(_retrobatPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
+            string ppssppName = Path.Combine(_lumacaPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
             if (!File.Exists(ppssppName))
                 return;
 
             ppssppName = File.ReadAllText(ppssppName);
 
-            var fnlan = GetRetrobatSaveStates();
+            var fnlan = GetLumacaSaveStates();
             var fnpsp = GetEmulatorSaveStates();
 
             foreach (var dist in fnpsp)
@@ -304,7 +304,7 @@ namespace EmulatorLauncher.Common
                     string dest = Path.Combine(_emulatorPath, MakeFilename(ppssppName, local.Slot, local.IsAutoSave ? FileNameType.AutoFile : FileNameType.File));
                     FileTools.TryCopyFile(local.FullPath, dest);
 
-                    var screenShot = Path.Combine(_retrobatPath, MakeFilename(Path.GetFileName(local.FullPath), local.Slot, local.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image));
+                    var screenShot = Path.Combine(_lumacaPath, MakeFilename(Path.GetFileName(local.FullPath), local.Slot, local.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image));
                     var destScreenShot = Path.Combine(_emulatorPath, MakeFilename(Path.GetFileName(dest), local.Slot, local.IsAutoSave ? FileNameType.AutoImage : FileNameType.Image));
                     FileTools.TryCopyFile(screenShot, destScreenShot);
                 }
@@ -319,7 +319,7 @@ namespace EmulatorLauncher.Common
 
         protected virtual int GetNextFreeSlot()
         {
-            var slots = GetRetrobatSaveStates().Where(s => !s.IsAutoSave).Select(s => s.Slot);
+            var slots = GetLumacaSaveStates().Where(s => !s.IsAutoSave).Select(s => s.Slot);
             if (slots.Any())
                 return slots.Max() + 1;
                 
@@ -328,7 +328,7 @@ namespace EmulatorLauncher.Common
 
         private SaveStateFileInfo[] GetEmulatorSaveStates()
         {
-            string txt = Path.Combine(_retrobatPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
+            string txt = Path.Combine(_lumacaPath, Path.GetFileNameWithoutExtension(_rom) + ".txt");
             if (!File.Exists(txt))
                 return new SaveStateFileInfo[] { };
 
@@ -337,9 +337,9 @@ namespace EmulatorLauncher.Common
             return GetSaveStatesInternal(_emulatorPath, txt);
         }
 
-        private SaveStateFileInfo[] GetRetrobatSaveStates()
+        private SaveStateFileInfo[] GetLumacaSaveStates()
         {
-            return GetSaveStatesInternal(_retrobatPath, Path.GetFileNameWithoutExtension(_rom));
+            return GetSaveStatesInternal(_lumacaPath, Path.GetFileNameWithoutExtension(_rom));
         }
 
         private SaveStateFileInfo[] GetSaveStatesInternal(string path, string stem)

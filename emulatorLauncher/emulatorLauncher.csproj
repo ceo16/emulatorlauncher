@@ -396,7 +396,7 @@
     <Compile Include="Generators\Redream.Controllers.cs">
       <DependentUpon>Redream.Generator.cs</DependentUpon>
     </Compile>
-    <Compile Include="Generators\RetrobatLauncher.Generator.cs" />
+    <Compile Include="Generators\LumacaLauncher.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Controllers.cs">
       <DependentUpon>Rpcs3.Generator.cs</DependentUpon>
@@ -578,7 +578,7 @@
   <ItemGroup>
     <Content Include="icon.ico" />
     <None Include="Resources\blacklisted-words.txt" />
-    <None Include="Resources\retrobat.png" />
+    <None Include="Resources\lumaca.png" />
     <None Include="Reshader\Bezel.fx" />
   </ItemGroup>
   <ItemGroup>

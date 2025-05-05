@@ -11,7 +11,7 @@ namespace EmulatorLauncher
         private static bool GetMameHookerExecutable(out string executable, out string mamehookPath)
         {
             executable = "mamehook.exe";
-            mamehookPath = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "mamehooker");
+            mamehookPath = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "mamehooker");
 
             // Always kill any existing MameHooker process first
             KillMameHooker();

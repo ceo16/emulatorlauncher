@@ -36,7 +36,7 @@ namespace EmulatorLauncher.Libretro
                 RetroarchCorePath = Path.Combine(RetroarchPath, "cores");
         }
 
-        const string RetroArchNetPlayPatchedName = "RETROBAT";
+        const string RetroArchNetPlayPatchedName = "LUMACA";
         private LibRetroStateFileManager _stateFileManager;
         private ScreenShotsWatcher _screenShotWatcher;
         private bool _noHotkey = false;
@@ -1444,7 +1444,7 @@ namespace EmulatorLauncher.Libretro
         }
 
         /// <summary>
-        /// Patch Retroarch to display @RETROBAT in netplay architecture
+        /// Patch Retroarch to display @LUMACA in netplay architecture
         /// </summary>
         /// <returns></returns>
         private string GetNetPlayPatchedRetroarch()
@@ -1597,7 +1597,7 @@ namespace EmulatorLauncher.Libretro
 
                 if (!File.Exists(animatedBezelPath))
                 {
-                    animatedBezelPath = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "decorations", "animated", "systems", systemName, systemName + ".cfg");
+                    animatedBezelPath = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "decorations", "animated", "systems", systemName, systemName + ".cfg");
                     if (!File.Exists(animatedBezelPath))
                         animatedBezel = false;
                 }

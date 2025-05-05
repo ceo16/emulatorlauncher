@@ -383,7 +383,7 @@ namespace EmulatorLauncher
                             .Replace("{systempath}", "system")
                             .Replace("{userpath}", "inputmapping");
 
-                        flycastMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                        flycastMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                         if (File.Exists(flycastMapping))
                             break;
@@ -955,7 +955,7 @@ namespace EmulatorLauncher
             // User specific
             "{userpath}\\flycast_Arcade.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\flycast_Arcade.yml",
         };
     }

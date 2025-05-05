@@ -29,7 +29,7 @@ namespace EmulatorLauncher
             }
             
             // Delete existing default file if any
-            string defaultCtrl = Path.Combine(path, "ctrlr", "retrobat.cfg");
+            string defaultCtrl = Path.Combine(path, "ctrlr", "lumaca.cfg");
             if (File.Exists(defaultCtrl))
                 File.Delete(defaultCtrl);
 

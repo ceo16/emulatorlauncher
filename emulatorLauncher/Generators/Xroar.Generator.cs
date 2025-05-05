@@ -34,7 +34,7 @@ namespace EmulatorLauncher
             string confFile = Path.Combine(path, "xroar.conf");
             if (!File.Exists(confFile))
             {
-                string templateConfFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "xroar", "xroar.conf");
+                string templateConfFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "xroar", "xroar.conf");
                 if (File.Exists(templateConfFile))
                     try { File.Copy(templateConfFile, confFile); } catch { }
             }
@@ -194,7 +194,7 @@ namespace EmulatorLauncher
                 commandArray.Add("-joy-left");
             else
                 commandArray.Add("-joy-right");
-            commandArray.Add("RetroBat1");
+            commandArray.Add("Lumaca1");
 
             int index2 = -1;
 
@@ -205,7 +205,7 @@ namespace EmulatorLauncher
                     commandArray.Add("-joy-right");
                 else
                     commandArray.Add("-joy-left");
-                commandArray.Add("RetroBat2");
+                commandArray.Add("Lumaca2");
             }
             else
             {
@@ -229,12 +229,12 @@ namespace EmulatorLauncher
                 {
                     if (lines[i].StartsWith("joy kjoy0"))
                         kjoy0Exists = true;
-                    if (lines[i].StartsWith("joy RetroBat2"))
+                    if (lines[i].StartsWith("joy Lumaca2"))
                     {
                         rb2Exists = true;
                         rb2line = i;
                     }
-                    if (lines[i].StartsWith("joy RetroBat1"))
+                    if (lines[i].StartsWith("joy Lumaca1"))
                     {
                         rb1Exists = true;
                         rb1line = i;
@@ -253,8 +253,8 @@ namespace EmulatorLauncher
 
                 if (rb1Exists)
                 {
-                    lines[rb1line] = "joy RetroBat1";
-                    lines[rb1line + 1] = "  joy-desc \"RetroBat1\"";
+                    lines[rb1line] = "joy Lumaca1";
+                    lines[rb1line + 1] = "  joy-desc \"Lumaca1\"";
                     lines[rb1line + 2] = "  joy-axis X=\"physical:" + index1 + ",0\"";
                     lines[rb1line + 3] = "  joy-axis Y=\"physical:" + index1 + ",1\"";
                     lines[rb1line + 4] = "  joy-button 0=\"physical:" + index1 + ",0\"";
@@ -262,8 +262,8 @@ namespace EmulatorLauncher
                 }
                 else
                 {
-                    lines.Add("joy RetroBat1");
-                    lines.Add("  joy-desc \"RetroBat1\"");
+                    lines.Add("joy Lumaca1");
+                    lines.Add("  joy-desc \"Lumaca1\"");
                     lines.Add("  joy-axis X=\"physical:" + index1 + ",0\"");
                     lines.Add("  joy-axis Y=\"physical:" + index1 + ",1\"");
                     lines.Add("  joy-button 0=\"physical:" + index1 + ",0\"");
@@ -274,8 +274,8 @@ namespace EmulatorLauncher
                 {
                     if (rb2Exists)
                     {
-                        lines[rb2line] = "joy RetroBat2";
-                        lines[rb2line + 1] = "  joy-desc \"RetroBat2\"";
+                        lines[rb2line] = "joy Lumaca2";
+                        lines[rb2line + 1] = "  joy-desc \"Lumaca2\"";
                         lines[rb2line + 2] = "  joy-axis X=\"physical:" + index2 + ",0\"";
                         lines[rb2line + 3] = "  joy-axis Y=\"physical:" + index2 + ",1\"";
                         lines[rb2line + 4] = "  joy-button 0=\"physical:" + index2 + ",0\"";
@@ -283,8 +283,8 @@ namespace EmulatorLauncher
                     }
                     else
                     {
-                        lines.Add("joy RetroBat2");
-                        lines.Add("  joy-desc \"RetroBat2\"");
+                        lines.Add("joy Lumaca2");
+                        lines.Add("  joy-desc \"Lumaca2\"");
                         lines.Add("  joy-axis X=\"physical:" + index2 + ",0\"");
                         lines.Add("  joy-axis Y=\"physical:" + index2 + ",1\"");
                         lines.Add("  joy-button 0=\"physical:" + index2 + ",0\"");
