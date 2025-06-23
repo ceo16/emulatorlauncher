@@ -278,6 +278,15 @@ namespace EmulatorLauncher
                     case "mesen":
                         ret = "gba_turbo";
                         break;
+                    case "mednafen":
+                        ret = "gba_turboface";
+                        break;
+                    case "bizhawk":
+                        if (Program.SystemConfig.getOptBoolean("bizhawk_gba_turbo"))
+                            ret = "gba_turbo";
+                        else
+                            ret = "gba";
+                        break;
                     case "mgba":
                     case "nosgba":
                         ret = "unknown";
@@ -746,7 +755,6 @@ namespace EmulatorLauncher
                             break;
                     }
                 }
-
             }
             else if (system == "snes")
             {
@@ -768,6 +776,12 @@ namespace EmulatorLauncher
                                 break;
                             case "fbneo":
                                 ret = "pcengine_simple";
+                                break;
+                            case "geargrafx":
+                                if (Program.SystemConfig.isOptSet("geargrafx_controller") && Program.SystemConfig["geargrafx_controller"] == "769")
+                                    ret = "pcengine_simple_6buttons";
+                                else
+                                    ret = "pcengine_simple";
                                 break;
                         }
                         break;
