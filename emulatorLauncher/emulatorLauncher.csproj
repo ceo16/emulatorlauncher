@@ -142,6 +142,15 @@
     <Compile Include="Generators\Bizhawk.Guns.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
     </Compile>
+	<Compile Include="Generators\EpicLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\AmazonLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\SteamLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
     <Compile Include="Generators\Bizhawk.SaveStatesMonitor.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
     </Compile>
@@ -230,6 +239,9 @@
     <Compile Include="Generators\SteamLauncher.Generator.cs">
       <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
     </Compile>
+	<Compile Include="Generators\XboxLauncher.Generator.cs" />
+    <Compile Include="Generators\EAGamesLauncher.Generator.cs" />
+    <Compile Include="Generators\GogLauncher.Generator.cs" />
     <Compile Include="Generators\Fbneo.Generator.cs" />
     <Compile Include="Generators\Fbneo.Controllers.cs">
       <DependentUpon>Fbneo.Generator.cs</DependentUpon>

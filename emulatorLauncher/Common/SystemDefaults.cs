@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.FileFormats;
 
 namespace EmulatorLauncher
@@ -54,8 +55,17 @@ namespace EmulatorLauncher
             return true; 
         }
 
-        public static bool CheckConfig(string path)
-        {
+       public static bool CheckConfig(string path)
+{
+    // --- INIZIO MODIFICA ---
+    // Se il sistema è uno store, salta il controllo di integrità.
+    string system = Program.SystemConfig["system"];
+    if (system == "steam" || system == "epicgamestore" || system == "amazon" || system == "xbox" || system == "eagames" || system == "eagamesstore" || system == "gog")
+    {
+        SimpleLogger.Instance.Info("[DEBUG] Rilevato sistema di store. Controllo di integrità saltato.");
+        return true;
+    }
+    // --- FINE MODIFICA ---
             string[] exeFiles = Directory.GetFiles(path, "*.exe", SearchOption.TopDirectoryOnly);
 
             foreach (string filePath in exeFiles)

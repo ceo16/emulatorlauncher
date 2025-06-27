@@ -14,7 +14,7 @@ namespace EmulatorLauncher
             public SteamGameLauncher(Uri uri)
             {
                 // Call method to get Steam executable
-                string steamInternalDBPath = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "steamexecutables.json");
+                string steamInternalDBPath = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "steamexecutables.json");
                 LauncherExe = SteamLibrary.GetSteamGameExecutableName(uri, steamInternalDBPath);
             }
 

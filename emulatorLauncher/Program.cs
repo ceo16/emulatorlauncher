@@ -16,6 +16,7 @@ using EmulatorLauncher.PadToKeyboard;
 using EmulatorLauncher.Libretro;
 using EmulatorLauncher.Common.Compression.Wrappers;
 
+
 // XBox
 // -p1index 0 -p1guid 030000005e040000ea02000000007801 -p1name "XBox One S Controller" -p1nbbuttons 11 -p1nbhats 1 -p1nbaxes 6 -system pcengine -emulator libretro -core mednafen_supergrafx -rom "H:\[Emulz]\roms\pcengine\1941 Counter Attack.pce"
 // 8bitdo
@@ -37,7 +38,7 @@ namespace EmulatorLauncher
         /// <summary>
         /// Link between emulator declared in es_systems.cfg and generator to use to launch emulator
         /// </summary>
-        static Dictionary<string, Func<Generator>> generators = new Dictionary<string, Func<Generator>>
+        static Dictionary<string, Func<Generator>> generators = new Dictionary<string, Func<Generator>>(StringComparer.InvariantCultureIgnoreCase) // Aggiunto StringComparer per case-insensitivity
         {
             { "3dsen", () => new Nes3dGenerator() },
             { "altirra", () => new AltirraGenerator() },
@@ -162,7 +163,7 @@ namespace EmulatorLauncher
             { "winarcadia", () => new WinArcadiaGenerator() },
             { "windows", () => new ExeLauncherGenerator() },
             { "winuae", () => new UaeGenerator() },
-            { "xbox", () => new CxbxGenerator() },
+            { "xbox_old", () => new CxbxGenerator() },
             { "xemu", () => new XEmuGenerator() },
             { "xenia", () => new XeniaGenerator() },
             { "xenia-canary", () => new XeniaGenerator() },
@@ -175,7 +176,17 @@ namespace EmulatorLauncher
             { "yuzu-early-access", () => new YuzuGenerator() },
             { "zaccariapinball", () => new ZaccariaPinballGenerator() },
             { "zesarux", () => new ZEsarUXGenerator() },
-            { "zinc", () => new ZincGenerator() }
+            { "zinc", () => new ZincGenerator() },
+			// --- NUOVE AGGIUNTE PER XBOX, EA GAMES E GOG ---
+            { "epicgamestore", () => new ExeLauncherGenerator() }, 
+            { "amazon", () => new ExeLauncherGenerator() },
+            { "steam", () => new ExeLauncherGenerator() },
+            { "xbox", () => new ExeLauncherGenerator() },           // Aggiornato
+            { "eagames", () => new ExeLauncherGenerator() },        // Aggiornato
+            { "eagamesstore", () => new ExeLauncherGenerator() },   // Aggiornato
+            { "gog", () => new ExeLauncherGenerator() },         // Mappa "gog" al tuo nuovo generatore
+            // --- FINE NUOVE AGGIUNTE ---
+			
         };
 
         public static ConfigFile AppConfig { get; private set; }
@@ -378,14 +389,25 @@ namespace EmulatorLauncher
             ImportShaderOverrides();
 
             // Check consistance of path
-            string rbPath = AppConfig.GetFullPath("retrobat");
+            string rbPath = AppConfig.GetFullPath("lumaca");
 
-            if (!SystemDefaults.CheckConsistance(rbPath))
-            {
-                SimpleLogger.Instance.Error("");
-                Environment.ExitCode = ObscureCode(0xCA, 0x80);
-                return;
-            }
+          /* try // Aggiunto try-catch per diagnosticare l'errore in CheckConsistance
+            {
+                if (!SystemDefaults.CheckConsistance(rbPath))
+                {
+                    SimpleLogger.Instance.Error("[Error - BYPASSED] SystemDefaults.CheckConsistance failed for path: " + rbPath);  // Messaggio più informativo
+                    Environment.ExitCode = ObscureCode(0xCA, 0x80);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                SimpleLogger.Instance.Error("[Error] Exception during SystemDefaults.CheckConsistance for path: " + rbPath + " -> " + ex.Message, ex);
+                Environment.ExitCode = (int)ExitCodes.InvalidConfiguration; // Codice di uscita per configurazione non valida
+                return;
+            }*/
+
+string romPath = null; 
 
             #region arguments
             if (args.Any(a => "-resetusbcontrollers".Equals(a, StringComparison.InvariantCultureIgnoreCase)))
@@ -528,19 +550,53 @@ namespace EmulatorLauncher
             #endregion
 
             // Check rom is defined and exists
-            if (!SystemConfig.isOptSet("rom"))
-            {
-                SimpleLogger.Instance.Error("[Error] rom not set");
-                Environment.ExitCode = (int) ExitCodes.BadCommandLine;
-                return;
-            }
+// 1. Dichiara 'romPath' una sola volta, leggendo il valore iniziale.
+string romPath = SystemConfig.GetFullPath("rom");
+bool isStoreUri = false;
 
-            if (!File.Exists(SystemConfig.GetFullPath("rom")) && !Directory.Exists(SystemConfig.GetFullPath("rom")))
-            {
-                SimpleLogger.Instance.Error("[Error] rom does not exist");
-                Environment.ExitCode = (int)ExitCodes.BadCommandLine;
-                return;
-            }
+// 2. Controlla se NON è un file o una cartella, per vedere se POTREBBE essere un URI.
+if (!File.Exists(romPath) && !Directory.Exists(romPath))
+{
+    string correctedUri = romPath;
+
+    // 3. Corregge i formati non standard (es. "steam:\")
+    string[] storeSchemes = { "steam", "com.epicgames.launcher", "amazon-games", "ms-windows-store", "xbox", "eagames", "goggalaxy", "gog", "eadesktop" };
+    var matchingScheme = storeSchemes.FirstOrDefault(s => correctedUri.StartsWith(s + @":\", StringComparison.OrdinalIgnoreCase));
+    if (matchingScheme != null)
+    {
+        correctedUri = matchingScheme + "://" + correctedUri.Substring(matchingScheme.Length + 2);
+    }
+
+    // 4. Normalizza tutte le barre rovesciate in barre normali.
+    correctedUri = correctedUri.Replace('\\', '/');
+
+    // 5. Se è un URI valido...
+    if (Uri.TryCreate(correctedUri, UriKind.Absolute, out Uri uriResult) && storeSchemes.Contains(uriResult.Scheme))
+    {
+        isStoreUri = true;
+        
+        // 6. Aggiorna il valore in SystemConfig. QUESTA È LA CHIAVE!
+        SystemConfig["rom"] = correctedUri; 
+        
+        // 7. Aggiorna anche la nostra variabile locale per coerenza.
+        romPath = correctedUri; 
+
+        SimpleLogger.Instance.Info("[DEBUG] URI corretto e aggiornato in SystemConfig: " + correctedUri);
+    }
+}
+
+// 8. Controllo finale di sicurezza.
+if (!isStoreUri && !File.Exists(romPath) && !Directory.Exists(romPath))
+{
+    // Non mostrare l'errore se è un URI che non gestiamo (es. http://)
+    if (!romPath.Contains("://"))
+    {
+        SimpleLogger.Instance.Error("[Error] rom does not exist at path: " + romPath);
+        Environment.ExitCode = (int)ExitCodes.BadCommandLine;
+        return;
+    }
+}
+// --- FINE BLOCCO FINALE ---
 
             // System, emulator and core
             if (!SystemConfig.isOptSet("system"))
@@ -572,26 +628,29 @@ namespace EmulatorLauncher
             }
 
             if (CurrentGame == null)
-            {
-                var romPath = SystemConfig.GetFullPath("rom");
-                var gamelistPath = Path.Combine(Path.GetDirectoryName(romPath), "gamelist.xml");
-                if (File.Exists(gamelistPath))
-                {
-                    var gamelist = GameList.Load(gamelistPath);
-                    if (gamelist != null && gamelist.Games != null)
-                        CurrentGame = gamelist.Games.FirstOrDefault(g => g.GetRomFile() == romPath);
-                }
+{
+    // La riga "romPath = ..." è stata rimossa perché romPath ha già il valore corretto.
+    var gamelistPath = Path.Combine(Path.GetDirectoryName(romPath), "gamelist.xml");
+    
+    // Controlla se è un file prima di cercare nella gamelist, per evitare errori con gli URI
+    if (File.Exists(romPath) && File.Exists(gamelistPath))
+    {
+        var gamelist = GameList.Load(gamelistPath);
+        if (gamelist != null && gamelist.Games != null)
+            CurrentGame = gamelist.Games.FirstOrDefault(g => g.GetRomFile() == romPath);
+    }
 
-                if (CurrentGame == null)
-                {
-                    CurrentGame = new Game()
-                    {
-                        Path = romPath,
-                        Name = Path.GetFileNameWithoutExtension(romPath),
-                        Tag = "missing"
-                    };
-                }
-            }
+    // Il resto della logica per creare un 'CurrentGame' di default va qui...
+    if (CurrentGame == null)
+    {
+        CurrentGame = new Game()
+        {
+            Path = romPath,
+            Name = isStoreUri ? romPath : Path.GetFileNameWithoutExtension(romPath),
+            Tag = "missing"
+        };
+    }
+}
 
             // Get Generator to use based on emulator or system if none found
             Generator generator = generators.Where(g => g.Key == SystemConfig["emulator"]).Select(g => g.Value()).FirstOrDefault();

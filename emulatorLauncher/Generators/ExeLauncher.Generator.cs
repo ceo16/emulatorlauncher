@@ -32,12 +32,49 @@ namespace EmulatorLauncher
         {
             { "com.epicgames.launcher", (uri) => new EpicGameLauncher(uri) },
             { "steam", (uri) => new SteamGameLauncher(uri) },
-            { "amazon-games", (uri) => new AmazonGameLauncher(uri) }
-        };
+            { "amazon-games", (uri) => new AmazonGameLauncher(uri) },
+            { "ms-windows-store", (uri) => new XboxGameLauncher(uri) }, // Per URL di Windows Store/Xbox
+            { "xbox", (uri) => new XboxGameLauncher(uri) },           // Per AUMID, se passato come URI
+            { "eagames", (uri) => new EAGameLauncher(uri) },
+            { "goggalaxy", (uri) => new GogGameLauncher(uri) }
+         };
 
         public override System.Diagnostics.ProcessStartInfo Generate(string system, string emulator, string core, string rom, string playersControllers, ScreenResolution resolution)
+	
         {
-            rom = this.TryUnZipGameIfNeeded(system, rom);
+             // --- INIZIO NUOVA MODIFICA PER GESTIRE URI DIRETTI ---
+    try
+    {
+        // Controlla se la stringa 'rom' è un URI.
+        if (rom.Contains("://"))
+        {
+            var uri = new Uri(rom);
+            SimpleLogger.Instance.Info("[INFO] Rilevato URI diretto: " + rom);
+
+            // Cerca il launcher corretto nel tuo dizionario 'launchers'.
+            if (launchers.TryGetValue(uri.Scheme, out Func<Uri, GameLauncher> gameLauncherBuilder))
+            {
+                // Crea l'istanza del launcher specifico (es. SteamGameLauncher).
+                _gameLauncher = gameLauncherBuilder(uri);
+                SimpleLogger.Instance.Info("[INFO] Trovato e impostato GameLauncher: " + _gameLauncher.GetType().Name);
+                
+                // Restituisce un ProcessStartInfo che il metodo 'RunAndWait' può utilizzare.
+                // Questo oggetto contiene l'URI che Windows saprà come lanciare.
+                return new ProcessStartInfo()
+                {
+                    FileName = rom,
+                    UseShellExecute = true // Fondamentale per lanciare URI
+                };
+            }
+        }
+    }
+    catch
+    {
+        // Se non è un URI valido, ignora l'errore e procedi con la normale logica basata su file.
+    }
+    // --- FINE NUOVA MODIFICA ---
+
+             rom = this.TryUnZipGameIfNeeded(system, rom);
 
             _systemName = system.ToLowerInvariant();
 
@@ -148,6 +185,10 @@ namespace EmulatorLauncher
 
                         if (launchers.TryGetValue(uri.Scheme, out Func<Uri, GameLauncher> gameLauncherInstanceBuilder))
                             _gameLauncher = gameLauncherInstanceBuilder(uri);
+						else if (rom.Contains("!App")) // Tentativo di rilevare un AUMID Xbox se non è un URI scheme riconosciuto
+                        {
+                            _gameLauncher = new XboxGameLauncher(new Uri("xbox://" + rom)); // Inizializza con AUMID come parte dell'URI
+                        }
                     }
                     catch (Exception ex)
                     {
