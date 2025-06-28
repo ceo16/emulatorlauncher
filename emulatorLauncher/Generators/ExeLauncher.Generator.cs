@@ -129,8 +129,19 @@ namespace EmulatorLauncher
 
     class GogGameLauncher : GameLauncher
     {
-        public GogGameLauncher(Uri uri) : base(uri) { LauncherExe = "GalaxyClient"; }
-        public GogGameLauncher() { LauncherExe = "GalaxyClient"; }
+        // Costruttore per la logica degli URI
+        public GogGameLauncher(Uri uri) : base(uri) 
+        { 
+            this.LauncherExe = "GalaxyClient"; 
+        }
+
+        // Costruttore vuoto per compatibilità
+        public GogGameLauncher() 
+        { 
+            this.LauncherExe = "GalaxyClient"; 
+        }
+        
+        // Questo è necessario per la compilazione
         public override int RunAndWait(ProcessStartInfo path) { return 0; }
     }
 
