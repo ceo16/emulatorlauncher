@@ -11,12 +11,14 @@ namespace EmulatorLauncher
     {
         class SteamGameLauncher : GameLauncher
         {
-            public SteamGameLauncher(Uri uri)
-            {
-                // Call method to get Steam executable
-                string steamInternalDBPath = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "steamexecutables.json");
-                LauncherExe = SteamLibrary.GetSteamGameExecutableName(uri, steamInternalDBPath);
-            }
+           public SteamGameLauncher(Uri uri)
+{
+    // NON cercare più l'eseguibile del gioco, perché la funzione è rotta.
+    // Imposta "steam" come nome generico del processo da monitorare.
+    // Il lancio vero e proprio avverrà tramite l'URI, non tramite questo eseguibile.
+    LauncherExe = "steam";
+    SimpleLogger.Instance.Info("[INFO] SteamGameLauncher: Impostato 'steam' come processo da monitorare, il lancio avverrà tramite URI.");
+}
 
             public override int RunAndWait(System.Diagnostics.ProcessStartInfo path)
             {
