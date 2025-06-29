@@ -297,6 +297,31 @@ namespace EmulatorLauncher.PadToKeyboard
             string process = GetActiveProcessFileName(out isDesktop, out hWndProcess);
 
             var mapping = _mapping[process];
+			
+			    // --- INIZIO NUOVA LOGICA DI MAPPATURA DINAMICA ---
+    // Se la mappatura non esiste, ma abbiamo ricevuto il segnale "*GAME*",
+    // creiamo la regola al volo.
+    if (mapping == null && _mapping.ForceApplyToProcess == "*GAME*")
+    {
+        // Lista di processi di sistema o launcher da ignorare
+        var processBlacklist = new List<string> { "steam", "EpicGamesLauncher", "EADesktop", "Amazon Games UI", "NVIDIA Overlay", "explorer", "emulationstation" };
+
+        if (!string.IsNullOrEmpty(process) && !processBlacklist.Contains(process, StringComparer.OrdinalIgnoreCase))
+        {
+            SimpleLogger.Instance.Info("[PadToKey] Mappatura dinamica applicata al processo: " + process);
+            
+            // Aggiungi la regola per chiudere il gioco
+            PadToKey.AddOrUpdateKeyMapping(_mapping, process, InputKey.hotkey | InputKey.start, "(%{KILL})");
+            
+            // Resetta il segnale per non applicarlo ad altri processi
+            _mapping.ForceApplyToProcess = null;
+
+            // Ricarica la mappatura appena creata
+            mapping = _mapping[process];
+        }
+    }
+    // --- FINE NUOVA LOGICA ---
+			
             if (mapping != null)
             {
                 foreach (var keyMap in mapping.Input)

@@ -566,28 +566,135 @@ public override int RunAndWait(ProcessStartInfo path)
         }
         
         
-        public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
-        {
-            // Se è un gioco da launcher, mappa l'hotkey sul LAUNCHER.
-            if (_gameLauncher != null && !string.IsNullOrEmpty(_gameLauncher.LauncherExe))
-            {
-                SimpleLogger.Instance.Info($"[PadToKey] Mapping hotkey (fase 1) per il launcher: {_gameLauncher.LauncherExe}");
-                return PadToKey.AddOrUpdateKeyMapping(mapping, _gameLauncher.LauncherExe, InputKey.hotkey | InputKey.start, "(%{KILL})");
-            }
-            
-            // Se è un gioco normale (file .exe) o c'è un .gameexe, mappa l'hotkey sul gioco.
-            if (!string.IsNullOrEmpty(_exename))
-            {
-                SimpleLogger.Instance.Info($"[PadToKey] Mapping hotkey (fase 1) per il gioco: {_exename}");
-                return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
-            }
+public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
+{
+    // Se è un gioco da store, non conosciamo ancora il nome dell'eseguibile.
+    // Quindi, impostiamo una variabile speciale per dire al JoystickListener di prepararsi.
+    if (_gameLauncher != null)
+    {
+        if (mapping == null)
+            mapping = new PadToKey();
+        
+        // Questa variabile dice al listener: "Il prossimo processo di gioco che vedi,
+        // applicagli la regola di chiusura".
+        mapping.ForceApplyToProcess = "*GAME*"; // Usiamo una stringa speciale come segnale
+        SimpleLogger.Instance.Info("[PadToKey] Impostata mappatura dinamica per gioco da store.");
+        return mapping;
+    }
 
-            return mapping;
-        }
+    // Se è un file locale, la logica esistente va benissimo.
+    if (_isGameExePath || _exeFile)
+        return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
+    
+    // Altre condizioni del tuo codice originale...
+    else if (_systemName != "mugen" || _systemName != "ikemen" || string.IsNullOrEmpty(_exename))
+        return mapping;
+
+    return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
+}
         // --- FINE MODIFICA 2 --
 
-        private void UpdateMugenConfig(string path, bool fullscreen, ScreenResolution resolution) { /* Il tuo codice qui */ }
-        private void UpdateIkemenConfig(string path, string system, string rom, bool fullscreen, ScreenResolution resolution, string emulator) { /* Il tuo codice qui */ }
+       private void UpdateMugenConfig(string path, bool fullscreen, ScreenResolution resolution)
+        {
+            if (_systemName != "mugen")
+                return;
+
+            var cfg = Path.Combine(path, "data", "mugen.cfg");
+            if (!File.Exists(cfg))
+                return;
+
+            if (resolution == null)
+                resolution = ScreenResolution.CurrentResolution;
+
+            using (var ini = IniFile.FromFile(cfg, IniOptions.UseSpaces | IniOptions.AllowDuplicateValues | IniOptions.KeepEmptyValues | IniOptions.KeepEmptyLines))
+            {
+
+                if (!string.IsNullOrEmpty(ini.GetValue("Config", "GameWidth")))
+                {
+                    ini.WriteValue("Config", "GameWidth", resolution.Width.ToString());
+                    ini.WriteValue("Config", "GameHeight", resolution.Height.ToString());
+                }
+
+                if (SystemConfig["resolution"] == "480p")
+                {
+                    ini.WriteValue("Config", "GameWidth", "640");
+                    ini.WriteValue("Config", "GameHeight", "480");
+                }
+                else if (SystemConfig["resolution"] == "720p")
+                {
+                    ini.WriteValue("Config", "GameWidth", "960");
+                    ini.WriteValue("Config", "GameHeight", "720");
+                }
+                else if (SystemConfig["resolution"] == "960p")
+                {
+                    ini.WriteValue("Config", "GameWidth", "1280");
+                    ini.WriteValue("Config", "GameHeight", "960");
+                }
+                else
+                {
+                    ini.WriteValue("Config", "GameWidth", resolution.Width.ToString());
+                    ini.WriteValue("Config", "GameHeight", resolution.Height.ToString());
+                }
+
+                //ini.WriteValue("Video", "Width", resolution.Width.ToString());
+                //ini.WriteValue("Video", "Height", resolution.Height.ToString());
+
+                BindBoolIniFeatureOn(ini, "Video", "VRetrace", "VRetrace", "1", "0");
+                ini.WriteValue("Video", "FullScreen", fullscreen ? "1" : "0");
+
+            }
+        }
+
+        private void UpdateIkemenConfig(string path, string system, string rom, bool fullscreen, ScreenResolution resolution, string emulator)
+        {
+            if (_systemName != "ikemen")
+                return;
+
+            var json = DynamicJson.Load(Path.Combine(path, "save", "config.json"));
+
+            ReshadeManager.Setup(ReshadeBezelType.opengl, ReshadePlatform.x64, system, rom, path, resolution, emulator);
+
+            if (resolution == null)
+                resolution = ScreenResolution.CurrentResolution;
+
+            json["FirstRun"] = "false";           
+            json["Fullscreen"] = fullscreen ? "true" : "false";
+
+            if (SystemConfig["resolution"] == "240p")
+            {
+                json["GameWidth"] = "320";
+                json["GameHeight"] = "240";
+            }
+            else if (SystemConfig["resolution"] == "480p")
+            {
+                json["GameWidth"] = "640";
+                json["GameHeight"] = "480";
+            }
+            else if (SystemConfig["resolution"] == "720p")
+            {
+                json["GameWidth"] = "1280";
+                json["GameHeight"] = "720";
+            }
+            else if (SystemConfig["resolution"] == "960p")
+            {
+                json["GameWidth"] = "1280";
+                json["GameHeight"] = "960";
+            }
+            else if (SystemConfig["resolution"] == "1080p")
+            {
+                json["GameWidth"] = "1920";
+                json["GameHeight"] = "1080";
+            }
+            else
+            {
+                json["GameWidth"] = resolution.Width.ToString();
+                json["GameHeight"] = resolution.Height.ToString();
+            }
+
+            BindBoolFeatureOn(json, "VRetrace", "VRetrace", "1", "0");
+
+            json.Save();
+        }
         private bool GetProcessFromFile(string rom) 
         {
             string executableFile = Path.Combine(Path.GetDirectoryName(rom), Path.GetFileNameWithoutExtension(rom) + ".gameexe");
