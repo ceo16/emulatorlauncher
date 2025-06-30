@@ -152,6 +152,7 @@ namespace EmulatorLauncher
     partial class ExeLauncherGenerator : Generator
     {
 		private JoystickListener _gameHotkeys;
+		private PadToKey _padToKeyMapping; 
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
         [DllImport("user32.dll")]
@@ -464,135 +465,128 @@ namespace EmulatorLauncher
         }
         
 public override int RunAndWait(ProcessStartInfo path)
+{
+    GetProcessFromFile(path.FileName);
+
+    try { Process.Start(path); }
+    catch (Exception ex) { SimpleLogger.Instance.Error($"[ERROR] Impossibile avviare: {path.FileName} -> {ex.Message}", ex); return 1; }
+
+    Process procToWatch = null;
+
+    if (string.IsNullOrEmpty(_exename) && (_gameLauncher != null || _isGameExePath || _exeFile))
+    {
+        SimpleLogger.Instance.Info("[INFO] Rilevamento automatico del processo del gioco in corso...");
+        
+        var processBlacklist = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "steam", "EpicGamesLauncher", "EADesktop", "Amazon Games UI", "GalaxyClient", "Origin",
+            "emulationstation", "EmulatorLauncher", "steamwebhelper",
+            "NVIDIA Overlay", "msedgewebview2", "ApplicationFrameHost", "SystemSettings", "explorer"
+        };
+
+        int waitTime = 30;
+        var watch = Stopwatch.StartNew();
+        while (watch.Elapsed.TotalSeconds < waitTime)
         {
-            GetProcessFromFile(path.FileName);
+            Process gameProcess = Process.GetProcesses()
+                .Where(p => p.MainWindowHandle != IntPtr.Zero && p.Id != Process.GetCurrentProcess().Id && !processBlacklist.Contains(p.ProcessName) && (DateTime.Now - p.StartTime).TotalSeconds < waitTime)
+                .OrderByDescending(p => p.StartTime).FirstOrDefault();
 
-            try { Process.Start(path); }
-            catch (Exception ex) { SimpleLogger.Instance.Error($"[ERROR] Impossibile avviare: {path.FileName} -> {ex.Message}", ex); return 1; }
-
-            Process procToWatch = null;
-
-            if (string.IsNullOrEmpty(_exename) && _gameLauncher != null)
+            if (gameProcess != null)
             {
-                SimpleLogger.Instance.Info("[INFO] Rilevamento automatico del processo del gioco in corso...");
-                
-                var processBlacklist = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-                    "steam", "EpicGamesLauncher", "EADesktop", "Amazon Games UI", "GalaxyClient", "Origin",
-                    "emulationstation", "EmulatorLauncher", "steamwebhelper",
-                    "NVIDIA Overlay", "msedgewebview2", "ApplicationFrameHost", "SystemSettings", "explorer"
-                };
+                _exename = gameProcess.ProcessName;
+                SimpleLogger.Instance.Info($"[INFO] Rilevato processo del gioco: {_exename}");
 
-                int waitTime = 30;
-                var watch = Stopwatch.StartNew();
-                while (watch.Elapsed.TotalSeconds < waitTime)
+                // --- MODIFICA CRUCIALE ---
+                if (_padToKeyMapping != null)
                 {
-                    Process gameProcess = Process.GetProcesses()
-                        .Where(p => p.MainWindowHandle != IntPtr.Zero && p.Id != Process.GetCurrentProcess().Id && !processBlacklist.Contains(p.ProcessName) && (DateTime.Now - p.StartTime).TotalSeconds < waitTime)
-                        .OrderByDescending(p => p.StartTime).FirstOrDefault();
-
-                    if (gameProcess != null)
-                    {
-                        _exename = gameProcess.ProcessName;
-                        SimpleLogger.Instance.Info($"[INFO] Rilevato processo del gioco: {_exename}");
-                        
-                        // --- INIZIO MODIFICA PER IL FOCUS ---
-                        SimpleLogger.Instance.Info($"[Focus] Tentativo di portare la finestra del gioco in primo piano...");
-                        Thread.Sleep(1500); // Dà alla finestra un secondo e mezzo per inizializzarsi completamente
-
-                        // Ricarica il processo per assicurarsi che l'handle sia valido e porta la finestra in primo piano
-                        var freshProcess = Process.GetProcessesByName(_exename).FirstOrDefault(p => p.Id == gameProcess.Id);
-                        if (freshProcess != null && freshProcess.MainWindowHandle != IntPtr.Zero)
-                        {
-                            SetForegroundWindow(freshProcess.MainWindowHandle);
-                            ShowWindow(freshProcess.MainWindowHandle, SW_RESTORE);
-                            SimpleLogger.Instance.Info($"[Focus] Finestra del gioco '{_exename}' portata in primo piano.");
-                        }
-                        else
-                            SimpleLogger.Instance.Warning($"[Focus] Impossibile trovare un handle valido per la finestra del gioco '{_exename}'.");
-                        // --- FINE MODIFICA PER IL FOCUS ---
-
-                        var gameMapping = new PadToKey();
-                        PadToKey.AddOrUpdateKeyMapping(gameMapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
-                        _gameHotkeys = new JoystickListener(Controllers.Where(c => c.Config.DeviceName != "Keyboard").ToArray(), gameMapping);
-                        SimpleLogger.Instance.Info($"[PadToKey] Mappatura dinamica creata per '{_exename}'.");
-
-                        break; 
-                    }
-                    Thread.Sleep(500);
+                    SimpleLogger.Instance.Info($"[PadToKey] Aggiornamento dinamico e forzatura della mappatura per il processo '{_exename}'.");
+                    
+                    // 1. Aggiungiamo la regola specifica per il nostro gioco
+                    PadToKey.AddOrUpdateKeyMapping(_padToKeyMapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
+                    
+                    // 2. Diciamo al listener di USARE SEMPRE questa regola, ignorando la finestra attiva
+                    _padToKeyMapping.ForceApplyToProcess = _exename;
                 }
-            }
-            
-            try
-            {
-                if (!string.IsNullOrEmpty(_exename))
+                
+                SimpleLogger.Instance.Info($"[Focus] Tentativo di portare la finestra del gioco in primo piano...");
+                Thread.Sleep(1500);
+
+                var freshProcess = Process.GetProcessesByName(_exename).FirstOrDefault(p => p.Id == gameProcess.Id);
+                if (freshProcess != null && freshProcess.MainWindowHandle != IntPtr.Zero)
                 {
-                    var processes = Process.GetProcessesByName(_exename);
-                    if (processes.Length > 0)
-                    {
-                        procToWatch = processes.OrderBy(p => p.StartTime).First();
-                        procToWatch.WaitForExit();
-                    }
+                    SetForegroundWindow(freshProcess.MainWindowHandle);
+                    ShowWindow(freshProcess.MainWindowHandle, SW_RESTORE);
+                    SimpleLogger.Instance.Info($"[Focus] Finestra del gioco '{_exename}' portata in primo piano.");
                 }
                 else
-                {
-                    Thread.Sleep(10000); 
-                }
-            }
-            finally
-            {
-                if (_gameHotkeys != null)
-                {
-                    _gameHotkeys.Dispose();
-                    _gameHotkeys = null;
-                }
+                    SimpleLogger.Instance.Warning($"[Focus] Impossibile trovare un handle valido per la finestra del gioco '{_exename}'.");
 
-                if (_gameLauncher != null && !string.IsNullOrEmpty(_gameLauncher.LauncherExe))
-                {
-                    var launcherProcesses = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_gameLauncher.LauncherExe));
-                    foreach (var process in launcherProcesses)
-                        if (process.MainWindowHandle != IntPtr.Zero && IsWindowVisible(process.MainWindowHandle))
-                            ShowWindow(process.MainWindowHandle, SW_HIDE);
-                }
-                
-                var esProcess = Process.GetProcessesByName("emulationstation").FirstOrDefault();
-                if (esProcess != null && esProcess.MainWindowHandle != IntPtr.Zero)
-                {
-                    ShowWindow(esProcess.MainWindowHandle, SW_RESTORE);
-                    SetForegroundWindow(esProcess.MainWindowHandle);
-                }
+                break; 
             }
-
-            return 0;
+            Thread.Sleep(500);
         }
+    }
+    
+    try
+    {
+        if (!string.IsNullOrEmpty(_exename))
+        {
+            SimpleLogger.Instance.Info($"[INFO] In attesa della chiusura del processo: {_exename}");
+            var processes = Process.GetProcessesByName(_exename);
+            if (processes.Length > 0)
+            {
+                procToWatch = processes.OrderBy(p => p.StartTime).First();
+                procToWatch.WaitForExit();
+            }
+            else
+                 SimpleLogger.Instance.Warning($"[WARN] Il processo del gioco '{_exename}' si è chiuso prima che potesse essere monitorato.");
+        }
+        else
+        {
+            SimpleLogger.Instance.Info("[INFO] Nessun processo specifico da monitorare, attesa generica.");
+            Thread.Sleep(10000); 
+        }
+    }
+    finally
+    {
+        if (_gameLauncher != null && !string.IsNullOrEmpty(_gameLauncher.LauncherExe))
+        {
+            var launcherProcesses = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_gameLauncher.LauncherExe));
+            foreach (var process in launcherProcesses)
+                if (process.MainWindowHandle != IntPtr.Zero && IsWindowVisible(process.MainWindowHandle))
+                    ShowWindow(process.MainWindowHandle, SW_HIDE);
+        }
+        
+        var esProcess = Process.GetProcessesByName("emulationstation").FirstOrDefault();
+        if (esProcess != null && esProcess.MainWindowHandle != IntPtr.Zero)
+        {
+            ShowWindow(esProcess.MainWindowHandle, SW_RESTORE);
+            SetForegroundWindow(esProcess.MainWindowHandle);
+        }
+    }
+
+    return 0;
+}
         
         
 public override PadToKey SetupCustomPadToKeyMapping(PadToKey mapping)
 {
-    // Se è un gioco da store, non conosciamo ancora il nome dell'eseguibile.
-    // Quindi, impostiamo una variabile speciale per dire al JoystickListener di prepararsi.
-    if (_gameLauncher != null)
-    {
-        if (mapping == null)
-            mapping = new PadToKey();
-        
-        // Questa variabile dice al listener: "Il prossimo processo di gioco che vedi,
-        // applicagli la regola di chiusura".
-        mapping.ForceApplyToProcess = "*GAME*"; // Usiamo una stringa speciale come segnale
-        SimpleLogger.Instance.Info("[PadToKey] Impostata mappatura dinamica per gioco da store.");
-        return mapping;
-    }
+    // Salva un riferimento all'oggetto di mappatura per poterlo modificare in seguito.
+    _padToKeyMapping = mapping;
 
-    // Se è un file locale, la logica esistente va benissimo.
+    // La logica per i giochi da store ora verrà gestita dinamicamente in RunAndWait,
+    // quindi non impostiamo più il segnale "*GAME*".
+
+    // Manteniamo la logica esistente per i file .exe e altri casi specifici
+    // che conoscono il nome del processo in anticipo.
     if (_isGameExePath || _exeFile)
         return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
-    
-    // Altre condizioni del tuo codice originale...
-    else if (_systemName != "mugen" || _systemName != "ikemen" || string.IsNullOrEmpty(_exename))
-        return mapping;
 
-    return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
+    if (!string.IsNullOrEmpty(_exename) && (_systemName == "mugen" || _systemName == "ikemen"))
+        return PadToKey.AddOrUpdateKeyMapping(mapping, _exename, InputKey.hotkey | InputKey.start, "(%{KILL})");
+
+    return mapping;
 }
-        // --- FINE MODIFICA 2 --
 
        private void UpdateMugenConfig(string path, bool fullscreen, ScreenResolution resolution)
         {

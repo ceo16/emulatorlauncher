@@ -288,72 +288,54 @@ namespace EmulatorLauncher.PadToKeyboard
             SDL.SDL_Quit();
         }
 
-        private void ProcessJoystickState(Controller controller, JoyInputState keyState, JoyInputState prevState)
-        {
-            //Debug.WriteLine("ProcessJoystickState : " + keyState.ToString() + " - OldState : " + prevState.ToString());
+       private void ProcessJoystickState(Controller controller, JoyInputState keyState, JoyInputState prevState)
+{
+    IntPtr hWndProcess;
+    bool isDesktop;
+    // Abbiamo ancora bisogno dell'handle della finestra attiva per poterla chiudere
+    string activeProcessName = GetActiveProcessFileName(out isDesktop, out hWndProcess);
 
-            IntPtr hWndProcess;
-            bool isDesktop;
-            string process = GetActiveProcessFileName(out isDesktop, out hWndProcess);
+    // --- NUOVA LOGICA DI SELEZIONE MAPPATURA ---
+    // Se è stata impostata una forzatura, usiamo quel nome di processo.
+    // Altrimenti, usiamo quello della finestra attiva come fallback.
+    string processToMap = !string.IsNullOrEmpty(_mapping.ForceApplyToProcess) ? _mapping.ForceApplyToProcess : activeProcessName;
 
-            var mapping = _mapping[process];
-			
-			    // --- INIZIO NUOVA LOGICA DI MAPPATURA DINAMICA ---
-    // Se la mappatura non esiste, ma abbiamo ricevuto il segnale "*GAME*",
-    // creiamo la regola al volo.
-    if (mapping == null && _mapping.ForceApplyToProcess == "*GAME*")
+    // Se non abbiamo un processo target, non facciamo nulla.
+    if (string.IsNullOrEmpty(processToMap))
+        return;
+
+    // Cerca una mappatura specifica per il nostro processo target.
+    PadToKeyApp mapping = _mapping[processToMap];
+    
+    // Logica di mappatura primaria (per il nostro gioco)
+    if (mapping != null)
     {
-        // Lista di processi di sistema o launcher da ignorare
-        var processBlacklist = new List<string> { "steam", "EpicGamesLauncher", "EADesktop", "Amazon Games UI", "NVIDIA Overlay", "explorer", "emulationstation" };
-
-        if (!string.IsNullOrEmpty(process) && !processBlacklist.Contains(process, StringComparer.OrdinalIgnoreCase))
+        foreach (var keyMap in mapping.Input)
         {
-            SimpleLogger.Instance.Info("[PadToKey] Mappatura dinamica applicata al processo: " + process);
-            
-            // Aggiungi la regola per chiudere il gioco
-            PadToKey.AddOrUpdateKeyMapping(_mapping, process, InputKey.hotkey | InputKey.start, "(%{KILL})");
-            
-            // Resetta il segnale per non applicarlo ad altri processi
-            _mapping.ForceApplyToProcess = null;
+            if (!keyMap.IsValid() || (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex))
+                continue;
 
-            // Ricarica la mappatura appena creata
-            mapping = _mapping[process];
+            SendInput(controller, keyState, prevState, hWndProcess, processToMap, keyMap);
         }
     }
-    // --- FINE NUOVA LOGICA ---
-			
-            if (mapping != null)
-            {
-                foreach (var keyMap in mapping.Input)
-                {
-                    if (!keyMap.IsValid())
-                        continue;
 
-                    if (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex)
-                        continue;
+    // Logica di fallback per la mappatura comune "*" (se esiste)
+    var commonMapping = _mapping["*"];
+    if (commonMapping != null)
+    {
+        foreach (var keyMap in commonMapping.Input)
+        {
+            if (!keyMap.IsValid() || (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex))
+                continue;
 
-                    SendInput(controller, keyState, prevState, hWndProcess, process, keyMap);
-                }
-            }
+            // Non applicare una mappatura comune se ne esiste già una specifica per lo stesso tasto
+            if (mapping != null && mapping[keyMap.Name] != null)
+                continue;
 
-            var commonMapping = _mapping["*"];
-            if (commonMapping != null)
-            {
-                foreach (var keyMap in commonMapping.Input)
-                {
-                    if (!keyMap.IsValid())
-                        continue;
-
-                    if (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex)
-                        continue;
-
-                    if (mapping != null && mapping[keyMap.Name] != null)
-                        continue;
-
-                    SendInput(controller, keyState, prevState, hWndProcess, process, keyMap);
-                }
-            }
+            SendInput(controller, keyState, prevState, hWndProcess, "*", keyMap);
         }
+    }
+}
 
         private void SendInput(Controller controller, JoyInputState newState, JoyInputState oldState, IntPtr hWndProcess, string process, PadToKeyInput input)
         {
