@@ -147,7 +147,7 @@ namespace EmulatorLauncher
             //write pref-path with emulator path
             yml["pref-path"] = _prefPath;
 
-            //Add modules if user has set option to manage from RETROBAT
+            //Add modules if user has set option to manage from LUMACA
             if (SystemConfig.isOptSet("modules") && SystemConfig["modules"] == "1")
             {
                 yml["modules-mode"] = "1";

@@ -4,18 +4,26 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Microsoft.Win32;
-using Steam_Library_Manager.Framework;
+using Steam_Library_Manager.Framework; // Assicurati che questo namespace sia correttamente risolto nel tuo progetto
 using EmulatorLauncher.Common.Launchers.Steam;
 using Newtonsoft.Json;
+using EmulatorLauncher.Common; // Aggiunto per SimpleLogger e StringExtensions
 
 namespace EmulatorLauncher.Common.Launchers
 {
     public static class SteamLibrary
     {
-        // https://cdn.cloudflare.steamstatic.com/steam/apps/1515950/header.jpg
+        public const string GameLaunchUrl = @"steam://rungameid/{0}";
+        public const string HeaderImageUrl = @"https://cdn.cloudflare.steamstatic.com/steam/apps/{0}/header.jpg";
 
-        const string GameLaunchUrl = @"steam://rungameid/{0}";
-        const string HeaderImageUrl = @"https://cdn.cloudflare.steamstatic.com/steam/apps/{0}/header.jpg";
+        // Nuova proprietà: Verifica se Steam è installato.
+        public static bool IsInstalled
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(GetInstallPath());
+            }
+        }
 
         public static LauncherGameInfo[] GetInstalledGames()
         {
@@ -37,7 +45,7 @@ namespace EmulatorLauncher.Common.Launchers
                     {
                         foreach(var game in GetInstalledGamesFromFolder(libFolder))
                         {
-                            if (game.Id == "228980")
+                            if (game.Id == "228980") // Steamworks Common Redistributables
                                 continue;
 
                             games.Add(game);
@@ -45,7 +53,10 @@ namespace EmulatorLauncher.Common.Launchers
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) 
+            {
+                SimpleLogger.Instance.Error($"[SteamLibrary] Errore durante il recupero dei giochi installati: {ex.Message}");
+            }
 
             return games.ToArray();
         }
@@ -250,7 +261,7 @@ namespace EmulatorLauncher.Common.Launchers
                 }
                 catch (Exception ex)
                 {
-
+                    SimpleLogger.Instance.Error($"[SteamLibrary] Errore durante l'elaborazione del file manifest {file}: {ex.Message}");
                 }
             }
 
@@ -285,7 +296,7 @@ namespace EmulatorLauncher.Common.Launchers
                 name = kv["name"].Value; // StringExtensions.NormalizeGameName();
 
             var gameId = kv["appID"].Value;
-            if (gameId == "228980")
+            if (gameId == "228980") // Steamworks Common Redistributables
                 return null;
 
             var installDir = Path.Combine((new FileInfo(path)).Directory.FullName, "common", kv["installDir"].Value);
@@ -352,15 +363,18 @@ namespace EmulatorLauncher.Common.Launchers
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                SimpleLogger.Instance.Error($"[SteamLibrary] Errore durante il recupero del percorso di installazione di Steam dal registro: {ex.Message}");
+            }
 
             return null;
         }
     }
 
 }
-
-
+// La classe SteamAppStateFlags è già definita qui, quindi non la ripeto
+// in un namespace annidato per evitare conflitti.
 namespace EmulatorLauncher.Common.Launchers.Steam
 {
     [Flags]

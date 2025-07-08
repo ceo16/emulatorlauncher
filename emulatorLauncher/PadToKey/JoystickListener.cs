@@ -288,47 +288,54 @@ namespace EmulatorLauncher.PadToKeyboard
             SDL.SDL_Quit();
         }
 
-        private void ProcessJoystickState(Controller controller, JoyInputState keyState, JoyInputState prevState)
+       private void ProcessJoystickState(Controller controller, JoyInputState keyState, JoyInputState prevState)
+{
+    IntPtr hWndProcess;
+    bool isDesktop;
+    // Abbiamo ancora bisogno dell'handle della finestra attiva per poterla chiudere
+    string activeProcessName = GetActiveProcessFileName(out isDesktop, out hWndProcess);
+
+    // --- NUOVA LOGICA DI SELEZIONE MAPPATURA ---
+    // Se è stata impostata una forzatura, usiamo quel nome di processo.
+    // Altrimenti, usiamo quello della finestra attiva come fallback.
+    string processToMap = !string.IsNullOrEmpty(_mapping.ForceApplyToProcess) ? _mapping.ForceApplyToProcess : activeProcessName;
+
+    // Se non abbiamo un processo target, non facciamo nulla.
+    if (string.IsNullOrEmpty(processToMap))
+        return;
+
+    // Cerca una mappatura specifica per il nostro processo target.
+    PadToKeyApp mapping = _mapping[processToMap];
+    
+    // Logica di mappatura primaria (per il nostro gioco)
+    if (mapping != null)
+    {
+        foreach (var keyMap in mapping.Input)
         {
-            //Debug.WriteLine("ProcessJoystickState : " + keyState.ToString() + " - OldState : " + prevState.ToString());
+            if (!keyMap.IsValid() || (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex))
+                continue;
 
-            IntPtr hWndProcess;
-            bool isDesktop;
-            string process = GetActiveProcessFileName(out isDesktop, out hWndProcess);
-
-            var mapping = _mapping[process];
-            if (mapping != null)
-            {
-                foreach (var keyMap in mapping.Input)
-                {
-                    if (!keyMap.IsValid())
-                        continue;
-
-                    if (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex)
-                        continue;
-
-                    SendInput(controller, keyState, prevState, hWndProcess, process, keyMap);
-                }
-            }
-
-            var commonMapping = _mapping["*"];
-            if (commonMapping != null)
-            {
-                foreach (var keyMap in commonMapping.Input)
-                {
-                    if (!keyMap.IsValid())
-                        continue;
-
-                    if (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex)
-                        continue;
-
-                    if (mapping != null && mapping[keyMap.Name] != null)
-                        continue;
-
-                    SendInput(controller, keyState, prevState, hWndProcess, process, keyMap);
-                }
-            }
+            SendInput(controller, keyState, prevState, hWndProcess, processToMap, keyMap);
         }
+    }
+
+    // Logica di fallback per la mappatura comune "*" (se esiste)
+    var commonMapping = _mapping["*"];
+    if (commonMapping != null)
+    {
+        foreach (var keyMap in commonMapping.Input)
+        {
+            if (!keyMap.IsValid() || (keyMap.ControllerIndex >= 0 && keyMap.ControllerIndex != controller.DeviceIndex))
+                continue;
+
+            // Non applicare una mappatura comune se ne esiste già una specifica per lo stesso tasto
+            if (mapping != null && mapping[keyMap.Name] != null)
+                continue;
+
+            SendInput(controller, keyState, prevState, hWndProcess, "*", keyMap);
+        }
+    }
+}
 
         private void SendInput(Controller controller, JoyInputState newState, JoyInputState oldState, IntPtr hWndProcess, string process, PadToKeyInput input)
         {

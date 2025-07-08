@@ -1,165 +1,126 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Data.SQLite;
-using EmulatorLauncher.Common.Launchers.Gog;
-using Newtonsoft.Json;
 using System.Linq;
+using System.Text;
+using System.IO;
+using System.Diagnostics; // Aggiungere per Process
+using EmulatorLauncher.Common; // Per RegistryKeyEx e SimpleLogger
 
 namespace EmulatorLauncher.Common.Launchers
 {
     public static class GogLibrary
     {
-        static GogLibrary()
+        // --- MODIFICA 1: Cambiato l'URL per visualizzare il gioco ---
+        public const string GameLaunchUrl = @"goggalaxy://openGameView/{0}"; // ID del gioco come argomento per il client GOG Galaxy
+
+        // Ottiene il percorso di installazione del client GOG Galaxy.
+        public static string GetGogClientPath()
         {
-            SQLiteInteropManager.InstallSQLiteInteropDll();
-        }
+            string clientPath = null;
+            string registryKeyWow64 = @"SOFTWARE\WOW6432Node\GOG.com\GalaxyClient\paths"; 
+            string registryKeyNormal = @"SOFTWARE\GOG.com\GalaxyClient\paths"; 
+            string clientExeFileName = "GalaxyClient.exe"; 
 
-        public static LauncherGameInfo[] GetInstalledGames()
-        {
-            var games = new List<LauncherGameInfo>();
+            SimpleLogger.Instance.Info($"[GogLibrary] Tentativo di rilevare il percorso di installazione di GOG Galaxy.");
+            
+            clientPath = (string)RegistryKeyEx.GetRegistryValue(RegistryKeyEx.LocalMachine, registryKeyWow64, "client");
 
-            if (!IsInstalled)
-                return games.ToArray();
-
-            using (var db = new SQLiteConnection("Data Source = " + GetDatabasePath()))
+            if (string.IsNullOrEmpty(clientPath))
             {
-                db.Open();
+                clientPath = (string)RegistryKeyEx.GetRegistryValue(RegistryKeyEx.LocalMachine, registryKeyNormal, "client");
+            }
 
-                var cmd = db.CreateCommand();
-                cmd.CommandText = "SELECT IB.productId, IB.installationPath, LD.title, LD.images FROM InstalledBaseProducts IB LEFT OUTER JOIN LimitedDetails as LD ON IB.productId = LD.productId; ";
-
-                var reader = cmd.ExecuteReader();
-
-                var list = reader.ReadObjects<GogInstalledGameInfo>();
-                if (list != null)
+            if (!string.IsNullOrEmpty(clientPath))
+            {
+                string fullClientExePath = Path.Combine(clientPath, clientExeFileName);
+                if (File.Exists(fullClientExePath))
                 {
-                    foreach (var app in list)
-                    {                                         
-                        if (!Directory.Exists(app.installationPath))
-                            continue;
-
-                        var exeInfo = GetExecutableInfo(app.productId, app.installationPath);
-                        if (exeInfo == null || string.IsNullOrEmpty(exeInfo.Path))
-                            continue;
-
-                        var game = new LauncherGameInfo()
-                        {
-                            Id = app.productId.ToString(),
-                            Name = app.title,
-                            InstallDirectory = Path.GetFullPath(app.installationPath),
-                            LauncherUrl = Path.Combine(app.installationPath, exeInfo.Path),   
-                            ExecutableName = exeInfo.Path,
-                            Parameters = exeInfo.Arguments,
-                            Launcher = GameLauncherType.Gog
-                        };
-                      
-                        games.Add(game);
-                    }
+                    SimpleLogger.Instance.Info($"[GogLibrary] Eseguibile GOG Galaxy trovato e percorso valido: {clientPath}");
+                    return clientPath; 
                 }
-
-
-                db.Close();
             }
             
-            return games.ToArray();
+            SimpleLogger.Instance.Info("[GogLibrary] Percorso di installazione di GOG Galaxy non rilevato tramite registro.");
+            return null; 
         }
 
-        public static bool IsInstalled { get { return File.Exists(GetDatabasePath()); } }
-
-        static string GetDatabasePath()
+        // Verifica se il client GOG Galaxy è in esecuzione.
+        public static bool IsClientRunning()
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-            string gogDB = Path.Combine(appData, "GOG.com", "Galaxy", "storage", "Galaxy-2.0.db");
-            if (File.Exists(gogDB))
-                return gogDB;
-
-            return null;
+            return Process.GetProcessesByName("GalaxyClient").Any();
         }
 
-        static GogPlayTask GetExecutableInfo(int productId, string installationPath)
+        // --- MODIFICA 2: Metodo StartClient migliorato ---
+        public static int StartClient(string uri = null)
         {
-            string fn = Path.Combine(installationPath, "goggame-" + productId + ".info");
-            if (!File.Exists(fn))
+            SimpleLogger.Instance.Info($"[GogLibrary] Tentativo di avviare il client GOG Galaxy. URI fornito: {(string.IsNullOrEmpty(uri) ? "Nessuno" : uri)}");
+
+            // Se l'URI è fornito, proviamo a lanciarlo direttamente.
+            // Questo è il modo più robusto per gestire i protocolli personalizzati come goggalaxy://
+            if (!string.IsNullOrEmpty(uri))
+            {
+                try
+                {
+                    SimpleLogger.Instance.Info($"[GogLibrary] Avvio diretto dell'URI tramite Process.Start: {uri}");
+                    Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
+                    SimpleLogger.Instance.Info("[GogLibrary] Avvio URI completato (o tentato).");
+                    return 0; // Successo
+                }
+                catch (Exception ex)
+                {
+                    SimpleLogger.Instance.Error($"[GogLibrary] Errore durante l'avvio diretto dell'URI '{uri}': {ex.Message}", ex);
+                    // Non tornare qui, potremmo provare ad avviare il client come fallback.
+                }
+            }
+
+            // Logica di fallback: se l'URI fallisce o non è fornito, avvia GalaxyClient.exe direttamente.
+            string clientPath = GetGogClientPath(); 
+            if (string.IsNullOrEmpty(clientPath))
+            {
+                SimpleLogger.Instance.Error("[GogLibrary] Fallback: Percorso del client GOG Galaxy non trovato.");
+                return 1; 
+            }
+
+            string clientExe = Path.Combine(clientPath, "GalaxyClient.exe");
+            if (!File.Exists(clientExe))
+            {
+                SimpleLogger.Instance.Error("[GogLibrary] Fallback: Eseguibile del client GOG Galaxy non trovato: " + clientExe);
+                return 1; 
+            }
+
+            try
+            {
+                Process.Start(clientExe);
+                SimpleLogger.Instance.Info("[GogLibrary] Fallback: Avvio eseguibile completato.");
+                return 0; 
+            }
+            catch (Exception ex)
+            {
+                SimpleLogger.Instance.Error($"[GogLibrary] Fallback: Errore durante l'avvio del client GOG Galaxy (eseguibile): {ex.Message}", ex);
+                return 1; 
+            }
+        }
+
+        public static string GetGogGameExecutableName(Uri uri)
+        {
+            if (uri == null || uri.Segments.Length < 2)
                 return null;
 
-            var product = JsonConvert.DeserializeObject<GogProduct>(File.ReadAllText(fn));
-            if (product == null || product.PlayTasks == null)
-                return null;
+            string gameId = uri.Segments.Last();
 
-            return product.PlayTasks.Where(p => p.Category == "game").FirstOrDefault();
+            SimpleLogger.Instance.Info($"[GogLibrary] Tentativo di ottenere il nome dell'eseguibile per GOG Game ID: {gameId}. Restituito il nome del client per il monitoraggio.");
+
+            // Per GOG, monitorare il client è spesso l'unica opzione affidabile
+            // perché non c'è un modo standard per ottenere l'eseguibile del gioco prima dell'installazione.
+            return "GalaxyClient"; 
         }
-    }
-}
 
-namespace EmulatorLauncher.Common.Launchers.Gog
-{
-    public class GogProduct
-    {
-        [JsonProperty("languages")]
-        public List<string> Languages { get; set; }
-
-        [JsonProperty("osBitness")]
-        public List<string> OsBitness { get; set; }
-
-        [JsonProperty("version")]
-        public int Version { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("language")]
-        public string Language { get; set; }
-
-        [JsonProperty("gameId")]
-        public string GameId { get; set; }
-
-        [JsonProperty("rootGameId")]
-        public string RootGameId { get; set; }
-
-        [JsonProperty("playTasks")]
-        public List<GogPlayTask> PlayTasks { get; set; }
-
-        [JsonProperty("buildId")]
-        public string BuildId { get; set; }
-    }
-
-    public class GogPlayTask
-    {
-        [JsonProperty("languages")]
-        public List<string> Languages { get; set; }
-
-        [JsonProperty("osBitness")]
-        public List<string> OsBitness { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("type")]
-        public string Type { get; set; }
-
-        [JsonProperty("isPrimary")]
-        public bool IsPrimary { get; set; }
-
-        [JsonProperty("path")]
-        public string Path { get; set; }
-
-        [JsonProperty("category")]
-        public string Category { get; set; }
-
-        [JsonProperty("url")]
-        public string Url { get; set; }
-
-        [JsonProperty("arguments")]
-        public string Arguments { get; set; }
-        
-    }
-
-    public class GogInstalledGameInfo
-    {        
-        public int productId { get; set; }
-        public string installationPath { get; set; }
-        public string title { get; set; }
-        public string images { get; set; }        
+        public static bool IsInstalled
+        {
+            get
+            {
+                return !string.IsNullOrEmpty(GetGogClientPath());
+            }
+        }
     }
 }

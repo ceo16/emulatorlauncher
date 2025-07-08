@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -30,9 +30,9 @@ namespace EmulatorLauncher
                     if (!File.Exists(tattooFile))
                         tattooFile = Path.Combine(Program.AppConfig.GetFullPath("user"), "tattoos", "default", system + ".png");
                     if (!File.Exists(tattooFile))
-                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tattoos", "games", system, gameName + ".png");
+                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tattoos", "games", system, gameName + ".png");
                     if (!File.Exists(tattooFile))
-                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tattoos", "default", tattooName);
+                        tattooFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tattoos", "default", tattooName);
                     if (!File.Exists(tattooFile))
                     {
                         SimpleLogger.Instance.Info("[GENERATOR] Tattoo file not found: " + tattooName);

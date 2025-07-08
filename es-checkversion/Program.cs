@@ -1,9 +1,9 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using RetrobatUpdater;
+using LumacaUpdater;
 using EmulatorLauncher.Common;
 
 namespace es_checkversion
@@ -37,23 +37,23 @@ namespace es_checkversion
 
                 SimpleLogger.Instance.Info("[INFO] Branch: " + branch);
 
-                string localVersion = RetrobatVersion.GetLocalVersion();
+                string localVersion = LumacaVersion.GetLocalVersion();
                 if (string.IsNullOrEmpty(localVersion))
-                    throw new ApplicationException("Retrobat is not properly installed");
+                    throw new ApplicationException("Lumaca is not properly installed");
                 SimpleLogger.Instance.Info("[INFO] Local Version: " + localVersion);
 
-                string esVersionFile = Path.Combine(Path.GetDirectoryName(typeof(RetrobatVersion).Assembly.Location), "version.info");
+                string esVersionFile = Path.Combine(Path.GetDirectoryName(typeof(LumacaVersion).Assembly.Location), "version.info");
                 if (!string.IsNullOrEmpty(localVersion))
                     File.WriteAllText(esVersionFile, localVersion);
 
-                string remoteVersion = RetrobatVersion.GetRemoteVersion(branch, localVersion);
+                string remoteVersion = LumacaVersion.GetRemoteVersion(branch, localVersion);
                 if (string.IsNullOrEmpty(remoteVersion))
                     throw new ApplicationException("Unable to get remote version");
                 SimpleLogger.Instance.Info("[INFO] Available remote Version: " + remoteVersion);
 
                 foreach (string old in oldFiles)
                 {
-                    string oldFile = Path.Combine(Path.GetDirectoryName(typeof(RetrobatVersion).Assembly.Location), old);
+                    string oldFile = Path.Combine(Path.GetDirectoryName(typeof(LumacaVersion).Assembly.Location), old);
                     if (File.Exists(oldFile))
                     {
                         SimpleLogger.Instance.Info("[INFO] Removing old file: " + oldFile);

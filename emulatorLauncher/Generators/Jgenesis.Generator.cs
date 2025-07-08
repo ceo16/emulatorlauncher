@@ -63,7 +63,7 @@ namespace EmulatorLauncher
                 string localPath = Program.EsSaveStates.GetSavePath(system, emulator, core);
                 string emulatorPath = Path.Combine(path, "states", savesSystem);
 
-                _saveStatesWatcher = new JGenesisSaveStatesMonitor(rom, emulatorPath, localPath, Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "savestateicon.png"));
+                _saveStatesWatcher = new JGenesisSaveStatesMonitor(rom, emulatorPath, localPath, Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "savestateicon.png"));
                 _saveStatesWatcher.PrepareEmulatorRepository();
                 _saveStateSlot = _saveStatesWatcher.Slot;
             }
@@ -111,7 +111,7 @@ namespace EmulatorLauncher
 
             if (!File.Exists(settingsFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "jgenesis", "jgenesis-config-template.toml");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "jgenesis", "jgenesis-config-template.toml");
                 if (!File.Exists(templateFile))
                     return;
 

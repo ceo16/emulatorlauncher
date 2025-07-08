@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <upgradeinfo>
-  <neveroverwrite path="retrobat.ini"/>
+  <neveroverwrite path="lumaca.ini"/>
   <!-- emulationstation -->
   <neveroverwrite path="emulationstation\.emulationstation\es_settings.cfg"/>
   <neveroverwrite path="emulationstation\.emulationstation\es_input.cfg"/>
@@ -50,6 +50,6 @@
     <delete path="system\modules\rb_gui\*.dll"/>
     <delete path="system\modules\rb_gui\images\*.png"/>
     <delete path="BatGui.exe"/>
-    <delete path="retrobat.ini"/> 
+    <delete path="lumaca.ini"/> 
   </actions>
 </upgradeinfo>

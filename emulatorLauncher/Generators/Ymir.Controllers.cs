@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common.EmulationStation;
@@ -106,7 +106,7 @@ namespace EmulatorLauncher
             bool needSatActivationSwitch = false;
             bool sat_pad = Program.SystemConfig["saturn_pad_ymir"] == "1";
 
-            string saturnjson = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "saturnControllers.json");
+            string saturnjson = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "saturnControllers.json");
             if (File.Exists(saturnjson))
             {
                 try

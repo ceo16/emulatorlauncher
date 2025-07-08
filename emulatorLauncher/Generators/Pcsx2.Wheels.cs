@@ -78,11 +78,11 @@ namespace EmulatorLauncher
             pcsx2ini.ClearSection("USB1");
             pcsx2ini.ClearSection("USB2");
 
-            // Get mapping from yml file in retrobat\system\resources\inputmapping\wheels and retrieve mapping
+            // Get mapping from yml file in lumaca\system\resources\inputmapping\wheels and retrieve mapping
             YmlFile ymlFile = null;
             YmlContainer wheel1Mapping = null;
             Dictionary<string, string> wheel1buttonMap = new Dictionary<string, string>();
-            string pcsx2WheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "pcsx2_wheels.yml");
+            string pcsx2WheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "pcsx2_wheels.yml");
             if (File.Exists(pcsx2WheelMapping))
             {
                 ymlFile = YmlFile.Load(pcsx2WheelMapping);

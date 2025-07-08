@@ -69,12 +69,12 @@ namespace EmulatorLauncher
 
                 // Inject controllers                
                 
-                string retrobatJoyScipt = Path.Combine(path, "retrobatJoystick.tcl");
+                string lumacaJoyScipt = Path.Combine(path, "lumacaJoystick.tcl");
 
                 if (Program.Controllers.Count == 1)
                 {
                     var c1 = Controllers.FirstOrDefault(c => c.PlayerIndex == 1);
-                    using (StreamWriter joyScript = new StreamWriter(retrobatJoyScipt, false))
+                    using (StreamWriter joyScript = new StreamWriter(lumacaJoyScipt, false))
                         ConfigureJoystick(settings, bindings, joyScript, c1);
                 }
 
@@ -82,12 +82,12 @@ namespace EmulatorLauncher
                 {
                     var c1 = Controllers.FirstOrDefault(c => c.PlayerIndex == 1);
                     var c2 = Controllers.FirstOrDefault(c => c.PlayerIndex == 2);
-                    using (StreamWriter joyScript = new StreamWriter(retrobatJoyScipt, false))
+                    using (StreamWriter joyScript = new StreamWriter(lumacaJoyScipt, false))
                         ConfigureJoystick(settings, bindings, joyScript, c1, c2);
                 }
 
                 retList.Add("-script");
-                retList.Add("\"" + retrobatJoyScipt + "\"");
+                retList.Add("\"" + lumacaJoyScipt + "\"");
                 return retList;
             } 
         }

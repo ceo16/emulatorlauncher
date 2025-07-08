@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -154,7 +154,7 @@ namespace EmulatorLauncher
 
                     // Get mapping in yml file
                     
-                    string model2WheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "model2_wheels.yml");
+                    string model2WheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "model2_wheels.yml");
                     if (File.Exists(model2WheelMapping))
                     {
                         ymlFile = YmlFile.Load(model2WheelMapping);

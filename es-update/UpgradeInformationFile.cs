@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,12 +7,12 @@ using System.IO;
 using EmulatorLauncher.Common.FileFormats;
 using EmulatorLauncher.Common;
 
-namespace RetrobatUpdater
+namespace LumacaUpdater
 {
     /* Sample file :
     <?xml version="1.0" encoding="UTF-8"?>
     <upgradeinfo>
-      <neveroverwrite path="retrobat.ini"/>
+      <neveroverwrite path="lumaca.ini"/>
       <neveroverwrite path="emulationstation\.emulationstation\es_settings.cfg"/>
       <neveroverwrite path="emulationstation\.emulationstation\es_input.cfg"/>
       <actions version="4.0.2"> <!-- startswith -->

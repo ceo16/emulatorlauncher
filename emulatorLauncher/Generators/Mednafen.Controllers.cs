@@ -140,7 +140,7 @@ namespace EmulatorLauncher
             MegadriveController saturnGamepad = null;
 
             string guid1 = (controller.Guid.ToString()).Substring(0, 24) + "00000000";
-            // Fetch information in retrobat/system/tools/gamecontrollerdb.txt file
+            // Fetch information in lumaca/system/tools/gamecontrollerdb.txt file
             SdlToDirectInput dinputCtrl = null;
             string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
 
@@ -244,7 +244,7 @@ namespace EmulatorLauncher
             if (mednafenCore == "md")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string mdjson = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+                string mdjson = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "mdControllers.json");
 
                 if (File.Exists(mdjson))
                 {
@@ -300,7 +300,7 @@ namespace EmulatorLauncher
             if (mednafenCore == "ss")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string saturnjson = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "saturnControllers.json");
+                string saturnjson = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "saturnControllers.json");
 
                 if (File.Exists(saturnjson))
                 {

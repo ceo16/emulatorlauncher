@@ -226,7 +226,7 @@ namespace EmulatorLauncher
 
                     // Get mapping in yml file
                     
-                    string model3WheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "model3_wheels.yml");
+                    string model3WheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "model3_wheels.yml");
                     if (File.Exists(model3WheelMapping))
                     {
                         ymlFile = YmlFile.Load(model3WheelMapping);
@@ -656,7 +656,7 @@ namespace EmulatorLauncher
                 else
                     ini.WriteValue(" Global ", "InputSystem", "dinput");
 
-                // Fetch information in retrobat/system/tools/gamecontrollerdb.txt file
+                // Fetch information in lumaca/system/tools/gamecontrollerdb.txt file
                 SdlToDirectInput ctrl1 = null;
                 string gamecontrollerDB = Path.Combine(AppConfig.GetFullPath("tools"), "gamecontrollerdb.txt");
                 

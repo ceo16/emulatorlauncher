@@ -67,7 +67,6 @@
       <choice name="270°" value="3"/>
     </feature>
     <feature name="MONITOR INDEX" value="MonitorIndex" description="Games will be displayed on the monitor corresponding to the selected index.">
-      <choice name="0" value="0"/>
       <choice name="1" value="1"/>
       <choice name="2" value="2"/>
       <choice name="3" value="3"/>
@@ -348,10 +347,7 @@
       <choice name="LEFT ANALOG (FORCED)" value="3"/>
       <choice name="RIGHT ANALOG (FORCED)" value="4"/>
     </feature>
-    <feature name="KILL LAUNCHER WHEN EXIT" value="global.killsteam" description="Set this to 'ON' to quit steam or Epic Game Launcher when quitting game." preset="switchauto"/>
     <feature name="KILL LAUNCHER WHEN EXIT" value="killsteam" description="Set this to 'ON' to quit steam or Epic Game Launcher when quitting game." preset="switchauto"/>
-    <feature name="KEEP GAMES ADDED MANUALLY" value="global.storekeep" description="By default, Lumaca keeps sync between installed games and roms folder." preset="switchauto"/>
-    <feature name="KEEP GAMES ADDED MANUALLY" value="storekeep" description="By default, Lumaca keeps sync between installed games and roms folder." preset="switchauto"/>
   </sharedFeatures>
   <!-- GLOBAL FEATURES -->
   <globalFeatures>
@@ -368,8 +364,6 @@
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.smooth"/>
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.discord"/>
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.disableautocontrollers"/>
-    <sharedFeature group="GLOBAL OPTIONS" submenu="WINDOWS GAMES" value="global.killsteam"/>
-    <sharedFeature group="GLOBAL OPTIONS" submenu="WINDOWS GAMES" value="global.storekeep"/>
     <sharedFeature group="COMPRESSION" value="decompressedfolders"/>
     <sharedFeature group="COMPRESSION" value="decompressedpath"/>
     <feature group="CONTROLS" name="DPAD AS ANALOG" submenu="SPECIAL CONTROLLERS" value="analogDpad" preset="switch"/>
@@ -5423,7 +5417,7 @@
       </feature>
       <feature submenu="VIDEO" name="FRAMESKIP" group="ADVANCED SETTINGS" value="kronos_skipframe" description="Skip frames to improve performance (smoothless)." preset="sliderauto" preset-parameters="0 5 1 frames" order="159"/>
       <feature submenu="VISUAL RENDERING" name="FORCE ORIGINAL RESOLUTION" group="ADVANCED SETTINGS" value="kronos_force_downsampling" description="Usefull when using resolution higher than the screen. Avoid moiré effect." preset="switchauto" order="251"/>
-      <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="saturn_meshmode" description="Replace meshed transparency by real transparency." preset="switchauto" order="252"/>
+      <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="kronos_meshmode" description="Replace meshed transparency by real transparency." preset="switchauto" order="252"/>
       <feature submenu="VISUAL RENDERING" name="IMPROVED BANDING" group="ADVANCED SETTINGS" value="kronos_bandingmode" description="Apply Gouraud shading instead on flat shading, only with OpenGL." preset="switchauto" order="253"/>
       <sharedFeature submenu="EMULATION" group="ADVANCED SETTINGS" value="autosave" order="101"/>
       <feature submenu="EMULATION" name="LANGUAGE" group="ADVANCED SETTINGS" value="kronos_language_id" order="102">
@@ -8704,8 +8698,6 @@
         <feature submenu="CONTROLS" name="BALANCE BOARD" group="ADVANCED SETTINGS" value="wii_balanceboard" description="Set this option only when using a real balance board." preset="switchauto" order="510"/>
         <feature submenu="CONTROLS" name="JOYSTICK DEADZONE" value="dolphin_wii_deadzone" group="ADVANCED SETTINGS" description="Use this only if the analog stick is drifting." preset="sliderauto" preset-parameters="0.0 50.0 2.0 %" order="511"/>
         <feature submenu="CONTROLS" name="JOYSTICK SENSITIVITY" value="dolphin_wii_sensitivity" group="ADVANCED SETTINGS" description="Decrease if too sensitive, decreasing too much might prevent from going full range." preset="sliderauto" preset-parameters="60.0 120.0 2.0 %" order="512"/>
-        <feature submenu="CONTROLS" name="DISABLE WIIMOTE CONTINUOUS SCANNING" group="ADVANCED SETTINGS" value="dolphin_nowiimotescan" preset="switchauto" order="513"/>
-        <feature submenu="CONTROLS" name="BLUETOOTH PASSTHROUGH" group="ADVANCED SETTINGS" value="dolphin_bt_pass" preset="switchauto" order="514"/>
         <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="use_guns" order="550"/>
       </system>
     </core>
@@ -12172,9 +12164,6 @@
       <choice name="Polski" value="19"/>
       <choice name="Lietuvu" value="20"/>
     </feature>
-    <feature submenu="EMULATION" name="JAK1 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak1" preset="files" order="110"/>
-    <feature submenu="EMULATION" name="JAK2 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak2" preset="files" order="111"/>
-    <feature submenu="EMULATION" name="JAK3 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak3" preset="files" order="112"/>
     <sharedFeature submenu="USER INTERFACE" group="ADVANCED SETTINGS" value="discord" order="450"/>
     <feature submenu="USER INTERFACE" name="INTERFACE LANGUAGE" group="ADVANCED SETTINGS" value="opengoal_menulang" order="451">
       <choice name="English" value="0"/>
@@ -15104,7 +15093,6 @@
       <choice name="105s" value="105"/>
       <choice name="120s" value="120"/>
     </feature>
-    <sharedFeature submenu="EMULATION" group="ADVANCED SETTINGS" value="storekeep" order="110"/>
     <feature submenu="GUNS" group="ADVANCED SETTINGS" name="USE DEMULSHOOTER" value="use_demulshooter" description="Launch DemulShooter for gun games." preset="switchauto" order="550"/>
     <feature submenu="GUNS" group="ADVANCED SETTINGS" name="OUTPUT GAME DATA" value="ds_output" description="Enable this option when using mamehooker with LEDs, solenoids, rumble..." order="551">
       <choice name="TO WINDOW" value="win"/>
@@ -15561,14 +15549,11 @@
       <choice name="NTSC" value="NTSC"/>
       <choice name="PAL" value="PAL"/>
     </feature>
-    <feature submenu="VISUAL RENDERING" name="DEINTERLACE" group="ADVANCED SETTINGS" value="saturn_deinterlace" preset="switchauto" order="250"/>
-    <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="saturn_meshmode" preset="switchauto" order="251"/>
     <feature submenu="EMULATION" name="FORCE BIOS" group="ADVANCED SETTINGS" value="ymir_force_bios" description="Define BIOS to use for emulation." order="102">
       <choice name="Multi-region" value="saturn_bios.bin"/>
       <choice name="JAP" value="sega_101.bin"/>
       <choice name="EUR/US" value="mpr-17933.bin"/>
     </feature>
-    <feature submenu="EMULATION" name="PER GAME BACKUP RAM" group="ADVANCED SETTINGS" value="saturn_pergame_backup" preset="switchauto" order="103"/>
     <feature submenu="CONTROLS" name="CONTROLLER TYPE" group="ADVANCED SETTINGS" value="ymir_peripheral" order="500">
       <choice name="STANDARD CONTROLLER" value="ControlPad"/>
       <choice name="3D PAD" value="AnalogPad"/>
