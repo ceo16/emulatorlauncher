@@ -15,6 +15,8 @@ after_build:
 - 7z a batocera-ports.zip emulatorLauncher.exe
 - copy EmulatorLauncher.Common\bin\Release\EmulatorLauncher.Common.dll .
 - 7z a batocera-ports.zip EmulatorLauncher.Common.dll
+- copy EmulatorLauncher.Common\bin\Release\System.Data.SQLite.dll .
+- 7z a batocera-ports.zip System.Data.SQLite.dll
 - copy batocera-retroachievements-info\bin\Release\batocera-retroachievements-info.exe .
 - 7z a batocera-ports.zip batocera-retroachievements-info.exe
 - copy batocera-systems\bin\Release\batocera-systems.exe .
