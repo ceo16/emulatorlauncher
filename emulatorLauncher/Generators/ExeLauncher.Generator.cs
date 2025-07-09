@@ -221,93 +221,110 @@ namespace EmulatorLauncher
         }
     }
 
-        class AmazonGameLauncher : GameLauncher
+class AmazonGameLauncher : GameLauncher
+{
+    private readonly string _gameExecutableName; 
+
+    public AmazonGameLauncher(Uri uri) : base(uri) 
+    { 
+        this.LauncherExe = "Amazon Games UI"; 
+        _gameExecutableName = AmazonLibrary.GetAmazonGameExecutableName(uri);
+    }
+    
+    public override int RunAndWait(ProcessStartInfo path)
     {
-        private readonly string _gameExecutableName; 
+        string uriToLaunch = GameUri.AbsoluteUri;
 
-        public AmazonGameLauncher(Uri uri) : base(uri) 
-        { 
-            this.LauncherExe = "Amazon Games UI"; 
-            _gameExecutableName = AmazonLibrary.GetAmazonGameExecutableName(uri);
-        }
-        
-        public override int RunAndWait(ProcessStartInfo path)
+        if (uriToLaunch.Contains("://install/"))
         {
-            // path.FileName contiene l'URI completo (es. "amazon-games://play/...")
-            string uriToLaunch = path.FileName;
-
-            // 1. Trova il percorso dell'eseguibile di Amazon Games
-            string clientExePath = AmazonLibrary.GetAmazonClientExePath();
-            if (string.IsNullOrEmpty(clientExePath))
+            // =======================================================
+            // ##                  LOGICA DI INSTALLAZIONE            ##
+            // =======================================================
+            if (Process.GetProcessesByName("Amazon Games UI").Any())
             {
-                SimpleLogger.Instance.Error("[AmazonGameLauncher] Impossibile trovare Amazon Games.exe.");
-                MessageBox.Show("Amazon Games non è installato. Impossibile avviare il gioco.", "Errore Amazon Games", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return 1;
-            }
-            
-            // 2. Prepara gli argomenti e la cartella di lavoro
-            string arguments = uriToLaunch;
-            string workingDir = Path.GetDirectoryName(clientExePath);
-
-            SimpleLogger.Instance.Info($"[AmazonGameLauncher] Avvio gioco con URI come argomento: \"{arguments}\"");
-
-            // 3. Avvia il processo direttamente, senza ShellExecute
-            try
-            {
-                var psi = new ProcessStartInfo(clientExePath)
-                {
-                    Arguments = arguments,
-                    WorkingDirectory = workingDir,
-                    UseShellExecute = false
-                };
-                
-                Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-                SimpleLogger.Instance.Error($"[AmazonGameLauncher] ERRORE durante l'avvio del gioco Amazon: {ex.Message}", ex);
-                return 1;
-            }
-
-            // 4. Logica per monitorare il processo del gioco (la tua logica originale va qui)
-            Process gameProcess = null;
-            int waitTime = 120;
-            string actualGameExeName = _gameExecutableName;
-            
-            if (string.IsNullOrEmpty(actualGameExeName))
-            {
-                SimpleLogger.Instance.Warning("[AmazonGameLauncher] Nome eseguibile del gioco non noto. L'attesa del processo potrebbe non funzionare correttamente.");
-                // Se non conosciamo l'eseguibile, non possiamo attenderlo, quindi usciamo con successo.
-                // Il gioco sarà in esecuzione in background.
+                Process.Start(new ProcessStartInfo(uriToLaunch) { UseShellExecute = true });
                 return 0;
             }
 
-            SimpleLogger.Instance.Info($"[AmazonGameLauncher] Attesa di {waitTime} secondi per il processo del gioco: {actualGameExeName}");
-            for (int i = 0; i < waitTime; i++)
+            string clientExePath = AmazonLibrary.GetAmazonClientExePath();
+            if (string.IsNullOrEmpty(clientExePath)) return 1;
+            
+            Process.Start(new ProcessStartInfo(clientExePath) { WorkingDirectory = Path.GetDirectoryName(clientExePath), UseShellExecute = false });
+
+            var watch = Stopwatch.StartNew();
+            bool clientReady = false;
+            while (watch.Elapsed.TotalSeconds < 60)
             {
-                gameProcess = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(actualGameExeName)).FirstOrDefault();
-                if (gameProcess != null)
+                if (Process.GetProcessesByName("Amazon Games Services").Length > 0 && Process.GetProcessesByName("Amazon Games UI").Length == 4)
                 {
-                    SimpleLogger.Instance.Info($"[AmazonGameLauncher] Processo del gioco '{actualGameExeName}' rilevato.");
+                    clientReady = true;
+                    Thread.Sleep(3000);
                     break;
                 }
-                Thread.Sleep(1000); 
+                Thread.Sleep(1000);
+            }
+
+            if (!clientReady) return 1;
+            
+            Process.Start(new ProcessStartInfo(uriToLaunch) { UseShellExecute = true });
+            return 0;
+        }
+        else
+        {
+            // =======================================================
+            // ##                    LOGICA DI GIOCO                  ##
+            // =======================================================
+            string clientExePath = AmazonLibrary.GetAmazonClientExePath();
+            if (string.IsNullOrEmpty(clientExePath)) return 1;
+
+            Process.Start(new ProcessStartInfo(clientExePath)
+            {
+                Arguments = uriToLaunch,
+                WorkingDirectory = Path.GetDirectoryName(clientExePath),
+                UseShellExecute = false
+            });
+
+            if (string.IsNullOrEmpty(_gameExecutableName)) return 0;
+
+            Process gameProcess = null;
+            var gameWatch = Stopwatch.StartNew();
+            while (gameWatch.Elapsed.TotalSeconds < 120)
+            {
+                gameProcess = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(_gameExecutableName)).FirstOrDefault();
+                if (gameProcess != null) break;
+                Thread.Sleep(10000);
             }
 
             if (gameProcess != null)
             {
-                // Qui puoi aggiungere la logica per nascondere il launcher e attendere la chiusura del gioco
-                gameProcess.WaitForExit();
-                SimpleLogger.Instance.Info($"[AmazonGameLauncher] Processo del gioco '{actualGameExeName}' terminato.");
-            }
-            else
-            {
-                SimpleLogger.Instance.Error($"[AmazonGameLauncher] Il processo del gioco '{actualGameExeName}' non è stato avviato entro il tempo limite.");
-            }
+                var amazonClientProcess = Process.GetProcessesByName("Amazon Games UI").FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
+                if (amazonClientProcess != null && User32.IsWindowVisible(amazonClientProcess.MainWindowHandle))
+                    User32.ShowWindow(amazonClientProcess.MainWindowHandle, SW.HIDE); 
 
-            return 0; 
+                if (gameProcess.MainWindowHandle != IntPtr.Zero)
+                {
+                    User32.SetForegroundWindow(gameProcess.MainWindowHandle);
+                    User32.ShowWindow(gameProcess.MainWindowHandle, SW.RESTORE);
+                }
+
+                gameProcess.WaitForExit();
+
+                // NUOVA LOGICA: Chiudi il client Amazon dopo che il gioco è terminato.
+                SimpleLogger.Instance.Info("[AmazonGameLauncher-Play] Gioco chiuso. Chiusura del client Amazon Games.");
+                try
+                {
+                    foreach (var p in Process.GetProcessesByName("Amazon Games UI"))
+                        p.Kill();
+                    foreach (var p in Process.GetProcessesByName("Amazon Games Services"))
+                        p.Kill();
+                }
+                catch { } // Ignora eventuali errori se i processi sono già chiusi.
+            }
+            
+            return 0;
         }
     }
+}
 
     class XboxGameLauncher : GameLauncher
     {
