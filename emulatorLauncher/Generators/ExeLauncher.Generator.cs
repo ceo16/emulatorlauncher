@@ -443,7 +443,6 @@ class AmazonGameLauncher : GameLauncher
             { "steam", (uri) => new SteamGameLauncher(uri) },
             { "amazon-games", (uri) => new AmazonGameLauncher(uri) },
             { "ms-windows-store", (uri) => new XboxGameLauncher(uri) },
-            { "xbox", (uri) => new XboxGameLauncher(uri) },
             { "eagames", (uri) => new EAGameLauncher(uri) },
             { "origin2", (uri) => new EAGameLauncher(uri) },
             { "eadesktop", (uri) => new EAGameLauncher(uri) },
@@ -466,6 +465,14 @@ class AmazonGameLauncher : GameLauncher
                 }
                 
                 correctedRom = correctedRom.Replace('\\', '/');
+				
+				 if (correctedRom.StartsWith("xboxstore:/install/", StringComparison.OrdinalIgnoreCase))
+        {
+            string productId = correctedRom.Substring("xboxstore:/install/".Length);
+            // Traduce il tuo comando nell'URI ufficiale che Windows capisce.
+            correctedRom = $"ms-windows-store://pdp/?productid={productId}";
+            SimpleLogger.Instance.Info($"[Generator] Rilevato e tradotto URI Xbox Store in: {correctedRom}");
+        }
 
                 if (Uri.TryCreate(correctedRom, UriKind.Absolute, out Uri uriResult) && launchers.ContainsKey(uriResult.Scheme))
                 {

@@ -166,7 +166,7 @@ namespace EmulatorLauncher
             { "epicgamestore", () => new ExeLauncherGenerator() },
             { "amazon", () => new ExeLauncherGenerator() },
             { "steam", () => new ExeLauncherGenerator() },
-            { "xbox", () => new ExeLauncherGenerator() },
+            { "xboxstore", () => new ExeLauncherGenerator() },
             { "eagames", () => new ExeLauncherGenerator() },
             { "eagamesstore", () => new ExeLauncherGenerator() },
             { "gog", () => new ExeLauncherGenerator() },
@@ -439,7 +439,7 @@ namespace EmulatorLauncher
             Generator generator = null;
             string system = SystemConfig["system"];
             string emulator = SystemConfig["emulator"];
-            var storeSystems = new List<string> { "amazon", "steam", "epicgamestore", "xbox", "eagames", "eagamesstore", "gog" };
+            var storeSystems = new List<string> { "amazon", "steam", "epicgamestore", "xboxstore", "eagames", "eagamesstore", "gog" };
 
             if (storeSystems.Contains(system, StringComparer.InvariantCultureIgnoreCase))
             {

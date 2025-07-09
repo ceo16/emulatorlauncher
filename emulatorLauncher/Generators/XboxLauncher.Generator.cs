@@ -18,7 +18,7 @@ namespace EmulatorLauncher
             {
                 // Se l'URI è un AUMID, lo usiamo come nome del processo da monitorare
                 // Altrimenti, ci basiamo sul nome del processo generico o su un nome noto.
-                if (uri.Scheme == "xbox" && uri.LocalPath.Contains("!App"))
+                if (uri.Scheme == "xboxstore" && uri.LocalPath.Contains("!App"))
                 {
                     // Esempio: "Microsoft.GamingApp" da "Microsoft.GamingApp_8wekyb3d8bbwe!App"
                     LauncherExe = uri.LocalPath.Split('!')[0]; 
