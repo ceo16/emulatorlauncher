@@ -389,8 +389,8 @@ namespace EmulatorLauncher
                 SystemConfig["rom"] = romPath;
 
             // Controllo finale sull'esistenza della ROM (ignorando gli URI degli store)
-            bool isStoreUri = romPath.Contains("://") || romPath.Contains(":\\");
-            if (!isStoreUri && !File.Exists(romPath) && !Directory.Exists(romPath))
+            bool isIdentifierNotFile = romPath.Contains("://") || romPath.Contains(":\\") || SystemConfig["system"] == "xboxstore";
+            if (!isIdentifierNotFile && !File.Exists(romPath) && !Directory.Exists(romPath))
             {
                 SimpleLogger.Instance.Error("[Error] rom does not exist: " + romPath);
                 Environment.ExitCode = (int)ExitCodes.BadCommandLine;
@@ -409,7 +409,7 @@ namespace EmulatorLauncher
             }
             if (CurrentGame == null)
             {
-                if (!isStoreUri && File.Exists(romPath))
+                if (!isIdentifierNotFile && File.Exists(romPath))
                 {
                     var gamelistPath = Path.Combine(Path.GetDirectoryName(romPath), "gamelist.xml");
                     if (File.Exists(gamelistPath))

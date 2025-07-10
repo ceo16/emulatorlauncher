@@ -326,11 +326,100 @@ class AmazonGameLauncher : GameLauncher
     }
 }
 
-    class XboxGameLauncher : GameLauncher
+class XboxGameLauncher : GameLauncher
+{
+    private readonly string _gameAumid;
+
+    // ✅ QUESTO È IL COSTRUTTORE CORRETTO CHE ACCETTA 2 ARGOMENTI
+    public XboxGameLauncher(Uri uri, string aumid = null) : base(uri)
     {
-        public XboxGameLauncher(Uri uri) : base(uri) { LauncherExe = "ApplicationFrameHost"; }
-        public override int RunAndWait(ProcessStartInfo path) { return 0; }
+        LauncherExe = "explorer.exe"; // Usiamo explorer per lanciare l'app
+        _gameAumid = aumid;
     }
+
+    public override int RunAndWait(ProcessStartInfo path)
+    {
+        // Caso 1: Stiamo installando un gioco tramite URI
+        if (!string.IsNullOrEmpty(GameUri?.AbsoluteUri))
+        {
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Avvio del Microsoft Store con URI: {GameUri.AbsoluteUri}");
+            ProcessExtensions.StartUri(GameUri.AbsoluteUri);
+            SimpleLogger.Instance.Info("[XboxGameLauncher] Comando inviato. L'operazione è delegata all'utente nello Store.");
+            Thread.Sleep(3000); 
+            return 0;
+        }
+
+        // Caso 2: Stiamo lanciando un gioco installato tramite AUMID
+        string aumidToLaunch = _gameAumid ?? path.FileName; // Usa l'AUMID dal costruttore o dal path
+
+        if (string.IsNullOrEmpty(aumidToLaunch))
+        {
+            SimpleLogger.Instance.Error("[XboxGameLauncher] AUMID del gioco non fornito per il lancio.");
+            return 1;
+        }
+        
+        SimpleLogger.Instance.Info($"[XboxGameLauncher] Avvio del gioco con AUMID: shell:appsFolder\\{aumidToLaunch}");
+
+        try
+        {
+            Process.Start(new ProcessStartInfo()
+            {
+                FileName = "explorer.exe",
+                Arguments = $"shell:appsFolder\\{aumidToLaunch}",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            SimpleLogger.Instance.Error($"[XboxGameLauncher] Errore critico durante l'avvio del gioco: {ex.Message}", ex);
+            MessageBox.Show($"Impossibile avviare il gioco Xbox:\n{aumidToLaunch}\n\nErrore: {ex.Message}", "Errore di avvio", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return 1;
+        }
+
+        // Attendiamo che il processo del gioco appaia e poi che termini
+        Process gameProcess = null;
+        var watch = Stopwatch.StartNew();
+        
+        while (watch.Elapsed.TotalSeconds < 60)
+        {
+            gameProcess = Process.GetProcesses().FirstOrDefault(p =>
+                p.MainWindowHandle != IntPtr.Zero &&
+                User32.IsWindowVisible(p.MainWindowHandle) &&
+                p.Id != Process.GetCurrentProcess().Id &&
+                p.ProcessName != "explorer" &&
+                p.ProcessName != "ApplicationFrameHost" &&
+                p.ProcessName != "SystemSettings" &&
+                p.ProcessName != "emulationstation" &&
+                (DateTime.Now - p.StartTime).TotalSeconds < 60);
+
+            if (gameProcess != null)
+            {
+                SimpleLogger.Instance.Info($"[XboxGameLauncher] Rilevato processo del gioco: {gameProcess.ProcessName} (ID: {gameProcess.Id})");
+                break;
+            }
+            
+            Thread.Sleep(1000);
+        }
+
+        if (gameProcess == null)
+        {
+            SimpleLogger.Instance.Warning("[XboxGameLauncher] Il processo del gioco non è stato rilevato dopo l'avvio. L'emulatore potrebbe non chiudersi correttamente al termine del gioco.");
+            return 0; 
+        }
+
+        try
+        {
+            gameProcess.WaitForExit();
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Il processo del gioco '{gameProcess.ProcessName}' è terminato.");
+        }
+        catch (Exception ex)
+        {
+            SimpleLogger.Instance.Warning($"[XboxGameLauncher] Eccezione durante l'attesa del processo del gioco (potrebbe essere già chiuso): {ex.Message}");
+        }
+
+        return 0;
+    }
+}
     
     class EAGameLauncher : GameLauncher
     {
@@ -456,7 +545,7 @@ class AmazonGameLauncher : GameLauncher
             try
             {
                 string correctedRom = rom;
-                string[] storeSchemes = { "steam", "com.epicgames.launcher", "amazon-games", "ms-windows-store", "xbox", "eagames", "goggalaxy", "gog", "eadesktop", "origin2" };
+                string[] storeSchemes = { "steam", "com.epicgames.launcher", "amazon-games", "ms-windows-store", "xboxstore", "eagames", "goggalaxy", "gog", "eadesktop", "origin2" };
 
                 var matchingSchemePrefix = storeSchemes.FirstOrDefault(s => correctedRom.StartsWith(s + @":\", StringComparison.OrdinalIgnoreCase));
                 if (matchingSchemePrefix != null)
@@ -527,6 +616,16 @@ class AmazonGameLauncher : GameLauncher
                         }
                     }
                 }
+				 // <<< INIZIO BLOCCO DA AGGIUNGERE >>>
+         else if (system.Equals("xboxstore", StringComparison.OrdinalIgnoreCase) && rom.Contains("!"))
+    {
+        SimpleLogger.Instance.Info($"[Generator] Rilevato AUMID per gioco Xbox installato: {rom}");
+        _gameLauncher = new XboxGameLauncher(null, rom); // Passiamo l'AUMID al costruttore
+        SimpleLogger.Instance.Info($"[INFO] GameLauncher impostato: {_gameLauncher.GetType().Name}");
+
+        // Creiamo un ProcessStartInfo fittizio; la vera logica è in RunAndWait
+        return new ProcessStartInfo() { FileName = rom };
+    }
             }
             catch (Exception ex)
             {
