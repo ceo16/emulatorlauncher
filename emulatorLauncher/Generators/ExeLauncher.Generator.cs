@@ -349,76 +349,104 @@ class XboxGameLauncher : GameLauncher
             return 0;
         }
 
-        // Caso 2: Stiamo lanciando un gioco installato tramite AUMID
-        string aumidToLaunch = _gameAumid ?? path.FileName; // Usa l'AUMID dal costruttore o dal path
+    // Caso 2: Lancio gioco
+    try
+    {
+        string aumidToLaunch = _gameAumid ?? path.FileName;
+        if (string.IsNullOrEmpty(aumidToLaunch)) { /*...*/ return 1; }
 
-        if (string.IsNullOrEmpty(aumidToLaunch))
-        {
-            SimpleLogger.Instance.Error("[XboxGameLauncher] AUMID del gioco non fornito per il lancio.");
-            return 1;
-        }
-        
-        SimpleLogger.Instance.Info($"[XboxGameLauncher] Avvio del gioco con AUMID: shell:appsFolder\\{aumidToLaunch}");
-
+        SimpleLogger.Instance.Info($"[XboxGameLauncher] Avvio del gioco/launcher con AUMID: shell:appsFolder\\{aumidToLaunch}");
         try
         {
-            Process.Start(new ProcessStartInfo()
-            {
-                FileName = "explorer.exe",
-                Arguments = $"shell:appsFolder\\{aumidToLaunch}",
-                UseShellExecute = true
-            });
+            Process.Start(new ProcessStartInfo("explorer.exe", $"shell:appsFolder\\{aumidToLaunch}") { UseShellExecute = true });
         }
         catch (Exception ex)
-        {
-            SimpleLogger.Instance.Error($"[XboxGameLauncher] Errore critico durante l'avvio del gioco: {ex.Message}", ex);
-            MessageBox.Show($"Impossibile avviare il gioco Xbox:\n{aumidToLaunch}\n\nErrore: {ex.Message}", "Errore di avvio", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return 1;
-        }
-
-        // Attendiamo che il processo del gioco appaia e poi che termini
-        Process gameProcess = null;
-        var watch = Stopwatch.StartNew();
+{
+    SimpleLogger.Instance.Error($"[XboxGameLauncher] Errore critico durante l'avvio del gioco: {ex.Message}", ex);
+    MessageBox.Show($"Impossibile avviare il gioco Xbox:\n{aumidToLaunch}\n\nErrore: {ex.Message}", "Errore di avvio", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    return 1;
+}
         
-        while (watch.Elapsed.TotalSeconds < 60)
-        {
-            gameProcess = Process.GetProcesses().FirstOrDefault(p =>
-                p.MainWindowHandle != IntPtr.Zero &&
-                User32.IsWindowVisible(p.MainWindowHandle) &&
-                p.Id != Process.GetCurrentProcess().Id &&
-                p.ProcessName != "explorer" &&
-                p.ProcessName != "ApplicationFrameHost" &&
-                p.ProcessName != "SystemSettings" &&
-                p.ProcessName != "emulationstation" &&
-                (DateTime.Now - p.StartTime).TotalSeconds < 60);
+        // --- FASE 1: TROVA E ATTENDI IL LAUNCHER INTERMEDIO ---
+        SimpleLogger.Instance.Info("[XboxGameLauncher] Fase 1: Ricerca del launcher intermedio...");
+        var launcherProcess = FindGameProcess(60); // Cerca per 60 secondi
 
-            if (gameProcess != null)
-            {
-                SimpleLogger.Instance.Info($"[XboxGameLauncher] Rilevato processo del gioco: {gameProcess.ProcessName} (ID: {gameProcess.Id})");
-                break;
-            }
+        if (launcherProcess != null)
+        {
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Launcher intermedio '{launcherProcess.ProcessName}' trovato. In attesa della sua chiusura...");
             
-            Thread.Sleep(1000);
+            // Porta il launcher in primo piano
+            User32.SetForegroundWindow(launcherProcess.MainWindowHandle);
+            User32.ShowWindow(launcherProcess.MainWindowHandle, SW.RESTORE);
+            
+            launcherProcess.WaitForExit();
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Launcher intermedio chiuso.");
+        }
+        else
+        {
+            SimpleLogger.Instance.Warning("[XboxGameLauncher] Fase 1: Nessun launcher intermedio trovato. Si procederà direttamente alla ricerca del gioco.");
         }
 
-        if (gameProcess == null)
-        {
-            SimpleLogger.Instance.Warning("[XboxGameLauncher] Il processo del gioco non è stato rilevato dopo l'avvio. L'emulatore potrebbe non chiudersi correttamente al termine del gioco.");
-            return 0; 
-        }
+        // --- FASE 2: TROVA E ATTENDI IL GIOCO VERO E PROPRIO ---
+        SimpleLogger.Instance.Info("[XboxGameLauncher] Fase 2: Ricerca del processo del gioco principale...");
+        Thread.Sleep(2000); // Piccola pausa per dare tempo al gioco di avviarsi
 
-        try
-        {
-            gameProcess.WaitForExit();
-            SimpleLogger.Instance.Info($"[XboxGameLauncher] Il processo del gioco '{gameProcess.ProcessName}' è terminato.");
-        }
-        catch (Exception ex)
-        {
-            SimpleLogger.Instance.Warning($"[XboxGameLauncher] Eccezione durante l'attesa del processo del gioco (potrebbe essere già chiuso): {ex.Message}");
-        }
+        var mainGameProcess = FindGameProcess(60); // Cerca di nuovo per 60 secondi
 
-        return 0;
+        if (mainGameProcess != null)
+        {
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Gioco principale '{mainGameProcess.ProcessName}' trovato. In attesa della sua chiusura...");
+
+            // Porta il GIOCO in primo piano
+            User32.SetForegroundWindow(mainGameProcess.MainWindowHandle);
+            User32.ShowWindow(mainGameProcess.MainWindowHandle, SW.RESTORE);
+
+            mainGameProcess.WaitForExit();
+            SimpleLogger.Instance.Info($"[XboxGameLauncher] Gioco principale chiuso.");
+        }
+        else
+        {
+            SimpleLogger.Instance.Warning("[XboxGameLauncher] Fase 2: Processo del gioco principale non trovato. Il ritorno a EmulationStation potrebbe essere immediato.");
+        }
     }
+    finally
+    {
+        // --- FASE 3: RIPRISTINA EMULATIONSTATION ---
+        var esProcess = Process.GetProcessesByName("emulationstation").FirstOrDefault();
+        if (esProcess != null && esProcess.MainWindowHandle != IntPtr.Zero)
+        {
+            SimpleLogger.Instance.Info("[XboxGameLauncher] Ripristino della finestra di EmulationStation.");
+            User32.ShowWindow(esProcess.MainWindowHandle, SW.RESTORE);
+            User32.SetForegroundWindow(esProcess.MainWindowHandle);
+        }
+    }
+
+    return 0;
+}
+
+// Metodo di supporto per non ripetere il codice
+private Process FindGameProcess(int timeoutSeconds)
+{
+    var watch = Stopwatch.StartNew();
+    while (watch.Elapsed.TotalSeconds < timeoutSeconds)
+    {
+        var gameProcess = Process.GetProcesses().FirstOrDefault(p =>
+            p.MainWindowHandle != IntPtr.Zero &&
+            User32.IsWindowVisible(p.MainWindowHandle) &&
+            p.Id != Process.GetCurrentProcess().Id &&
+            p.ProcessName != "explorer" &&
+            p.ProcessName != "ApplicationFrameHost" &&
+            p.ProcessName != "SystemSettings" &&
+            p.ProcessName != "emulationstation" &&
+            (DateTime.Now - p.StartTime).TotalSeconds < timeoutSeconds);
+
+        if (gameProcess != null)
+            return gameProcess;
+
+        Thread.Sleep(1000);
+    }
+    return null;
+}
 }
     
     class EAGameLauncher : GameLauncher
