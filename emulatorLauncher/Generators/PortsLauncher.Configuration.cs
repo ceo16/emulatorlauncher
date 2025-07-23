@@ -375,7 +375,7 @@ namespace EmulatorLauncher
             if (SystemConfig.isOptSet("dhewm3_playerName") && !string.IsNullOrEmpty(SystemConfig["dhewm3_playerName"]))
                 changes.Add(new Dhewm3ConfigChange("seta", "ui_name", SystemConfig["dhewm3_playerName"]));
             else
-                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", "RetroBat"));
+                changes.Add(new Dhewm3ConfigChange("seta", "ui_name", "Lumaca"));
 
             if (SystemConfig.isOptSet("dhewm3_hideHUD") && SystemConfig.getOptBoolean("dhewm3_hideHUD"))
                 changes.Add(new Dhewm3ConfigChange("seta", "g_showHud", "0"));
