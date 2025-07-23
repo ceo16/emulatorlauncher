@@ -36,7 +36,7 @@ namespace EmulatorLauncher.Libretro
                 RetroarchCorePath = Path.Combine(RetroarchPath, "cores");
         }
 
-        const string RetroArchNetPlayPatchedName = "RETROBAT";
+        const string RetroArchNetPlayPatchedName = "LUMACA";
         private LibRetroStateFileManager _stateFileManager;
         private ScreenShotsWatcher _screenShotWatcher;
         private bool _noHotkey = false;
@@ -1458,7 +1458,7 @@ namespace EmulatorLauncher.Libretro
         }
 
         /// <summary>
-        /// Patch Retroarch to display @RETROBAT in netplay architecture
+        /// Patch Retroarch to display @LUMACA in netplay architecture
         /// </summary>
         /// <returns></returns>
         private string GetNetPlayPatchedRetroarch()
