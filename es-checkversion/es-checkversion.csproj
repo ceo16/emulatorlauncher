@@ -58,8 +58,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\es-update\RetrobatVersion.cs">
-      <Link>RetrobatVersion.cs</Link>
+    <Compile Include="..\es-update\LumacaVersion.cs">
+      <Link>LumacaVersion.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

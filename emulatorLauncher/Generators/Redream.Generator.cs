@@ -25,8 +25,8 @@ namespace EmulatorLauncher
             bool wideScreen = SystemConfig["redream_aspect"] == "16:9" || SystemConfig["redream_aspect"] == "stretch";
             if (wideScreen)
                 SystemConfig["forceNoBezel"] = "1";
-
-            if (Path.GetExtension(rom).ToLowerInvariant() == ".m3u")
+			
+			 if (Path.GetExtension(rom).ToLowerInvariant() == ".m3u")
             {
                 string[] lines = File.ReadAllLines(rom);
                 int lineIndex = 0;
@@ -45,6 +45,7 @@ namespace EmulatorLauncher
                 }
             }
             
+
             //Applying bezels & shaders
             if (!fullscreen)
                 SystemConfig["forceNoBezel"] = "true";

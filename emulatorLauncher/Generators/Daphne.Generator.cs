@@ -384,7 +384,7 @@ namespace EmulatorLauncher
                 if (bezelFileInfo != null)
                 {
                     string bezelFile = bezelFileInfo.PngFile;
-                    string hypseusBezelFile = Path.Combine(AppConfig.GetFullPath("hypseus"), "bezels", "retrobatBezel.png");
+                    string hypseusBezelFile = Path.Combine(AppConfig.GetFullPath("hypseus"), "bezels", "lumacaBezel.png");
 
                     if (bezelFile != null && File.Exists(bezelFile))
                     {

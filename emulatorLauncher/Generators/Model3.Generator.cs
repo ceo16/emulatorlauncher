@@ -179,7 +179,7 @@ namespace EmulatorLauncher
                 string iniPath = Path.Combine(path, "Config", "Supermodel.ini");
                 if (!File.Exists(iniPath))
                 {
-                    string templateIniFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "supermodel", "Supermodel.ini");
+                    string templateIniFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "supermodel", "Supermodel.ini");
                     if (File.Exists(templateIniFile))
                         try { File.Copy(templateIniFile, iniPath, true); } catch { }
                 }

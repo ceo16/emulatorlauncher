@@ -110,7 +110,7 @@ namespace EmulatorLauncher
             else if (ConfigureMameControllers(path))
             {
                 commandArray.Add("-ctrlr");
-                commandArray.Add("retrobat");
+                commandArray.Add("lumaca");
             }
 
             commandArray.Add("-verbose");
@@ -186,7 +186,7 @@ namespace EmulatorLauncher
                 ini["seconds_to_run"] = "0";
 
                 BindBoolFeatureOn(ini, "throttle", "psxmame_throttle", "1", "0");
-                BindBoolFeatureOn(ini, "sleep", "psxmame_sleep", "1", "0");
+				BindBoolFeatureOn(ini, "sleep", "psxmame_sleep", "1", "0");
 
                 ini["speed"] = "1.0";
                 ini["refreshspeed"] = "0";

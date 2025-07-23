@@ -160,10 +160,10 @@ namespace EmulatorLauncher.Libretro
             config["input_exit_emulator"] = "escape";
 #endif            
             // Overwrite hotkeys with a file
-            string kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "user", "inputmapping", "retroarch_kb_hotkeys.yml");
+            string kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "user", "inputmapping", "retroarch_kb_hotkeys.yml");
 
             if (!File.Exists(kbHotkeyFile))
-                kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "retroarch_kb_hotkeys.yml");
+                kbHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "retroarch_kb_hotkeys.yml");
 
             if (File.Exists(kbHotkeyFile))
             {
@@ -197,7 +197,7 @@ namespace EmulatorLauncher.Libretro
                 }
             }
 
-            // If no file use RetroBat standard
+            // If no file use Lumaca standard
             config["input_menu_toggle"] = "f1";
             config["input_save_state"] = "f2";
             config["input_load_state"] = "f4";
@@ -270,7 +270,7 @@ namespace EmulatorLauncher.Libretro
             Dictionary<InputKey, string> retroarchbtns = new Dictionary<InputKey, string>()
             {
                 { InputKey.b, "a" },
-                { InputKey.a, "b" }, // A and B reverted for RetroBat
+                { InputKey.a, "b" }, // A and B reverted for Lumaca
                 { InputKey.x, "x" }, 
                 { InputKey.y, "y" },
                 { InputKey.pageup, "l" },
@@ -407,10 +407,10 @@ namespace EmulatorLauncher.Libretro
                     hotkeyList = retroarchspecialsALT;
 
                 // override shortcuts from file
-                string cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "user", "inputmapping", "retroarch_controller_hotkeys.yml");
+                string cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "user", "inputmapping", "retroarch_controller_hotkeys.yml");
 
                 if (!File.Exists(cHotkeyFile))
-                    cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "retroarch_controller_hotkeys.yml");
+                    cHotkeyFile = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "retroarch_controller_hotkeys.yml");
 
                 if (File.Exists(cHotkeyFile))
                 {

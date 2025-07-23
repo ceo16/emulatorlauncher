@@ -42,7 +42,7 @@ namespace EmulatorLauncher
                 }
                 else
                 {
-                    string sindenExe = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "sinden", "Lightgun.exe");
+                    string sindenExe = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "tools", "sinden", "Lightgun.exe");
                     string sindenPath = Path.GetDirectoryName(sindenExe);
                     
 

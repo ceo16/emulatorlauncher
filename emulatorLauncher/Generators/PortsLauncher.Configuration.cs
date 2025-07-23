@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -632,7 +632,7 @@ namespace EmulatorLauncher
 
             if (!File.Exists(configFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "openjazz", "openjazz.cfg");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "openjazz", "openjazz.cfg");
                 if (File.Exists(templateFile))
                     try { File.Copy(templateFile, configFile); } catch { }
             }
@@ -688,7 +688,7 @@ namespace EmulatorLauncher
                         break;
                 }
             }
-            else
+			else
             {
                 string romName = Path.GetFileNameWithoutExtension(rom).ToLowerInvariant();
                 if (rom.Contains("eur") || rom.Contains("pal") || rom.Contains("fr"))

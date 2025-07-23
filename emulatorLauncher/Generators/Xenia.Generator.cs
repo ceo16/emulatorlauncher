@@ -80,7 +80,7 @@ namespace EmulatorLauncher
 
             if (_xeniaManagerConfig)
             {
-                SimpleLogger.Instance.Info("[INFO] Using Xenia Manager Configuration file, RetroBat will not append configuration.");
+                SimpleLogger.Instance.Info("[INFO] Using Xenia Manager Configuration file, Lumaca will not append configuration.");
                 commandArray.Add("--config");
                 commandArray.Add("\"" + _xeniaManagerConfigFile + "\"");
             }
@@ -103,7 +103,7 @@ namespace EmulatorLauncher
             if (SystemConfig.getOptBoolean("disableautoconfig"))
                 return;
 
-            SimpleLogger.Instance.Info("[Generator] Writing RetroBat configuration to .toml config file.");
+            SimpleLogger.Instance.Info("[Generator] Writing Lumaca configuration to .toml config file.");
 
             try
             {

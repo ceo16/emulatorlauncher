@@ -74,7 +74,7 @@ namespace EmulatorLauncher
             //settings
             SetupConfiguration(path, rom, fullscreen);
 
-            // Try and rename gameprofiles folder to not mess with RetroBat
+            // Try and rename gameprofiles folder to not mess with Lumaca
             try
             {
                 _gameProfilePath = Path.Combine(portablePath, "gameProfiles");
@@ -88,13 +88,13 @@ namespace EmulatorLauncher
                     }
                     catch 
                     {
-                        SimpleLogger.Instance.Info("[GENERATOR] Impossible to rename gameprofiles folder, RetroBat options might not work.");
+                        SimpleLogger.Instance.Info("[GENERATOR] Impossible to rename gameprofiles folder, Lumaca options might not work.");
                     }
                 }
             } 
             catch 
             {
-                SimpleLogger.Instance.Info("[GENERATOR] Impossible to rename gameprofiles folder, RetroBat options might not work.");
+                SimpleLogger.Instance.Info("[GENERATOR] Impossible to rename gameprofiles folder, Lumaca options might not work.");
             }
 
             //controller configuration
@@ -270,7 +270,7 @@ namespace EmulatorLauncher
                 graphicPackExists = false;
             }
 
-            string graphicpackDB = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "cemuGraphicPacks.txt");
+            string graphicpackDB = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "cemuGraphicPacks.txt");
 
             if (File.Exists(graphicpackDB))
             {

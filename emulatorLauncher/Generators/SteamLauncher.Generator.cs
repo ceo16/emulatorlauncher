@@ -4,170 +4,52 @@ using System.Linq;
 using System.Diagnostics;
 using EmulatorLauncher.Common.Launchers;
 using EmulatorLauncher.Common;
-using Microsoft.Win32;
 
 namespace EmulatorLauncher
 {
     partial class ExeLauncherGenerator : Generator
     {
-        
         class SteamGameLauncher : GameLauncher
         {
-            private string _steamID;
-            public SteamGameLauncher(Uri uri)
-            {
-                // Call method to get Steam executable
-                string steamInternalDBPath = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "tools", "steamexecutables.json");
-                LauncherExe = SteamLibrary.GetSteamGameExecutableName(uri, steamInternalDBPath, out _steamID);
-            }
+           public SteamGameLauncher(Uri uri)
+{
+    // NON cercare più l'eseguibile del gioco, perché la funzione è rotta.
+    // Imposta "steam" come nome generico del processo da monitorare.
+    // Il lancio vero e proprio avverrà tramite l'URI, non tramite questo eseguibile.
+    LauncherExe = "steam";
+    SimpleLogger.Instance.Info("[INFO] SteamGameLauncher: Impostato 'steam' come processo da monitorare, il lancio avverrà tramite URI.");
+}
 
             public override int RunAndWait(System.Diagnostics.ProcessStartInfo path)
             {
                 // Check if steam is already running
                 bool uiExists = Process.GetProcessesByName("steam").Any();
-                if (uiExists)
-                    SimpleLogger.Instance.Info("[INFO] Steam found running already.");
-                else
-                    SimpleLogger.Instance.Info("[INFO] Steam not yet running.");
+                SimpleLogger.Instance.Info("[INFO] Executable name : " + LauncherExe);
+                
+                // Kill game if already running
+                KillExistingLauncherExes();
 
-                if (LauncherExe != null)
+                // Start game
+                Process.Start(path);
+
+                // Get running game process (30 seconds delay 30x1000)
+                var steamGame = GetLauncherExeProcess();
+
+                if (steamGame != null)
                 {
-                    SimpleLogger.Instance.Info("[INFO] Executable name : " + LauncherExe);
+                    steamGame.WaitForExit();
 
-                    // Kill game if already running
-                    KillExistingLauncherExes();
-
-                    // Start game
-                    Process.Start(path);
-
-                    // Get running game process (30 seconds delay 30x1000)
-                    var steamGame = GetLauncherExeProcess();
-
-                    if (steamGame != null)
-                    {
-                        steamGame.WaitForExit();
-
-                        // Kill steam if it was not running previously or if option is set in RetroBat
-                        KillSteam(uiExists);
-                    }
-                    return 0;
-                }
-                else
-                {
-                    // Start game
-                    Process.Start(path);
-
-                    if (MonitorGameByRegistry(uiExists))
-                        return 0;
-
-                    SimpleLogger.Instance.Info("[INFO] Registry monitoring failed. Falling back to window focus detection.");
-                    var gameProcess = FindGameProcessByWindowFocus();
-                    if (gameProcess != null)
-                    {
-                        SimpleLogger.Instance.Info("[INFO] Game process '" + gameProcess.ProcessName + "' identified by window focus. Monitoring process.");
-                        gameProcess.WaitForExit();
-                        SimpleLogger.Instance.Info("[INFO] Game process has exited.");
-
-                        // Kill steam if it was not running previously or if option is set in RetroBat
-                        KillSteam(uiExists);
-                    }
-                    else
-                        SimpleLogger.Instance.Info("[INFO] All fallback methods failed. Unable to monitor game process.");
-
-                    return 0;
-                }
-            }
-
-            private void KillSteam(bool uiExists)
-            {
-                if (Program.SystemConfig.getOptBoolean("killsteam"))
-                    SimpleLogger.Instance.Info("[INFO] Option set to always kill Steam.");
-                else if (Program.SystemConfig.isOptSet("killsteam"))
-                    SimpleLogger.Instance.Info("[INFO] Option set to never kill Steam.");
-                else
-                    SimpleLogger.Instance.Info("[INFO] Steam will be killed if not running before.");
-
-                // Kill steam if it was not running previously or if option is set in RetroBat
-                if (Program.SystemConfig.getOptBoolean("killsteam"))
-                {
-                    foreach (var ui in Process.GetProcessesByName("steam"))
-                    {
-                        try { ui.Kill(); }
-                        catch { }
-                        SimpleLogger.Instance.Info("[INFO] Killing Steam.");
-                    }
-                }
-                else if (!Program.SystemConfig.isOptSet("killsteam"))
-                {
-                    if (!uiExists)
+                    // Kill steam if it was not running previously or if option is set in Lumaca
+                    if (!uiExists || (Program.SystemConfig.isOptSet("killsteam") && Program.SystemConfig.getOptBoolean("killsteam")))
                     {
                         foreach (var ui in Process.GetProcessesByName("steam"))
                         {
                             try { ui.Kill(); }
                             catch { }
-                            SimpleLogger.Instance.Info("[INFO] Killing Steam.");
                         }
                     }
                 }
-            }
-
-            private bool MonitorGameByRegistry(bool uiExists = false)
-            {
-                if (string.IsNullOrEmpty(_steamID))
-                    return false;
-
-                SimpleLogger.Instance.Info("[INFO] Monitoring registry for game start (AppID: " + _steamID + ").");
-
-                // Wait for the game to be marked as running, with a 60-second timeout
-                bool gameStarted = false;
-                for (int i = 0; i < 60; i++)
-                {
-                    try
-                    {
-                        using (var key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Valve\\Steam\\Apps\\" + _steamID))
-                        {
-                            if (key != null && key.GetValue("Running") != null && (int)key.GetValue("Running") == 1)
-                            {
-                                gameStarted = true;
-                                break;
-                            }
-                        }
-                    }
-                    catch { }
-                    System.Threading.Thread.Sleep(1000);
-                }
-
-                if (!gameStarted)
-                {
-                    SimpleLogger.Instance.Info("[INFO] Timeout: Game did not appear as 'Running' in the registry.");
-                    // Kill steam if it was not running previously or if option is set in RetroBat
-                    KillSteam(uiExists);
-                    return false;
-                }
-
-                SimpleLogger.Instance.Info("[INFO] Game detected as running. Monitoring registry for exit.");
-
-                // Wait for the game to exit
-                while (true)
-                {
-                    try
-                    {
-                        using (var key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Valve\\Steam\\Apps\\" + _steamID))
-                        {
-                            if (key == null || (key.GetValue("Running") != null && (int)key.GetValue("Running") == 0))
-                                break;
-                        }
-                    }
-                    catch { }
-                    System.Threading.Thread.Sleep(1000);
-                }
-
-                SimpleLogger.Instance.Info("[INFO] Game has exited.");
-
-                // Kill steam if it was not running previously or if option is set in RetroBat
-                KillSteam(uiExists);
-
-                return true;
+                return 0;
             }
         }
     }

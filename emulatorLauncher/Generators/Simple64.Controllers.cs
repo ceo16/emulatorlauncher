@@ -86,7 +86,7 @@ namespace EmulatorLauncher
             string guid = controller.SdlController != null ? controller.SdlController.Guid.ToString().ToLower() : controller.Guid.ToString().ToLower();
             string n64guid = controller.Guid.ToLowerInvariant();
 
-            string iniSection = "RetroBatAuto-" + playerIndex;
+            string iniSection = "LumacaAuto-" + playerIndex;
 
             // Get default sensitivity & deadzone
             string sensitivity = "100";
@@ -101,7 +101,7 @@ namespace EmulatorLauncher
             // 3 = hat / 4 = button / 5 = axis / 1 or -1 = axis direction (if axis)
 
             // Special mapping for n64 style controllers
-            string n64json = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+            string n64json = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
             bool needActivationSwitch = false;
             bool n64_pad = Program.SystemConfig.getOptBoolean("n64_pad");
 

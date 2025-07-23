@@ -13,8 +13,6 @@ namespace EmulatorLauncher.Common.Launchers
         public string ExecutableName { get; set; }
         public string InstallDirectory { get; set; }
         public string PreviewImageUrl { get; set; }
-        public string Parameters { get; set; }
-
         public GameLauncherType Launcher { get; set; }
 
         public override string ToString()
@@ -28,8 +26,7 @@ namespace EmulatorLauncher.Common.Launchers
         Epic,
         Amazon,
         Steam,
-        Gog,
-        EaGames
+		Gog
     }
 
 }

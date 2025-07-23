@@ -67,7 +67,6 @@
       <choice name="270°" value="3"/>
     </feature>
     <feature name="MONITOR INDEX" value="MonitorIndex" description="Games will be displayed on the monitor corresponding to the selected index.">
-      <choice name="0" value="0"/>
       <choice name="1" value="1"/>
       <choice name="2" value="2"/>
       <choice name="3" value="3"/>
@@ -348,10 +347,7 @@
       <choice name="LEFT ANALOG (FORCED)" value="3"/>
       <choice name="RIGHT ANALOG (FORCED)" value="4"/>
     </feature>
-    <feature name="KILL LAUNCHER WHEN EXIT" value="global.killsteam" description="Set this to 'ON' to quit steam or Epic Game Launcher when quitting game." preset="switchauto"/>
     <feature name="KILL LAUNCHER WHEN EXIT" value="killsteam" description="Set this to 'ON' to quit steam or Epic Game Launcher when quitting game." preset="switchauto"/>
-    <feature name="KEEP GAMES ADDED MANUALLY" value="global.storekeep" description="By default, Lumaca keeps sync between installed games and roms folder." preset="switchauto"/>
-    <feature name="KEEP GAMES ADDED MANUALLY" value="storekeep" description="By default, Lumaca keeps sync between installed games and roms folder." preset="switchauto"/>
   </sharedFeatures>
   <!-- GLOBAL FEATURES -->
   <globalFeatures>
@@ -368,8 +364,6 @@
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.smooth"/>
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.discord"/>
     <sharedFeature group="GLOBAL OPTIONS" submenu="" value="global.disableautocontrollers"/>
-    <sharedFeature group="GLOBAL OPTIONS" submenu="WINDOWS GAMES" value="global.killsteam"/>
-    <sharedFeature group="GLOBAL OPTIONS" submenu="WINDOWS GAMES" value="global.storekeep"/>
     <sharedFeature group="COMPRESSION" value="decompressedfolders"/>
     <sharedFeature group="COMPRESSION" value="decompressedpath"/>
     <feature group="CONTROLS" name="DPAD AS ANALOG" submenu="SPECIAL CONTROLLERS" value="analogDpad" preset="switch"/>
@@ -1088,7 +1082,7 @@
       </feature>
       <feature submenu="CONTROLS" name="EMULATE STYLUS WITH RIGHT STICK" group="ADVANCED SETTINGS" value="desmume_rightanalog" preset="switchauto" order="505"/>
     </core>
-    <core name="dolphin" features="cheevos">
+    <core name="dolphin">
       <feature name="INTERNAL RESOLUTION" group="GENERAL SETTINGS" value="dolphin_efb_scale" order="20">
         <choice name="x1" value="x1 (640 x 528)"/>
         <choice name="x2" value="x2 (1280 x 1056)"/>
@@ -1183,7 +1177,6 @@
           <choice name="TOP" value="Top"/>
           <choice name="BOTTOM" value="Bottom"/>
         </feature>
-		<feature submenu="CONTROLS" name="DISABLE WIIMOTE CONTINUOUS SCANNING" group="ADVANCED SETTINGS" value="dolphin_nowiimotescan" preset="switchauto" order="510"/>
       </system>
     </core>
     <core name="dosbox" features="padtokeyboard">
@@ -1827,7 +1820,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
       </system>
       <system name="neogeo">
@@ -2148,7 +2140,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
         <feature submenu="GUNS" name="GUN TYPE" group="ADVANCED SETTINGS" value="gun_type" description="Select the type of gun depending on the game." order="551">
@@ -2193,7 +2184,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
         <feature submenu="GUNS" name="GUN TYPE" group="ADVANCED SETTINGS" value="gun_type" description="Select the type of gun depending on the game." order="551">
@@ -2238,7 +2228,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
         <feature submenu="GUNS" name="GUN TYPE" group="ADVANCED SETTINGS" value="gun_type" description="Select the type of gun depending on the game." order="551">
@@ -2257,10 +2246,9 @@
         <choice name="KEYPAD LEFT/RIGHT" value="directions"/>
         <choice name="KEYBOARD A/B" value="keyboard"/>
       </feature>
-	  <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="one_gun" order="555"/>
-      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="gun_reload_button" order="556"/>
-      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="gun_invert" order="557"/>
-      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="sindenJoyMode" order="558"/>
+      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="gun_reload_button" order="554"/>
+      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="gun_invert" order="555"/>
+      <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="sindenJoyMode" order="556"/>
       <sharedFeature submenu="TURBO" group="ADVANCED SETTINGS" value="enable_turbo" order="650"/>
       <sharedFeature submenu="TURBO" group="ADVANCED SETTINGS" value="turbo_button" order="651"/>
       <sharedFeature submenu="TURBO" group="ADVANCED SETTINGS" value="turbo_default_button" order="652"/>
@@ -2326,7 +2314,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
       </system>
@@ -2336,7 +2323,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
       </system>
@@ -2346,7 +2332,6 @@
           <choice name="L/R as X/Z" value="lr_xz"/>
           <choice name="L/R as Z/C" value="lr_zc"/>
           <choice name="L/R as Y/Z" value="lr_yz"/>
-		  <choice name="L/R as Y/B" value="lr_yb"/>
         </feature>
         <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="507"/>
       </system>
@@ -5432,7 +5417,7 @@
       </feature>
       <feature submenu="VIDEO" name="FRAMESKIP" group="ADVANCED SETTINGS" value="kronos_skipframe" description="Skip frames to improve performance (smoothless)." preset="sliderauto" preset-parameters="0 5 1 frames" order="159"/>
       <feature submenu="VISUAL RENDERING" name="FORCE ORIGINAL RESOLUTION" group="ADVANCED SETTINGS" value="kronos_force_downsampling" description="Usefull when using resolution higher than the screen. Avoid moiré effect." preset="switchauto" order="251"/>
-      <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="saturn_meshmode" description="Replace meshed transparency by real transparency." preset="switchauto" order="252"/>
+      <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="kronos_meshmode" description="Replace meshed transparency by real transparency." preset="switchauto" order="252"/>
       <feature submenu="VISUAL RENDERING" name="IMPROVED BANDING" group="ADVANCED SETTINGS" value="kronos_bandingmode" description="Apply Gouraud shading instead on flat shading, only with OpenGL." preset="switchauto" order="253"/>
       <sharedFeature submenu="EMULATION" group="ADVANCED SETTINGS" value="autosave" order="101"/>
       <feature submenu="EMULATION" name="LANGUAGE" group="ADVANCED SETTINGS" value="kronos_language_id" order="102">
@@ -6920,12 +6905,6 @@
     </feature>
     <sharedFeature group="GENERAL SETTINGS" value="disableautocontrollers" order="45"/>
     <sharedFeature submenu="VIDEO" group="ADVANCED SETTINGS" value="forcefullscreen" order="150"/>
-	<feature submenu="VIDEO" name="VIDEO SYNC" group="ADVANCED SETTINGS" value="ares_gpusync" order="152">
-      <choice name="SYNC" value="sync"/>
-      <choice name="GPU SYNC ONLY" value="gpu"/>
-      <choice name="SYNC + GPU" value="gpusync"/>
-      <choice name="NO" value="none"/>
-    </feature>
     <feature submenu="VIDEO" name="ADJUST LUMINANCE" group="ADVANCED SETTINGS" value="ares_luminance" preset="sliderauto" preset-parameters="0.00 1.00 0.04 %" order="160"/>
     <feature submenu="VIDEO" name="ADJUST SATURATION" group="ADVANCED SETTINGS" value="ares_saturation" preset="sliderauto" preset-parameters="0.00 2.00 0.04 %" order="161"/>
     <feature submenu="VIDEO" name="ADJUST GAMMA" group="ADVANCED SETTINGS" value="ares_gamma" preset="sliderauto" preset-parameters="1.00 2.00 0.04 %" order="162"/>
@@ -6948,7 +6927,6 @@
       <choice name="DIRECT3D 9" value="Direct3D 9.0"/>
       <choice name="GDI" value="GDI"/>
     </feature>
-	<feature submenu="AUDIO" name="AUDIO SYNC" group="ADVANCED SETTINGS" value="ares_audiosync" preset="switchauto" order="301"/>
     <feature name="AUDIO" submenu="DRIVERS" group="ADVANCED SETTINGS" value="ares_audio_renderer" order="300">
       <choice name="WASAPI" value="WASAPI"/>
       <choice name="XAUDIO2" value="XAudio 2.1"/>
@@ -7346,7 +7324,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE 3 BUTTON CONTROLLER" value="md_3buttons" group="ADVANCED SETTINGS" description="Default emulated pad is a 6-button pad." preset="switchauto" order="501"/>
       <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="502"/>
@@ -8469,7 +8446,6 @@
         <choice name="ASCII ART" value="asciiart"/>
         <choice name="AUTO TOON" value="auto_toon"/>
         <choice name="AUTO TOON 2" value="auto_toon2"/>
-		<choice name="AUTO HDR" value="AutoHDR"/>
         <choice name="BAD BLOOM" value="bad_bloom"/>
         <choice name="BRIGHTEN" value="brighten"/>
         <choice name="CHRISMAS" value="chrismas"/>
@@ -8481,36 +8457,17 @@
         <choice name="FIRE WATER" value="firewater"/>
         <choice name="FXAA" value="FXAA"/>
         <choice name="GRAYSCALE" value="grayscale"/>
-		<choice name="GRAYSCALE 2" value="grayscale2"/>
-        <choice name="INTERGER SCALING" value="integer_scaling"/>
         <choice name="INVERT" value="invert"/>
-		<choice name="INVERT BLUE" value="invert_blue"/>
-        <choice name="INVERTED OUTLINE" value="invertedoutline"/>
         <choice name="LENS DISTORTION" value="lens_distortion"/>
         <choice name="MAD WORLD" value="mad_world"/>
         <choice name="NIGHT VISION" value="nightvision"/>
-		<choice name="NIGHT VISION 2" value="nightvision2"/>
-        <choice name="NIGHT VISION 2 SCANLINES" value="nightvision2scanlines"/>
-        <choice name="PERCEPTUAL HDR" value="PerceptualHDR"/>
         <choice name="POSTERIZE" value="posterize"/>
-		<choice name="POSTERIZE 2" value="posterize2"/>
-        <choice name="PRIMARY COLORS" value="primarycolors"/>
         <choice name="SEPIA" value="sepia"/>
+        <choice name="SHARP BILINEAR" value="sharp_bilinear"/>
         <choice name="SKETCHY" value="sketchy"/>
-		<choice name="SPOOKEY" value="spookey1"/>
-        <choice name="SPOOKEY 2" value="spookey2"/>
         <choice name="SUNSET" value="sunset"/>
-		<choice name="SWAP RGB_BGR" value="swap_RGB_BGR"/>
-        <choice name="SWAP RGB_BRG" value="swap_RGB_BRG"/>
-        <choice name="SWAP RGB_GBR" value="swap_RGB_GBR"/>
-        <choice name="SWAP RGB_GRB" value="swap_RGB_GRB"/>
-        <choice name="SWAP RGB_RBG" value="swap_RGB_RBG"/>
         <choice name="TOXIC" value="toxic"/>
       </feature>
-	  <feature submenu="SHADER CONFIG" name="HDR SHOULDER POW" group="GENERAL SETTINGS" value="hdr_shoulder_pow" preset="sliderauto" preset-parameters="1 10 0.25" order="6"/>
-      <feature submenu="SHADER CONFIG" name="SHOULDER START ALPHA" group="GENERAL SETTINGS" value="hdr_start_alpha" preset="sliderauto" preset-parameters="0 1 0.05" order="6"/>
-      <feature submenu="SHADER CONFIG" name="MAX NITS" group="GENERAL SETTINGS" value="hdr_max_nits" preset="sliderauto" preset-parameters="100 2000 100" order="6"/>
-      <feature submenu="SHADER CONFIG" name="HDR AMPLIFICATION" group="GENERAL SETTINGS" value="hdr_amplification" preset="sliderauto" preset-parameters="1 6 0.25" order="6"/>
       <feature name="GAME ASPECT RATIO" group="GENERAL SETTINGS" value="ratio" order="25">
         <choice name="16/9" value="16/9"/>
         <choice name="4/3" value="4/3"/>
@@ -8741,8 +8698,6 @@
         <feature submenu="CONTROLS" name="BALANCE BOARD" group="ADVANCED SETTINGS" value="wii_balanceboard" description="Set this option only when using a real balance board." preset="switchauto" order="510"/>
         <feature submenu="CONTROLS" name="JOYSTICK DEADZONE" value="dolphin_wii_deadzone" group="ADVANCED SETTINGS" description="Use this only if the analog stick is drifting." preset="sliderauto" preset-parameters="0.0 50.0 2.0 %" order="511"/>
         <feature submenu="CONTROLS" name="JOYSTICK SENSITIVITY" value="dolphin_wii_sensitivity" group="ADVANCED SETTINGS" description="Decrease if too sensitive, decreasing too much might prevent from going full range." preset="sliderauto" preset-parameters="60.0 120.0 2.0 %" order="512"/>
-        <feature submenu="CONTROLS" name="DISABLE WIIMOTE CONTINUOUS SCANNING" group="ADVANCED SETTINGS" value="dolphin_nowiimotescan" preset="switchauto" order="513"/>
-        <feature submenu="CONTROLS" name="BLUETOOTH PASSTHROUGH" group="ADVANCED SETTINGS" value="dolphin_bt_pass" preset="switchauto" order="514"/>
         <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="use_guns" order="550"/>
       </system>
     </core>
@@ -9683,38 +9638,9 @@
     <sharedFeature submenu="TATTOO" group="GENERAL SETTINGS" value="resize_tattoo" order="17"/>
     <sharedFeature group="GENERAL SETTINGS" value="integerscale" order="35"/>
     <sharedFeature group="GENERAL SETTINGS" value="disableautocontrollers" order="45"/>
-	<feature submenu="EMULATION" name="DISABLE EXPANSION PACK" group="ADVANCED SETTINGS" value="gopher64_disable_expansion_pak" preset="switchauto" order="100"/>
     <sharedFeature submenu="VIDEO" group="ADVANCED SETTINGS" value="videomode" order="150"/>
     <sharedFeature submenu="VIDEO" group="ADVANCED SETTINGS" value="forcefullscreen" order="151"/>
     <feature submenu="VIDEO" name="STRETCH TO SCREEN" group="ADVANCED SETTINGS" value="gopher64_widescreen" preset="switchauto" order="152"/>
-	<feature submenu="CONTROLS" name="CONTROLLER LAYOUT P1" value="gopher64_inputprofile1" group="ADVANCED SETTINGS" description="Select between the different controller layouts." order="510">
-      <choice name="C-BUTTONS=RIGHT-STICK Z=LEFT-TRIGGER" value="c_stick_zl"/>
-      <choice name="C-BUTTONS=FACE Z=LEFT-TRIGGER" value="c_face_zl"/>
-      <choice name="C-BUTTONS=RIGHT-STICK Z=RIGHT-TRIGGER" value="c_stick"/>
-      <choice name="C-BUTTONS=FACE Z=RIGHT-TRIGGER" value="c_face"/>
-      <choice name="XBOX" value="xbox"/>
-    </feature>
-    <feature submenu="CONTROLS" name="CONTROLLER LAYOUT P2" value="gopher64_inputprofile2" group="ADVANCED SETTINGS" order="512">
-      <choice name="C-BUTTONS=RIGHT-STICK Z=LEFT-TRIGGER" value="c_stick_zl"/>
-      <choice name="C-BUTTONS=FACE Z=LEFT-TRIGGER" value="c_face_zl"/>
-      <choice name="C-BUTTONS=RIGHT-STICK Z=RIGHT-TRIGGER" value="c_stick"/>
-      <choice name="C-BUTTONS=FACE Z=RIGHT-TRIGGER" value="c_face"/>
-      <choice name="XBOX" value="xbox"/>
-    </feature>
-    <feature submenu="CONTROLS" name="CONTROLLER LAYOUT P3" value="gopher64_inputprofile3" group="ADVANCED SETTINGS" order="514">
-      <choice name="C-BUTTONS=RIGHT-STICK Z=LEFT-TRIGGER" value="c_stick_zl"/>
-      <choice name="C-BUTTONS=FACE Z=LEFT-TRIGGER" value="c_face_zl"/>
-      <choice name="C-BUTTONS=RIGHT-STICK Z=RIGHT-TRIGGER" value="c_stick"/>
-      <choice name="C-BUTTONS=FACE Z=RIGHT-TRIGGER" value="c_face"/>
-      <choice name="XBOX" value="xbox"/>
-    </feature>
-    <feature submenu="CONTROLS" name="CONTROLLER LAYOUT P4" value="gopher64_inputprofile4" group="ADVANCED SETTINGS" order="516">
-      <choice name="C-BUTTONS=RIGHT-STICK Z=LEFT-TRIGGER" value="c_stick_zl"/>
-      <choice name="C-BUTTONS=FACE Z=LEFT-TRIGGER" value="c_face_zl"/>
-      <choice name="C-BUTTONS=RIGHT-STICK Z=RIGHT-TRIGGER" value="c_stick"/>
-      <choice name="C-BUTTONS=FACE Z=RIGHT-TRIGGER" value="c_face"/>
-      <choice name="XBOX" value="xbox"/>
-    </feature>
   </emulator>
   <!-- GSPLUS -->
   <emulator name="gsplus" features="padtokeyboard">
@@ -10001,7 +9927,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE 3 BUTTON CONTROLLER" value="md_3buttons" group="ADVANCED SETTINGS" description="Default emulated pad is a 6-button pad." preset="switchauto" order="501"/>
       <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="502"/>
@@ -10047,7 +9972,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE 3 BUTTON CONTROLLER" value="md_3buttons" group="ADVANCED SETTINGS" description="Default emulated pad is a 6-button pad." preset="switchauto" order="501"/>
       <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="502"/>
@@ -10076,7 +10000,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE 3 BUTTON CONTROLLER" value="md_3buttons" group="ADVANCED SETTINGS" description="Default emulated pad is a 6-button pad." preset="switchauto" order="501"/>
       <feature submenu="CONTROLS" name="USE GENESIS-LIKE CONTROLLER" group="ADVANCED SETTINGS" value="md_pad" preset="switchauto" order="502"/>
@@ -10191,7 +10114,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE MULTITAP" group="ADVANCED SETTINGS" value="kega_multitap" order="501">
         <choice name="NO" value="0"/>
@@ -10210,7 +10132,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE MULTITAP" group="ADVANCED SETTINGS" value="kega_multitap" order="501">
         <choice name="NO" value="0"/>
@@ -10229,7 +10150,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE MULTITAP" group="ADVANCED SETTINGS" value="kega_multitap" order="501">
         <choice name="NO" value="0"/>
@@ -11370,7 +11290,6 @@
         <choice name="L/R as X/Z" value="lr_xz"/>
         <choice name="L/R as Z/C" value="lr_zc"/>
         <choice name="L/R as Y/Z" value="lr_yz"/>
-		<choice name="L/R as Y/B" value="lr_yb"/>
       </feature>
       <feature submenu="CONTROLS" name="USE MULTITAP" group="ADVANCED SETTINGS" value="mednafen_md_multitap" order="502">
         <choice name="NO" value="0"/>
@@ -12245,9 +12164,6 @@
       <choice name="Polski" value="19"/>
       <choice name="Lietuvu" value="20"/>
     </feature>
-    <feature submenu="EMULATION" name="JAK1 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak1" preset="files" order="110"/>
-    <feature submenu="EMULATION" name="JAK2 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak2" preset="files" order="111"/>
-    <feature submenu="EMULATION" name="JAK3 ISO PATH" group="ADVANCED SETTINGS" value="opengoal_isopath_jak3" preset="files" order="112"/>
     <sharedFeature submenu="USER INTERFACE" group="ADVANCED SETTINGS" value="discord" order="450"/>
     <feature submenu="USER INTERFACE" name="INTERFACE LANGUAGE" group="ADVANCED SETTINGS" value="opengoal_menulang" order="451">
       <choice name="English" value="0"/>
@@ -13128,8 +13044,8 @@
     <sharedFeature submenu="VIDEO" group="ADVANCED SETTINGS" value="videomode" order="150"/>
     <sharedFeature submenu="VIDEO" group="ADVANCED SETTINGS" value="forcefullscreen" order="151"/>
     <feature submenu="VIDEO" name="FRAMESKIP" group="ADVANCED SETTINGS" value="psxmame_frameskipping" description="Skip frames to improve performance (smoothless)." preset="switchauto" order="153"/>
-    <feature submenu="VIDEO" name="RUN IN A WINDOW" group="ADVANCED SETTINGS" value="psxmame_window" preset="switchauto" order="154"/>
-    <feature submenu="VIDEO" name="GPU RENDERING PLUGIN" group="ADVANCED SETTINGS" value="psxmame_gpu_plugin" description="Select the GPU plugin, RetroBat options will not work on non-default plugin, they can be configured from emulators folder with config.exe." order="155">      <choice name="OPENGL (default)" value="ogl_renderer.znc"/>
+    <feature submenu="VIDEO" name="GPU RENDERING PLUGIN" group="ADVANCED SETTINGS" value="psxmame_gpu_plugin" description="Select the GPU plugin, Lumaca options will not work on non-default plugin, they can be configured from emulators folder with config.exe." order="154">
+      <choice name="OPENGL (default)" value="ogl_renderer.znc"/>
       <choice name="D3D" value="d3d_renderer.znc"/>
       <choice name="PETE OPENGL 2" value="gpuPeteOpenGL2.dll"/>
       <choice name="BLADESOFT" value="gpuBladeSoft-1.64.dll"/>
@@ -13159,13 +13075,7 @@
     </feature>
     <feature submenu="USER INTERFACE" name="DISPLAY FPS" value="psxmame_fps" group="ADVANCED SETTINGS" description="Show FPS overlay in-game." preset="switchauto" order="450"/>
     <feature submenu="EMULATION" name="THROTTLE" group="ADVANCED SETTINGS" value="psxmame_throttle" description="Default is ON, use this setting to remove the 60hz limit, might break games." preset="switchauto" order="100"/>
-    <feature submenu="EMULATION" name="ENABLE CHEATS" group="ADVANCED SETTINGS" value="psxmame_cheats" description="Cheats need to be placed in 'cheats\psxmame' folder." preset="switchauto" order="101"/> 
-	 <feature submenu="EMULATION" name="SLEEP WHEN POSSIBLE" group="ADVANCED SETTINGS" value="psxmame_sleep" description="Default ON." preset="switchauto" order="102"/>
-    <feature submenu="DRIVERS" name="VIDEO" group="ADVANCED SETTINGS" value="psxmame_video" order="400">
-      <choice name="GDI" value="gdi"/>
-      <choice name="DIRECT DRAW" value="ddraw"/>
-      <choice name="DIRECT 3D" value="d3d"/>
-    </feature>
+    <feature submenu="EMULATION" name="ENABLE CHEATS" group="ADVANCED SETTINGS" value="psxmame_cheats" description="Cheats need to be placed in 'cheats\psxmame' folder." preset="switchauto" order="101"/>
     <feature submenu="CONTROLS" name="CONTROLLER PROFILE" group="ADVANCED SETTINGS" value="psxmame_controller_configmode" description="Select 'game specific' to use game specific cfg file located in emulators\psxmame\ctrlr folder." order="500">
       <choice name="LUMACA AUTO" value="lumaca_auto"/>
       <choice name="GAME SPECIFIC" value="per_game"/>
@@ -13409,12 +13319,6 @@
       <choice name="USA" value="usa"/>
       <choice name="Europe" value="europe"/>
     </feature>
-	<feature submenu="EMULATION" name="M3U DISC NUMBER" group="ADVANCED SETTINGS" value="dreamcast_m3uindex" order="102">
-      <choice name="1" value="1"/>
-      <choice name="2" value="2"/>
-      <choice name="3" value="3"/>
-      <choice name="4" value="4"/>
-    </feature>
     <feature submenu="CONTROLS" name="USE REDREAM CONTROLLER CONFIGURATION" group="ADVANCED SETTINGS" value="redream_controller_autoconfig" preset="switchauto" order="500"/>
     <feature submenu="CONTROLS" name="USE R1 AND L1" group="ADVANCED SETTINGS" value="dreamcast_use_shoulders" description="Use shoulder buttons instead of triggers." preset="switchauto" order="501"/>
   </emulator>
@@ -13597,7 +13501,7 @@
     <feature submenu="USER INTERFACE" name="HIDE HINTS" value="rpcs3_hidehints" group="ADVANCED SETTINGS" description="Hide shader and PPU compilation hints." preset="switchauto" order="452"/>
     <sharedFeature submenu="USER INTERFACE" group="ADVANCED SETTINGS" value="discord" order="453"/>
     <feature submenu="USER INTERFACE" name="SHOW GUI" group="ADVANCED SETTINGS" value="rpcs3_gui" preset="switchauto" order="454"/>
-    <feature submenu="USER INTERFACE" name="SHOW MOUSE CURSOR" value="rpcs3_mouse_cursor" group="ADVANCED SETTINGS" preset="switchauto" order="455"/>
+    <feature submenu="CONTROLS" name="SHOW MOUSE CURSOR" value="rpcs3_mouse_cursor" group="ADVANCED SETTINGS" preset="switchauto" order="500"/>
     <feature submenu="CONTROLS" name="INVERT FACE BUTTONS" value="rpcs3_gamepadbuttons" group="ADVANCED SETTINGS" description="Invert A/B and X/Y buttons." preset="switchauto" order="501"/>
     <feature submenu="CONTROLS" name="ENABLE RUMBLE" value="rpcs3_rumble" group="ADVANCED SETTINGS" preset="switchauto" order="502"/>
     <feature submenu="CONTROLS" name="KEYBOARD HANDLER" value="rpcs3_keyboard" group="ADVANCED SETTINGS" order="503">
@@ -14375,6 +14279,12 @@
       <choice name="ALWAYS" value="always"/>
       <choice name="NEVER" value="never"/>
     </feature>
+    <feature submenu="CONTROLS" name="SHOW MOUSE CURSOR" group="ADVANCED SETTINGS" value="stella_cursor" order="501">
+      <choice name="IN UI ONLY" value="2"/>
+      <choice name="ALWAYS" value="3"/>
+      <choice name="IN GAME ONLY" value="1"/>
+      <choice name="NEVER" value="0"/>
+    </feature>
     <feature submenu="CONTROLS" name="ANALOG DEADZONE" group="ADVANCED SETTINGS" value="stella_deadzone" order="502">
       <choice name="5%" value="3"/>
       <choice name="0%" value="0"/>
@@ -14395,12 +14305,6 @@
       <choice name="30HZ" value="30"/>
     </feature>
     <feature submenu="USER INTERFACE" name="SHOW UI MESSAGES" group="ADVANCED SETTINGS" value="stella_uimessages" preset="switchauto" order="450"/>
-	 <feature submenu="USER INTERFACE" name="SHOW MOUSE CURSOR" group="ADVANCED SETTINGS" value="stella_cursor" order="451">
-      <choice name="IN UI ONLY" value="2"/>
-      <choice name="ALWAYS" value="3"/>
-      <choice name="IN GAME ONLY" value="1"/>
-      <choice name="NEVER" value="0"/>
-    </feature>
   </emulator>
   <!-- SUDACHI -->
   <emulator name="sudachi">
@@ -14830,7 +14734,6 @@
       <choice name="DIRECTINPUT" value="DirectInput"/>
       <choice name="RAW INPUT" value="RawInput"/>
     </feature>
-	<feature submenu="USER INTERFACE" name="SHOW MOUSE CURSOR" value="tp_display_cursor" group="ADVANCED SETTINGS" preset="switchauto" order="450"/>
     <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="use_guns" order="550"/>
     <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="one_gun" order="551"/>
     <sharedFeature submenu="GUNS" group="ADVANCED SETTINGS" value="gun_invert" order="552"/>
@@ -15190,7 +15093,6 @@
       <choice name="105s" value="105"/>
       <choice name="120s" value="120"/>
     </feature>
-    <sharedFeature submenu="EMULATION" group="ADVANCED SETTINGS" value="storekeep" order="110"/>
     <feature submenu="GUNS" group="ADVANCED SETTINGS" name="USE DEMULSHOOTER" value="use_demulshooter" description="Launch DemulShooter for gun games." preset="switchauto" order="550"/>
     <feature submenu="GUNS" group="ADVANCED SETTINGS" name="OUTPUT GAME DATA" value="ds_output" description="Enable this option when using mamehooker with LEDs, solenoids, rumble..." order="551">
       <choice name="TO WINDOW" value="win"/>
@@ -15647,14 +15549,11 @@
       <choice name="NTSC" value="NTSC"/>
       <choice name="PAL" value="PAL"/>
     </feature>
-    <feature submenu="VISUAL RENDERING" name="DEINTERLACE" group="ADVANCED SETTINGS" value="saturn_deinterlace" preset="switchauto" order="250"/>
-    <feature submenu="VISUAL RENDERING" name="IMPROVED MESH" group="ADVANCED SETTINGS" value="saturn_meshmode" preset="switchauto" order="251"/>
     <feature submenu="EMULATION" name="FORCE BIOS" group="ADVANCED SETTINGS" value="ymir_force_bios" description="Define BIOS to use for emulation." order="102">
       <choice name="Multi-region" value="saturn_bios.bin"/>
       <choice name="JAP" value="sega_101.bin"/>
       <choice name="EUR/US" value="mpr-17933.bin"/>
     </feature>
-    <feature submenu="EMULATION" name="PER GAME BACKUP RAM" group="ADVANCED SETTINGS" value="saturn_pergame_backup" preset="switchauto" order="103"/>
     <feature submenu="CONTROLS" name="CONTROLLER TYPE" group="ADVANCED SETTINGS" value="ymir_peripheral" order="500">
       <choice name="STANDARD CONTROLLER" value="ControlPad"/>
       <choice name="3D PAD" value="AnalogPad"/>

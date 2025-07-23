@@ -9,7 +9,7 @@ namespace EmulatorLauncher.Libretro
     partial class LibretroControllers
     {
         // Used to automatically map special controllers like N64, saturn, megadrive
-        // The mapping is forced from json file located in retrobat\system\resources\inputmapping
+        // The mapping is forced from json file located in lumaca\system\resources\inputmapping
 
         private static List<string> digitalDpadStrings = new List<string> { "down_btn", "up_btn", "left_btn", "right_btn" };
         private static List<string> analogDpadStrings = new List<string> { "down_axis", "up_axis", "left_axis", "right_axis" };
@@ -23,7 +23,7 @@ namespace EmulatorLauncher.Libretro
             if (system == "n64")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string n64json = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "n64Controllers.json");
+                string n64json = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "n64Controllers.json");
                 bool needActivationSwitch = false;
                 bool n64_pad = Program.SystemConfig.getOptBoolean("n64_pad");
 
@@ -105,7 +105,7 @@ namespace EmulatorLauncher.Libretro
             else if (mdSystems.Contains(system))
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string mdjson = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "mdControllers.json");
+                string mdjson = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "mdControllers.json");
                 bool needActivationSwitch = false;
                 bool md_pad = Program.SystemConfig.getOptBoolean("md_pad");
 
@@ -184,7 +184,7 @@ namespace EmulatorLauncher.Libretro
             else if (system == "saturn")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string saturnjson = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "saturnControllers.json");
+                string saturnjson = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "saturnControllers.json");
                 bool needActivationSwitch = false;
                 bool sat_pad = Program.SystemConfig.getOptBoolean("saturn_pad");
 
@@ -263,7 +263,7 @@ namespace EmulatorLauncher.Libretro
             else if (system == "3do")
             {
                 string guid = controller.Guid.ToString().ToLowerInvariant();
-                string specjson = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "3doControllers.json");
+                string specjson = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "3doControllers.json");
                 bool needActivationSwitch = false;
                 bool spec_pad = Program.SystemConfig.getOptBoolean("3do_pad");
 

@@ -7,8 +7,6 @@ using System.IO;
 using EmulatorLauncher.Common.FileFormats;
 using Microsoft.Win32;
 using EmulatorLauncher.Common.Launchers.Epic;
-using EmulatorLauncher.Common.EmulationStation;
-using System.Text.RegularExpressions;
 
 namespace EmulatorLauncher.Common.Launchers
 {
@@ -18,7 +16,7 @@ namespace EmulatorLauncher.Common.Launchers
 
         public static string GetEpicGameExecutableName(Uri uri)
         {
-            string shorturl = Regex.Replace(uri.LocalPath, @"[^a-zA-Z0-9]", "");
+            string shorturl = uri.LocalPath.ExtractString("/", ":");
 
             var modSdkMetadataDir = GetMetadataPath();
             if (modSdkMetadataDir != null)
@@ -31,12 +29,7 @@ namespace EmulatorLauncher.Common.Launchers
                 {
                     foreach (var manifest in GetInstalledManifests())
                     {
-                        if (shorturl.Equals(manifest.AppName))
-                        {
-                            gameExecutable = manifest.LaunchExecutable;
-                            break;
-                        }
-                        else if (shorturl.Equals(manifest.MainGameAppName))
+                        if (shorturl.Equals(manifest.CatalogNamespace))
                         {
                             gameExecutable = manifest.LaunchExecutable;
                             break;

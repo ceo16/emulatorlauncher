@@ -127,7 +127,7 @@
             disable_fractured_bones_females = true
             enable_avg_contents = false
             remove_destroyed_rooms = false
-            theme_hospital_install = [=[C:\RetroBat\roms\corsixth\HOSP.th]=]
+            theme_hospital_install = [=[C:\Lumaca\roms\corsixth\HOSP.th]=]
             unicode_font = nil
             savegames = nil
             levels = nil

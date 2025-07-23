@@ -361,13 +361,13 @@ namespace EmulatorLauncher
 
             // Write active Profiles
             if (playerIndex == 1 && system == "atari5200")
-                _activeProfiles = "Retrobat -> 5200 (port " + joyPort + ")";
+                _activeProfiles = "Lumaca -> 5200 (port " + joyPort + ")";
             else if (playerIndex == 1)
-                _activeProfiles = "Retrobat -> CX40 (port " + joyPort + ")";
+                _activeProfiles = "Lumaca -> CX40 (port " + joyPort + ")";
             else if (system == "atari5200")
-                _activeProfiles = _activeProfiles + "\\n" + "Retrobat -> 5200 (port " + joyPort + ")";
+                _activeProfiles = _activeProfiles + "\\n" + "Lumaca -> 5200 (port " + joyPort + ")";
             else
-                _activeProfiles = _activeProfiles + "\\n" + "Retrobat -> CX40 (port " + joyPort + ")";
+                _activeProfiles = _activeProfiles + "\\n" + "Lumaca -> CX40 (port " + joyPort + ")";
         }
 
         private void ConfigureKeyboard(IniFile ini, string system, string inputMapsSection)

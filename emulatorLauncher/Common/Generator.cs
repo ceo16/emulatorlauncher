@@ -98,7 +98,6 @@ namespace EmulatorLauncher
                 if (SystemConfig.isOptSet("decompressedpath") && !string.IsNullOrEmpty(SystemConfig["decompressedpath"]))
                 {
                     extractionPath = SystemConfig["decompressedpath"].Replace('/', '\\');
-                    extractionPath = Path.Combine(extractionPath, ".uncompressed");
                     _customPathValue = extractionPath;
                 }
 
@@ -143,9 +142,9 @@ namespace EmulatorLauncher
                 string uncompressedFolderPath = GetUnCompressedFolderPath();
 
                 if (SystemConfig.isOptSet("decompressedpath") && !string.IsNullOrEmpty(SystemConfig["decompressedpath"]))
-                {
+					{
                     extractionPath = SystemConfig["decompressedpath"].Replace('/', '\\');
-                    extractionPath = Path.Combine(extractionPath, ".uncompressed");
+					extractionPath = Path.Combine(extractionPath, ".uncompressed");
                 }
 
                 else if (Program.SystemConfig["decompressedfolders"] != "keep")
@@ -251,7 +250,7 @@ namespace EmulatorLauncher
                 string extractionPath = GetUnCompressedFolderPath();
 
                 if (Program.SystemConfig.isOptSet("decompressedpath") && !string.IsNullOrEmpty(Program.SystemConfig["decompressedpath"]))
-                {
+                    {
                     extractionPath = Program.SystemConfig["decompressedpath"].Replace('/', '\\');
                     extractionPath = Path.Combine(extractionPath, ".uncompressed");
                 }

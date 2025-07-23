@@ -77,7 +77,6 @@
     <Compile Include="Controller.cs" />
     <Compile Include="EsFeaturesPoBuilder.cs" />
     <Compile Include="EsSaveStatesExtensions.cs" />
-    <Compile Include="GameStoresManager.cs" />
     <Compile Include="Installer.cs" />
     <Compile Include="InstallerFrm.cs">
       <SubType>Form</SubType>
@@ -142,6 +141,15 @@
     </Compile>
     <Compile Include="Generators\Bizhawk.Guns.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
+    </Compile>
+	<Compile Include="Generators\EpicLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\AmazonLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Generators\SteamLauncher.Generator.cs">
+      <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\Bizhawk.SaveStatesMonitor.cs">
       <DependentUpon>Bizhawk.Generator.cs</DependentUpon>
@@ -231,6 +239,9 @@
     <Compile Include="Generators\SteamLauncher.Generator.cs">
       <DependentUpon>ExeLauncher.Generator.cs</DependentUpon>
     </Compile>
+	<Compile Include="Generators\XboxLauncher.Generator.cs" />
+    <Compile Include="Generators\EAGamesLauncher.Generator.cs" />
+    <Compile Include="Generators\GogLauncher.Generator.cs" />
     <Compile Include="Generators\Fbneo.Generator.cs" />
     <Compile Include="Generators\Fbneo.Controllers.cs">
       <DependentUpon>Fbneo.Generator.cs</DependentUpon>
@@ -252,7 +263,7 @@
     <Compile Include="Generators\Fpinball.Generator.cs" />
     <Compile Include="Generators\GemRB.Generator.cs" />
     <Compile Include="Generators\Gopher64.Generator.cs" />
-    <Compile Include="Generators\Gopher64.Controllers.cs">
+	<Compile Include="Generators\Gopher64.Controllers.cs">
       <DependentUpon>Gopher64.Generator.cs</DependentUpon>
     </Compile>
     <Compile Include="Generators\GsPlus.Generator.cs" />
@@ -419,7 +430,7 @@
     <Compile Include="Generators\Redream.Controllers.cs">
       <DependentUpon>Redream.Generator.cs</DependentUpon>
     </Compile>
-    <Compile Include="Generators\RetrobatLauncher.Generator.cs" />
+    <Compile Include="Generators\LumacaLauncher.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Generator.cs" />
     <Compile Include="Generators\Rpcs3.Controllers.cs">
       <DependentUpon>Rpcs3.Generator.cs</DependentUpon>
@@ -605,7 +616,7 @@
   <ItemGroup>
     <Content Include="icon.ico" />
     <None Include="Resources\blacklisted-words.txt" />
-    <None Include="Resources\retrobat.png" />
+    <None Include="Resources\lumaca.png" />
     <None Include="Reshader\Bezel.fx" />
   </ItemGroup>
   <ItemGroup>

@@ -70,11 +70,11 @@ namespace EmulatorLauncher
             wheelIndex1 = wheel1.DinputIndex;
             SimpleLogger.Instance.Info("[WHEELS] Wheel 1 directinput index : " + wheelIndex1);
 
-            // Get mapping from yml file in retrobat\system\resources\inputmapping\wheels and retrieve mapping
+            // Get mapping from yml file in lumaca\system\resources\inputmapping\wheels and retrieve mapping
             YmlFile ymlFile = null;
             YmlContainer wheel1Mapping = null;
             Dictionary<string, string> wheel1buttonMap = new Dictionary<string, string>();
-            string flycastWheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "flycast_wheels.yml");
+            string flycastWheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "flycast_wheels.yml");
             if (File.Exists(flycastWheelMapping))
             {
                 ymlFile = YmlFile.Load(flycastWheelMapping);
@@ -411,7 +411,7 @@ namespace EmulatorLauncher
                 wheelIndex2 = wheel2.DinputIndex;
                 SimpleLogger.Instance.Info("[WHEELS] Wheel 2 directinput index : " + wheelIndex2);
 
-                // Get mapping from yml file in retrobat\system\resources\inputmapping\wheels and retrieve mapping
+                // Get mapping from yml file in lumaca\system\resources\inputmapping\wheels and retrieve mapping
                 YmlContainer wheel2Mapping = null;
                 Dictionary<string, string> wheel2buttonMap = new Dictionary<string, string>();
 

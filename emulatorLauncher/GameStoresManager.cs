@@ -1,4 +1,4 @@
-﻿using EmulatorLauncher.Common;
+﻿﻿using EmulatorLauncher.Common;
 using EmulatorLauncher.Common.Launchers;
 using System;
 using System.Collections.Generic;

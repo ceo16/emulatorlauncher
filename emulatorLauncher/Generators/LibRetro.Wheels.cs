@@ -65,7 +65,7 @@ namespace EmulatorLauncher.Libretro
                 YmlContainer wheelMapping = null;
                 Dictionary<string, string> wheelbuttonMap = new Dictionary<string, string>();
 
-                string coreWheelMapping = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "resources", "inputmapping", "wheels", "libretro_" + core + "_wheels.yml");
+                string coreWheelMapping = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "resources", "inputmapping", "wheels", "libretro_" + core + "_wheels.yml");
                 if (File.Exists(coreWheelMapping))
                 {
                     ymlFile = YmlFile.Load(coreWheelMapping);

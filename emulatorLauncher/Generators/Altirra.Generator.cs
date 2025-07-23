@@ -69,7 +69,7 @@ namespace EmulatorLauncher
             string configFile = Path.Combine(path, "Altirra.ini");
             if (!File.Exists(configFile))
             {
-                string templateCfgFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", emulator, "Altirra.ini");
+                string templateCfgFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", emulator, "Altirra.ini");
                 if (File.Exists(templateCfgFile))
                     try { File.Copy(templateCfgFile, configFile); } catch { }
             }

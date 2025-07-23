@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Drawing;
-using System.Diagnostics;
-using System.Net;
+using System.Drawing; // Necessario per Image e Rectangle in Misc
+using System.Diagnostics; // Necessario per Process in Misc
+using System.Net; // Necessario per IPAddress in Misc
+using EmulatorLauncher.Common; // Per RegistryKeyEx e User32 in Misc (già presente)
 
 namespace EmulatorLauncher.Common
 {
@@ -25,31 +26,6 @@ namespace EmulatorLauncher.Common
             }
 
             return false;
-        }
-
-        public static string GetProcessCommandline(this Process process)
-        {
-            if (process == null)
-                return null;
-
-            try
-            {
-                using (var cquery = new System.Management.ManagementObjectSearcher("SELECT CommandLine FROM Win32_Process WHERE ProcessId=" + process.Id))
-                {
-                    var commandLine = cquery.Get()
-                        .OfType<System.Management.ManagementObject>()
-                        .Select(p => (string)p["CommandLine"])
-                        .FirstOrDefault();
-
-                    return commandLine;
-                }
-            }
-            catch
-            {
-
-            }
-
-            return null;
         }
 
         public static bool IsDeveloperModeEnabled
@@ -138,7 +114,7 @@ namespace EmulatorLauncher.Common
 
         public static bool IsPrivateIP(IPAddress address)
         {
-            if (address.ToString() == "::1") 
+            if (address.ToString() == "::1")    
                 return true;
 
             byte[] ip = address.GetAddressBytes();
@@ -177,7 +153,11 @@ namespace EmulatorLauncher.Common
             int cxDIB = imageSize.Width;
             int cyDIB = imageSize.Height;
             int iMaxX = rcPhoto.Width;
-            int iMaxY = rcPhoto.Height;
+            int iMaxY = rcPhoto.Height; 
+
+            if (imageSize.Height == 0) 
+                return Rectangle.Empty;
+
 
             double xCoef = (double)iMaxX / (double)cxDIB;
             double yCoef = (double)iMaxY / (double)cyDIB;
@@ -232,7 +212,6 @@ namespace EmulatorLauncher.Common
             return new Rectangle(iScreenX - cxDIB / 2, iScreenY - cyDIB / 2, cxDIB, cyDIB);
         }
 
-
         public static int IndexOf(this byte[] arrayToSearchThrough, byte[] patternToFind, int startIndex = 0)
         {
             if (patternToFind.Length > arrayToSearchThrough.Length)
@@ -264,8 +243,4 @@ namespace EmulatorLauncher.Common
         Mouse = 1,
         Gamepad = 2
     }
-
-
-
-
 }

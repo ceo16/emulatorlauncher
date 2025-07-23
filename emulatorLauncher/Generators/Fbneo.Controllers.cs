@@ -39,7 +39,7 @@ namespace EmulatorLauncher
                     .Replace("{systempath}", "system")
                     .Replace("{userpath}", "user");
 
-                fbneoMapping = Path.Combine(Program.AppConfig.GetFullPath("retrobat"), result);
+                fbneoMapping = Path.Combine(Program.AppConfig.GetFullPath("lumaca"), result);
 
                 if (File.Exists(fbneoMapping))
                     break;
@@ -528,7 +528,7 @@ namespace EmulatorLauncher
             // User specific
             "{userpath}\\inputmapping\\fbneo.yml",
 
-            // RetroBat Default
+            // Lumaca Default
             "{systempath}\\resources\\inputmapping\\fbneo.yml",
         };
     }

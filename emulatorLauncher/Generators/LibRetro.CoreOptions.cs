@@ -1111,7 +1111,7 @@ namespace EmulatorLauncher.Libretro
                     coreSettings["dolphin_widescreen"] = "disabled";
 
                 BindFeature(coreSettings, "dolphin_sensor_bar_position", "dolphin_sensor_bar_position", "Bottom");
-                BindBoolFeature(coreSettings, "dolphin_wiimote_continuous_scanning", "dolphin_nowiimotescan", "disabled", "enabled");
+				BindBoolFeature(coreSettings, "dolphin_wiimote_continuous_scanning", "dolphin_nowiimotescan", "disabled", "enabled");
             }
         }
 
@@ -4581,8 +4581,8 @@ namespace EmulatorLauncher.Libretro
             BindFeature(coreSettings, "stella_filter", "stella_filter", "disabled");
             BindBoolFeature(coreSettings, "stella_crop_hoverscan", "stella_crop_hoverscan", "enabled", "disabled");
             BindBoolFeatureAuto(coreSettings, "stella_phosphor", "stella_phosphor", "on", "off", "auto");
-
-            _forcenobias = true;
+			
+			_forcenobias = true;
 
             // Lightgun
             SetupLightGuns(retroarchConfig, "4", core);

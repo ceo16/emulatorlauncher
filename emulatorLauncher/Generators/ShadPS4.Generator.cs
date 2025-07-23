@@ -102,7 +102,7 @@ namespace EmulatorLauncher
                 if (SystemConfig.isOptSet("shadps4_username") && !string.IsNullOrEmpty(SystemConfig["shadps4_username"]))
                     toml.WriteValue("General", "userName", "\"" + SystemConfig["shadps4_username"] + "\"");
 
-                //toml.WriteValue("General", "autoUpdate", "false");
+               // toml.WriteValue("General", "autoUpdate", "false");
                 toml.WriteValue("General", "showSplash", "false");
 
                 // GPU section
@@ -157,8 +157,8 @@ namespace EmulatorLauncher
                 if (!Directory.Exists(dlcPath))
                     try { Directory.CreateDirectory(dlcPath); } catch { }
                 toml.WriteValue("GUI", "addonInstallDir", "\"" + dlcPath.Replace("\\", "\\\\") + "\"");
-
-                toml.Save();
+				
+				toml.Save();
             }
 
             string uiSettingsFile = Path.Combine(userFolder, "qt_ui.ini");
@@ -172,7 +172,7 @@ namespace EmulatorLauncher
 
         private string Getps4LangFromEnvironment()
         {
-            SimpleLogger.Instance.Info("[Generator] Getting Language from RetroBat language.");
+            SimpleLogger.Instance.Info("[Generator] Getting Language from Lumaca language.");
 
             var availableLanguages = new Dictionary<string, int>()
             {

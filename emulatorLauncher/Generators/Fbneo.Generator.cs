@@ -95,7 +95,7 @@ namespace EmulatorLauncher
             string iniFile = Path.Combine(configFolder, "fbneo64.ini");
             if (!File.Exists(iniFile))
             {
-                string templateFile = Path.Combine(AppConfig.GetFullPath("retrobat"), "system", "templates", "fbneo", "config", "fbneo64.ini");
+                string templateFile = Path.Combine(AppConfig.GetFullPath("lumaca"), "system", "templates", "fbneo", "config", "fbneo64.ini");
 
                 if (File.Exists(templateFile))
                     try { File.Copy(templateFile, iniFile); } catch { }

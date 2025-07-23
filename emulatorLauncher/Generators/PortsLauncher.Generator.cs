@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 using EmulatorLauncher.Common;
@@ -106,7 +106,7 @@ namespace EmulatorLauncher
             _romPath = Path.GetDirectoryName(rom);
             _resolution = resolution;
 
-            // Copy existing saves from retrobat\saves to the emulator folder
+            // Copy existing saves from lumaca\saves to the emulator folder
             CopySavesToEmulator();
 
             // Initiate command array to pass it to the configuration part, do not add command line arguments here, add them in the port configuration part
@@ -325,7 +325,7 @@ namespace EmulatorLauncher
             base.Cleanup();
         }
 
-        // Method to copy saves from retrobat\saves to emulator folder, called before the game
+        // Method to copy saves from lumaca\saves to emulator folder, called before the game
         private void CopySavesToEmulator()
         {
             string savesPath = Path.Combine(AppConfig.GetFullPath("saves"));
