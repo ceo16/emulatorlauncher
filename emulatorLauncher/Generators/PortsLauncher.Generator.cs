@@ -236,7 +236,7 @@ namespace EmulatorLauncher
         }
 
         // Cleanup override
-        // Used so far to copy saves from emulator folder to Retrobat saves folder
+        // Used so far to copy saves from emulator folder to Lumaca saves folder
         public override void Cleanup()
         {
             string savesPath = Path.Combine(AppConfig.GetFullPath("saves"));
