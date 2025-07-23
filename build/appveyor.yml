@@ -25,6 +25,8 @@ after_build:
 - 7z a batocera-ports.zip es-checkversion.exe
 - copy es-update\bin\Release\es-update.exe .\es-update.exe
 - 7z a batocera-ports.zip es-update.exe
+- copy x64controllers\bin\Release\x64controllers.exe .\x64controllers.exe
+- 7z a batocera-ports.zip x64controllers.exe
 - copy mount\bin\Release\mount.exe .
 - 7z a batocera-ports.zip mount.exe
 - 7z a batocera-ports.zip 7za.exe
